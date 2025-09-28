@@ -19,6 +19,9 @@ repositories {
 dependencies {
     // This dependency is used by the application.
     implementation libs.guava
+    
+    // Annotation processor configuration to resolve build issues
+    annotationProcessor libs.guava
 }
 
 testing {
