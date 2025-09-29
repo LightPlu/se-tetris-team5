@@ -92,18 +92,21 @@ public class home extends JFrame implements KeyListener {
     private void drawHomeScreen() {
         StringBuilder sb = new StringBuilder();
         
-        // ASCII 아트 제목
-        sb.append("\n");
-        sb.append("████████╗███████╗████████╗██████╗ ██╗███████╗\n");
-        sb.append("╚══██╔══╝██╔════╝╚══██╔══╝██╔══██╗██║██╔════╝\n");
-        sb.append("   ██║   █████╗     ██║   ██████╔╝██║███████╗\n");
-        sb.append("   ██║   ██╔══╝     ██║   ██╔══██╗██║╚════██║\n");
-        sb.append("   ██║   ███████╗   ██║   ██║  ██║██║███████║\n");
-        sb.append("   ╚═╝   ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚══════╝\n\n");
+        // 개선된 제목 디자인
+        sb.append("\n\n");
+        sb.append("╔═══════════════════════════════════════════════════╗\n");
+        sb.append("║                                                   ║\n");
+        sb.append("║   ████████ ███████ ████████ ██████  ██ ███████    ║\n");
+        sb.append("║      ██    ██         ██    ██   ██ ██ ██         ║\n");
+        sb.append("║      ██    █████      ██    ██████  ██ ███████    ║\n");
+        sb.append("║      ██    ██         ██    ██   ██ ██      ██    ║\n");
+        sb.append("║      ██    ███████    ██    ██   ██ ██ ███████    ║\n");
+        sb.append("║                                                   ║\n");
+        sb.append("║                🎮  5조 테트리스  🎮               ║\n");
+        sb.append("║                                                   ║\n");
+        sb.append("╚═══════════════════════════════════════════════════╝\n\n");
         
-        sb.append("═══════════════════════════════════════════════════\n");
-        sb.append("              🎮 5조 테트리스 🎮\n");
-        sb.append("═══════════════════════════════════════════════════\n\n");
+        sb.append("┌─────────────────── 메뉴 ───────────────────┐\n");
         
         // 메뉴 옵션들
         for(int i = 0; i < menuOptions.length; i++) {
@@ -135,6 +138,7 @@ public class home extends JFrame implements KeyListener {
             sb.append("\n");
         }
         
+        sb.append("└─────────────────────────────────────────────┘\n\n");
         sb.append("═══════════════════════════════════════════════════\n");
         sb.append("🎮 조작법:\n");
         sb.append("   ↑↓ : 메뉴 선택    Enter : 확인\n");
@@ -172,9 +176,9 @@ public class home extends JFrame implements KeyListener {
         doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
         
         // 제목 색상 변경 (TETRIS 부분)
-        int tetrisStart = text.indexOf("████████╗███████╗");
+        int tetrisStart = text.indexOf("████████ ███████");
         if (tetrisStart != -1) {
-            int tetrisEnd = text.indexOf("╚══════╝", tetrisStart) + 8;
+            int tetrisEnd = text.indexOf("███████    ║", tetrisStart) + 12;
             SimpleAttributeSet titleStyle = new SimpleAttributeSet(styleSet);
             StyleConstants.setForeground(titleStyle, Color.CYAN);
             StyleConstants.setBold(titleStyle, true);
@@ -293,9 +297,27 @@ public class home extends JFrame implements KeyListener {
     
     private void showGameScreen() {
         setVisible(false);
-        // 게임 화면 구현 필요
-        se.tetris.team5.component.Board gameBoard = new se.tetris.team5.component.Board();
-        gameBoard.setVisible(true);
+        // 모듈화된 게임 화면 사용
+        JFrame gameFrame = new JFrame("5조 테트리스 - 게임");
+        gameFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        
+        // GameSettings에서 창 크기 가져오기
+        GameSettings settings = GameSettings.getInstance();
+        String windowSize = settings.getWindowSize();
+        String[] sizeParts = windowSize.split("x");
+        int width = Integer.parseInt(sizeParts[0]);
+        int height = Integer.parseInt(sizeParts[1]);
+        gameFrame.setSize(width, height);
+        
+        gameFrame.setLocationRelativeTo(null);
+        gameFrame.setResizable(false);
+        
+        // 모듈화된 game 패널 추가
+        se.tetris.team5.screen.game gamePanel = new se.tetris.team5.screen.game(this);
+        gameFrame.add(gamePanel);
+        
+        gameFrame.setVisible(true);
+        gamePanel.requestFocus(); // 키 입력을 위한 포커스 설정
     }
     
     private void showScoreScreen() {
