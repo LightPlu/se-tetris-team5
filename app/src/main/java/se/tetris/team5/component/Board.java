@@ -240,6 +240,37 @@ public class Board extends JFrame {
 		}
 		placeBlock();
 	}
+	
+	// 하드 드롭: 블록을 가능한 한 아래로 한 번에 떨어뜨리는 메서드
+	protected void hardDrop() {
+		eraseCurr();
+		
+		// 블록이 더 이상 내려갈 수 없을 때까지 y 좌표를 증가시킴
+		while(canMove(x, y + 1, curr)) {
+			y++;
+		}
+		
+		// 최종 위치에 블록을 배치하고 고정
+		placeBlock();
+		fixBlock();
+		
+		// 가득 찬 줄이 있는지 확인하고 제거
+		clearLines();
+		
+		// 새로운 블록 생성
+		curr = getRandomBlock();
+		x = 3;
+		y = 0;
+		
+		// 게임 오버 체크 (새 블록이 시작 위치에 놓일 수 없는 경우)
+		if(!canMove(x, y, curr)) {
+			// 게임 오버 처리 (일단 리셋)
+			reset();
+			return;
+		}
+		
+		placeBlock();
+	}
 
 	public void drawBoard() {
 		StringBuffer sb = new StringBuffer();
@@ -358,6 +389,10 @@ public class Board extends JFrame {
 					curr.rotate();
 				}
 				placeBlock();
+				drawBoard();
+				break;
+			case KeyEvent.VK_SPACE:
+				hardDrop();
 				drawBoard();
 				break;
 			}
