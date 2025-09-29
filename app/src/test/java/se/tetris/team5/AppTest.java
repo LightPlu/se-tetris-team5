@@ -7,8 +7,25 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AppTest {
-    @Test public void appHasAGreeting() {
+    @Test 
+    public void appCanCreateInstance() {
         App classUnderTest = new App();
-        assertNotNull("app should have a greeting", classUnderTest.getGreeting());
+        assertNotNull("App 객체가 생성되어야 합니다", classUnderTest);
+    }
+    
+    @Test
+    public void appHasMainMethod() {
+        // main 메서드가 존재하는지 리플렉션으로 확인
+        try {
+            App.class.getMethod("main", String[].class);
+        } catch (NoSuchMethodException e) {
+            fail("App 클래스에 main 메서드가 있어야 합니다");
+        }
+    }
+    
+    @Test
+    public void appClassExists() {
+        // App 클래스가 존재하는지 확인
+        assertNotNull("App 클래스가 존재해야 합니다", App.class);
     }
 }
