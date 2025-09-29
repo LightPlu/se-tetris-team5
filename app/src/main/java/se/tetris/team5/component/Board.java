@@ -96,7 +96,6 @@ public class Board extends JFrame {
       drawBoard();
       timer.start();
    }
-
    private Block getRandomBlock() {
       Random rnd = new Random(System.currentTimeMillis());
       int block = rnd.nextInt(7); // 0~6까지 7개 블록
@@ -245,6 +244,7 @@ public class Board extends JFrame {
       }
       placeBlock();
    }
+
 
    public void drawBoard() {
       StringBuffer sb = new StringBuffer();
