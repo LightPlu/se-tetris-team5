@@ -34,20 +34,20 @@ public class Board extends JFrame {
 	public static final int WIDTH = 10;
 	public static final char BORDER_CHAR = 'X';
 	
-	private JTextPane pane;
-	private int[][] board;
+	private JTextPane pane;        // 게임 화면 표시용 텍스트 패널
+	private int[][] board;         // 보드 상태 저장 (0: 빈칸, 1: 고정된 블록, 2: 움직이는 블록)
 	private Color[][] boardColors; // 각 셀의 색상 정보 저장
-	private KeyListener playerKeyListener;
-	private SimpleAttributeSet styleSet;
-	private Timer timer;
-	private Block curr;
+	private KeyListener playerKeyListener;     // 플레이어 키 입력 리스너
+	private SimpleAttributeSet styleSet;       // 텍스트 스타일 설정
+	private Timer timer;   		   // 블록 자동 낙하 타이머
+	private Block curr;            // 현재 움직이는 블록
 	int x = 3; //Default Position.
 	int y = 0;
 	
 	private static final int initInterval = 1000;
 	
 	public Board() {
-		super("SeoulTech SE Tetris");
+		super("5조 테트리스");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		//Board display setting.
@@ -60,10 +60,15 @@ public class Board extends JFrame {
 		pane.setBorder(border);
 		this.getContentPane().add(pane, BorderLayout.CENTER);
 		
+		// 창 크기 설정
+		setSize(350, 500);
+		setResizable(false);
+		setLocationRelativeTo(null); // 화면 중앙에 위치
+		
 		//Document default style.
 		styleSet = new SimpleAttributeSet();
 		StyleConstants.setFontSize(styleSet, 18);
-		StyleConstants.setFontFamily(styleSet, "Courier");
+		StyleConstants.setFontFamily(styleSet, "Source Code Pro");
 		StyleConstants.setBold(styleSet, true);
 		StyleConstants.setForeground(styleSet, Color.WHITE);
 		StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
@@ -249,7 +254,7 @@ public class Board extends JFrame {
 			sb.append(BORDER_CHAR);
 			for(int j=0; j < board[i].length; j++) {
 				if(board[i][j] == 1 || board[i][j] == 2) {
-					sb.append("O"); // 네모난 사각형으로 변경
+					sb.append("O"); // 단순한 영문 문자
 				} else {
 					sb.append(" ");
 				}
@@ -265,21 +270,20 @@ public class Board extends JFrame {
 		// 기본 스타일 적용 (테두리 색상을 하얀색으로 고정)
 		SimpleAttributeSet borderStyle = new SimpleAttributeSet();
 		StyleConstants.setForeground(borderStyle, Color.WHITE);
-		StyleConstants.setFontSize(borderStyle, 18);
-		StyleConstants.setFontFamily(borderStyle, "Courier");
+		StyleConstants.setFontSize(borderStyle, 16);
+		StyleConstants.setFontFamily(borderStyle, "Courier New");
 		StyleConstants.setBold(borderStyle, true);
+		StyleConstants.setLineSpacing(borderStyle, -0.4f); // 줄 간격 더 많이 줄이기
 		doc.setCharacterAttributes(0, doc.getLength(), borderStyle, false);
+		doc.setParagraphAttributes(0, doc.getLength(), borderStyle, false);
 		
 		// 각 블록에 색상 적용
 		int textOffset = WIDTH + 3; // 첫 번째 줄(테두리) 건너뛰기
 		for(int i = 0; i < board.length; i++) {
 			for(int j = 0; j < board[i].length; j++) {
 				if((board[i][j] == 1 || board[i][j] == 2) && boardColors[i][j] != null) {
-					SimpleAttributeSet colorStyle = new SimpleAttributeSet();
-					StyleConstants.setForeground(colorStyle, boardColors[i][j]);
-					StyleConstants.setFontSize(colorStyle, 18);
-					StyleConstants.setFontFamily(colorStyle, "Courier");
-					StyleConstants.setBold(colorStyle, true);
+					SimpleAttributeSet colorStyle = new SimpleAttributeSet(borderStyle); // 기본 스타일 복사
+					StyleConstants.setForeground(colorStyle, boardColors[i][j]); // 색상만 변경
 					
 					int charPos = textOffset + j + 1; // +1은 왼쪽 테두리
 					doc.setCharacterAttributes(charPos, 1, colorStyle, false);

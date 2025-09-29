@@ -1,12 +1,10 @@
 package se.tetris.team5;
 
-import se.tetris.team5.component.Board;
+import se.tetris.team5.screan.home;
 
 public class App {
 
     public static void main(String[] args) {
-        Board main = new Board();
-		main.setSize(400, 500);
-		main.setVisible(true);
+        new home(); // 메인 메뉴부터 시작
     }
 }
