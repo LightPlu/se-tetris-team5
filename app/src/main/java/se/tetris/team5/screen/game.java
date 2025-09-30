@@ -257,6 +257,40 @@ public class game extends JPanel implements KeyListener {
     placeBlock();
   }
 
+  protected void hardDrop() {
+    eraseCurr();
+    
+    // 블록이 바닥에 닿을 때까지 y 좌표를 증가시킴
+    int dropDistance = 0;
+    while (canMove(x, y + 1, curr)) {
+      y++;
+      dropDistance++;
+    }
+    
+    // 하드드롭 시 떨어진 거리만큼 보너스 점수 (거리 * 2점)
+    currentScore += dropDistance * 2;
+    
+    placeBlock();
+    fixBlock();
+    
+    // 가득 찬 줄이 있는지 확인하고 제거
+    clearLines();
+    
+    // 새로운 블록 생성
+    curr = getRandomBlock();
+    x = 3;
+    y = 0;
+    
+    // 게임 오버 체크 (새 블록이 시작 위치에 놓일 수 없는 경우)
+    if (!canMove(x, y, curr)) {
+      // 게임 오버 처리
+      gameOver();
+      return;
+    }
+    
+    placeBlock();
+  }
+
   public void drawBoard() {
     StringBuffer sb = new StringBuffer();
 
@@ -264,6 +298,8 @@ public class game extends JPanel implements KeyListener {
     sb.append("SCORE: ").append(String.format("%,d", currentScore)).append("\n");
     sb.append("LINES: ").append(linesCleared).append("\n");
     sb.append("LEVEL: ").append(level).append("\n");
+    sb.append("\n"); // 빈 줄 추가
+    sb.append("Controls: ↑Rotate ↓Soft ←→Move SPACE HardDrop ESC Exit").append("\n");
     sb.append("\n"); // 빈 줄 추가
 
     // 게임 보드 테두리
@@ -302,26 +338,39 @@ public class game extends JPanel implements KeyListener {
     SimpleAttributeSet scoreStyle = new SimpleAttributeSet(borderStyle);
     StyleConstants.setForeground(scoreStyle, Color.YELLOW);
     String text = sb.toString();
-    int scoreEndIndex = text.indexOf("\n\n") + 2; // 점수 정보가 끝나는 지점
-    if (scoreEndIndex > 1) {
+    int scoreEndIndex = text.indexOf("Controls:"); // 컨트롤 정보 시작 지점까지
+    if (scoreEndIndex > 0) {
       doc.setCharacterAttributes(0, scoreEndIndex, scoreStyle, false);
+    }
+    
+    // 컨트롤 정보를 회색으로 표시
+    SimpleAttributeSet controlStyle = new SimpleAttributeSet(borderStyle);
+    StyleConstants.setForeground(controlStyle, Color.LIGHT_GRAY);
+    StyleConstants.setFontSize(controlStyle, 12);
+    int controlStartIndex = scoreEndIndex;
+    int controlEndIndex = text.indexOf("\n\nXXXXXXXXXX"); // 게임 보드 시작 전까지
+    if (controlStartIndex > 0 && controlEndIndex > controlStartIndex) {
+      doc.setCharacterAttributes(controlStartIndex, controlEndIndex - controlStartIndex, controlStyle, false);
     }
 
     // 각 블록에 색상 적용
-    int textOffset = scoreEndIndex + WIDTH + 3; // 점수 정보 + 첫 번째 줄(테두리) 건너뛰기
-    for (int i = 0; i < board.length; i++) {
-      for (int j = 0; j < board[i].length; j++) {
-        if ((board[i][j] == 1 || board[i][j] == 2) && boardColors[i][j] != null) {
-          SimpleAttributeSet colorStyle = new SimpleAttributeSet(borderStyle); // 기본 스타일 복사
-          StyleConstants.setForeground(colorStyle, boardColors[i][j]); // 색상만 변경
+    int boardStartIndex = text.indexOf("XXXXXXXXXXXX"); // 게임 보드 테두리 시작점 찾기
+    if (boardStartIndex > 0) {
+      int textOffset = boardStartIndex + WIDTH + 3; // 첫 번째 줄(테두리) 건너뛰기
+      for (int i = 0; i < board.length; i++) {
+        for (int j = 0; j < board[i].length; j++) {
+          if ((board[i][j] == 1 || board[i][j] == 2) && boardColors[i][j] != null) {
+            SimpleAttributeSet colorStyle = new SimpleAttributeSet(borderStyle); // 기본 스타일 복사
+            StyleConstants.setForeground(colorStyle, boardColors[i][j]); // 색상만 변경
 
-          int charPos = textOffset + j + 1; // +1은 왼쪽 테두리
-          if (charPos < doc.getLength()) {
-            doc.setCharacterAttributes(charPos, 1, colorStyle, false);
+            int charPos = textOffset + j + 1; // +1은 왼쪽 테두리
+            if (charPos < doc.getLength()) {
+              doc.setCharacterAttributes(charPos, 1, colorStyle, false);
+            }
           }
         }
+        textOffset += WIDTH + 3; // 다음 줄로 이동 (테두리 2개 + 줄바꿈 1개)
       }
-      textOffset += WIDTH + 3; // 다음 줄로 이동 (테두리 2개 + 줄바꿈 1개)
     }
   }
 
@@ -454,6 +503,10 @@ public class game extends JPanel implements KeyListener {
           curr.rotate();
         }
         placeBlock();
+        drawBoard();
+        break;
+      case KeyEvent.VK_SPACE:
+        hardDrop();
         drawBoard();
         break;
     }
