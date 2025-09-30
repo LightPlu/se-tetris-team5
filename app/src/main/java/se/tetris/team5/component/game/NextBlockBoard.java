@@ -12,36 +12,34 @@ import javax.swing.SwingConstants;
 import javax.swing.border.CompoundBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
 
-import se.tetris.team5.blocks.Block;
-import se.tetris.team5.util.GameSettings;
-
+/**
+ * 다음 블록을 표시하는 보드의 테두리만을 담당하는 컴포넌트
+ */
 public class NextBlockBoard extends JPanel {
     
     private static final long serialVersionUID = 1L;
     
     private JTextPane nextBlockPane;
-
+    private SimpleAttributeSet styleSet;
     
     public NextBlockBoard() {
         initComponents();
     }
     
     private void initComponents() {
-        // GameSettings에서 설정 불러오기 (향후 확장 가능)
-        //GameSettings settings = GameSettings.getInstance();
-        
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
         setPreferredSize(new Dimension(240, 150));
         setMinimumSize(new Dimension(200, 120));
         
+        // 라벨 추가
         JLabel nextLabel = new JLabel("다음 블록", SwingConstants.CENTER);
         nextLabel.setForeground(Color.WHITE);
         nextLabel.setFont(nextLabel.getFont().deriveFont(14f));
         add(nextLabel, BorderLayout.NORTH);
         
+        // 다음 블록 표시 패널
         nextBlockPane = new JTextPane();
         nextBlockPane.setEditable(false);
         nextBlockPane.setBackground(Color.BLACK);
@@ -50,45 +48,45 @@ public class NextBlockBoard extends JPanel {
                 BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
         nextBlockPane.setBorder(nextBorder);
         add(nextBlockPane, BorderLayout.CENTER);
+        
+        // 스타일 설정
+        styleSet = new SimpleAttributeSet();
+        StyleConstants.setFontSize(styleSet, 16);
+        StyleConstants.setFontFamily(styleSet, "Courier New");
+        StyleConstants.setBold(styleSet, true);
+        StyleConstants.setForeground(styleSet, Color.WHITE);
+        StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
+        
+        // 초기 빈 상태 표시
+        showEmptyNextBlock();
     }
     
-    public void updateNextBlock(Block next) {
-        if (next == null || nextBlockPane == null) return;
-        
+    /**
+     * 빈 다음 블록 영역을 표시합니다
+     */
+    public void showEmptyNextBlock() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\n");
         
-        // 4x4 영역에 블록 표시
-        boolean[][] shape = new boolean[4][4];
-        for (int i = 0; i < next.width() && i < 4; i++) {
-            for (int j = 0; j < next.height() && j < 4; j++) {
-                shape[i][j] = (next.getShape(i, j) == 1);
-            }
-        }
-        
-        for (int j = 0; j < 4; j++) {
-            sb.append("  ");
-            for (int i = 0; i < 4; i++) {
-                if (shape[i][j]) {
-                    sb.append("■ ");
-                } else {
-                    sb.append("  ");
-                }
-            }
-            sb.append("\n");
+        // 작은 테두리로 다음 블록 영역 표시
+        for (int i = 0; i < 3; i++) {
+            sb.append("      ").append("\n");
         }
         
         nextBlockPane.setText(sb.toString());
-        StyledDocument doc = nextBlockPane.getStyledDocument();
-        
-        // 스타일 적용
-        SimpleAttributeSet style = new SimpleAttributeSet();
-        StyleConstants.setForeground(style, next.getColor());
-        StyleConstants.setFontSize(style, 12);
-        StyleConstants.setFontFamily(style, "Courier New");
-        StyleConstants.setBold(style, true);
-        StyleConstants.setAlignment(style, StyleConstants.ALIGN_CENTER);
-        doc.setCharacterAttributes(0, doc.getLength(), style, false);
-        doc.setParagraphAttributes(0, doc.getLength(), style, false);
+        nextBlockPane.getStyledDocument().setCharacterAttributes(0, nextBlockPane.getDocument().getLength(), styleSet, false);
+    }
+    
+    /**
+     * JTextPane을 반환합니다 (외부에서 내용을 설정할 수 있도록)
+     */
+    public JTextPane getTextPane() {
+        return nextBlockPane;
+    }
+    
+    /**
+     * 스타일 설정을 반환합니다
+     */
+    public SimpleAttributeSet getStyleSet() {
+        return styleSet;
     }
 }
