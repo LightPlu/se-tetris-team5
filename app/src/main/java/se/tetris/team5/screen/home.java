@@ -23,6 +23,16 @@ public class home extends JFrame implements KeyListener {
     private SimpleAttributeSet styleSet;
     private int selectedMenu = 0; // 0: 게임시작, 1: 스코어보기, 2: 설정, 3: 종료
     
+    // 창 크기 정보
+    private int windowWidth;
+    private int windowHeight;
+    private WindowSize currentWindowSize;
+    
+    // 창 크기별 레이아웃 설정
+    private enum WindowSize {
+        SMALL, MEDIUM, LARGE, XLARGE
+    }
+    
     private String[] menuOptions = {
         "게임 시작",
         "스코어 보기", 
@@ -41,19 +51,37 @@ public class home extends JFrame implements KeyListener {
         super("5조 테트리스");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        // GameSettings에서 창 크기 가져오기
+        // GameSettings에서 창 크기 가져오기 및 윈도우 크기 설정
         GameSettings settings = GameSettings.getInstance();
         String windowSize = settings.getWindowSize();
         String[] sizeParts = windowSize.split("x");
-        int width = Integer.parseInt(sizeParts[0]);
-        int height = Integer.parseInt(sizeParts[1]);
-        setSize(width, height);
+        windowWidth = Integer.parseInt(sizeParts[0]);
+        windowHeight = Integer.parseInt(sizeParts[1]);
         
+        // 창 크기에 따른 레이아웃 모드 결정
+        currentWindowSize = determineWindowSize(windowWidth, windowHeight);
+        
+        setSize(windowWidth, windowHeight);
         setLocationRelativeTo(null);
         setResizable(false);
         
         initializeUI();
         setVisible(true);
+    }
+    
+    /**
+     * 창 크기에 따른 레이아웃 모드를 결정합니다
+     */
+    private WindowSize determineWindowSize(int width, int height) {
+        if (width <= 350) {
+            return WindowSize.SMALL;
+        } else if (width <= 450) {
+            return WindowSize.MEDIUM;
+        } else if (width <= 550) {
+            return WindowSize.LARGE;
+        } else {
+            return WindowSize.XLARGE;
+        }
     }
     
     private void initializeUI() {
@@ -92,8 +120,80 @@ public class home extends JFrame implements KeyListener {
     private void drawHomeScreen() {
         StringBuilder sb = new StringBuilder();
         
-        // 개선된 제목 디자인
-        sb.append("\n\n");
+        // 창 크기에 따른 제목 디자인
+        drawTitle(sb);
+        
+        // 창 크기에 따른 메뉴 디자인
+        drawMenu(sb);
+        
+        // 조작법 및 정보
+        drawControls(sb);
+        drawGameInfo(sb);
+        
+        updateDisplay(sb.toString());
+    }
+    
+    /**
+     * 창 크기에 따른 제목을 그립니다
+     */
+    private void drawTitle(StringBuilder sb) {
+        switch (currentWindowSize) {
+            case SMALL:
+                drawSmallTitle(sb);
+                break;
+            case MEDIUM:
+                drawMediumTitle(sb);
+                break;
+            case LARGE:
+                drawLargeTitle(sb);
+                break;
+            case XLARGE:
+                drawXLargeTitle(sb);
+                break;
+        }
+    }
+    
+    private void drawSmallTitle(StringBuilder sb) {
+        sb.append("\n");
+        sb.append("┌─────────────────────┐\n");
+        sb.append("│  ████ ████ ████ █  │\n");
+        sb.append("│   ██  ██    ██   █  │\n");
+        sb.append("│   ██  ███   ██   █  │\n");
+        sb.append("│   ██  ██    ██   █  │\n");
+        sb.append("│   ██  ████  ██   █  │\n");
+        sb.append("│                     │\n");
+        sb.append("│   🎮 5조 테트리스   │\n");
+        sb.append("└─────────────────────┘\n\n");
+    }
+    
+    private void drawMediumTitle(StringBuilder sb) {
+        sb.append("\n");
+        sb.append("╔═════════════════════════════════╗\n");
+        sb.append("║  ██████ ███████ ████████ ███████║\n");
+        sb.append("║     ██  ██         ██    ██     ║\n");
+        sb.append("║     ██  █████      ██    ███████║\n");
+        sb.append("║     ██  ██         ██         ██║\n");
+        sb.append("║     ██  ███████    ██    ███████║\n");
+        sb.append("║                                 ║\n");
+        sb.append("║         🎮 5조 테트리스         ║\n");
+        sb.append("╚═════════════════════════════════╝\n\n");
+    }
+    
+    private void drawLargeTitle(StringBuilder sb) {
+        sb.append("\n");
+        sb.append("╔═══════════════════════════════════════════╗\n");
+        sb.append("║  ████████ ███████ ████████ ██████  ██████ ║\n");
+        sb.append("║     ██    ██         ██    ██   ██    ██  ║\n");
+        sb.append("║     ██    █████      ██    ██████     ██  ║\n");
+        sb.append("║     ██    ██         ██    ██   ██    ██  ║\n");
+        sb.append("║     ██    ███████    ██    ██   ██ ██████ ║\n");
+        sb.append("║                                           ║\n");
+        sb.append("║            🎮 5조 테트리스 🎮            ║\n");
+        sb.append("╚═══════════════════════════════════════════╝\n\n");
+    }
+    
+    private void drawXLargeTitle(StringBuilder sb) {
+        sb.append("\n");
         sb.append("╔═══════════════════════════════════════════════════╗\n");
         sb.append("║                                                   ║\n");
         sb.append("║   ████████ ███████ ████████ ██████  ██ ███████    ║\n");
@@ -105,15 +205,24 @@ public class home extends JFrame implements KeyListener {
         sb.append("║                🎮  5조 테트리스  🎮               ║\n");
         sb.append("║                                                   ║\n");
         sb.append("╚═══════════════════════════════════════════════════╝\n\n");
-        
-        sb.append("┌─────────────────── 메뉴 ───────────────────┐\n");
+    }
+    
+    /**
+     * 창 크기에 따른 메뉴를 그립니다
+     */
+    private void drawMenu(StringBuilder sb) {
+        String menuHeader = getMenuHeader();
+        sb.append(menuHeader).append("\n");
         
         // 메뉴 옵션들
         for(int i = 0; i < menuOptions.length; i++) {
+            // 창 크기에 따른 메뉴 들여쓰기 조정
+            String indent = getMenuIndent();
+            
             if(i == selectedMenu) {
-                sb.append("  ►►  ");
+                sb.append(indent).append("►►  ");
             } else {
-                sb.append("     ");
+                sb.append(indent).append("   ");
             }
             
             // 메뉴 아이콘 추가
@@ -131,27 +240,111 @@ public class home extends JFrame implements KeyListener {
             }
             sb.append("\n");
             
-            // 선택된 메뉴의 설명 표시
-            if(i == selectedMenu) {
-                sb.append("     💬 ").append(menuDescriptions[i]).append("\n");
+            // 선택된 메뉴의 설명 표시 (창 크기에 따라 조정)
+            if(i == selectedMenu && currentWindowSize != WindowSize.SMALL) {
+                sb.append(indent).append("   💬 ").append(menuDescriptions[i]).append("\n");
             }
             sb.append("\n");
         }
         
-        sb.append("└─────────────────────────────────────────────┘\n\n");
-        sb.append("═══════════════════════════════════════════════════\n");
+        String menuFooter = getMenuFooter();
+        sb.append(menuFooter).append("\n\n");
+    }
+    
+    /**
+     * 창 크기에 따른 메뉴 헤더를 반환합니다
+     */
+    private String getMenuHeader() {
+        switch (currentWindowSize) {
+            case SMALL:
+                return "┌─────── 메뉴 ───────┐";
+            case MEDIUM:
+                return "┌─────────────── 메뉴 ───────────────┐";
+            case LARGE:
+                return "┌─────────────────── 메뉴 ───────────────────┐";
+            case XLARGE:
+            default:
+                return "┌─────────────────── 메뉴 ───────────────────┐";
+        }
+    }
+    
+    /**
+     * 창 크기에 따른 메뉴 들여쓰기를 반환합니다
+     */
+    private String getMenuIndent() {
+        switch (currentWindowSize) {
+            case SMALL:
+                return " ";
+            case MEDIUM:
+                return "  ";
+            case LARGE:
+                return "   ";
+            case XLARGE:
+            default:
+                return "  ";
+        }
+    }
+    
+    /**
+     * 창 크기에 따른 메뉴 푸터를 반환합니다
+     */
+    private String getMenuFooter() {
+        switch (currentWindowSize) {
+            case SMALL:
+                return "└─────────────────────┘";
+            case MEDIUM:
+                return "└─────────────────────────────────────┘";
+            case LARGE:
+                return "└─────────────────────────────────────────────┘";
+            case XLARGE:
+            default:
+                return "└─────────────────────────────────────────────┘";
+        }
+    }
+    
+    /**
+     * 창 크기에 따른 조작법을 그립니다
+     */
+    private void drawControls(StringBuilder sb) {
+        String separator = getSeparator();
+        sb.append(separator).append("\n");
         sb.append("🎮 조작법:\n");
         sb.append("   ↑↓ : 메뉴 선택    Enter : 확인\n");
         sb.append("   ESC : 게임 종료\n");
-        sb.append("═══════════════════════════════════════════════════\n\n");
-        
-        // 게임 정보
-        sb.append("📋 게임 정보:\n");
-        sb.append("   버전: 1.0.0\n");
-        sb.append("   개발팀: 5조\n");
-        sb.append("   최고 기록: ").append(getHighestScore()).append("점\n");
-        
-        updateDisplay(sb.toString());
+        sb.append(separator).append("\n\n");
+    }
+    
+    /**
+     * 창 크기에 따른 게임 정보를 그립니다
+     */
+    private void drawGameInfo(StringBuilder sb) {
+        // 작은 창에서는 간단하게 표시
+        if (currentWindowSize == WindowSize.SMALL) {
+            sb.append("📋 버전: 1.0.0 | 5조\n");
+            sb.append("🏆 최고: ").append(getHighestScore()).append("점\n");
+        } else {
+            sb.append("📋 게임 정보:\n");
+            sb.append("   버전: 1.0.0\n");
+            sb.append("   개발팀: 5조\n");
+            sb.append("   최고 기록: ").append(getHighestScore()).append("점\n");
+        }
+    }
+    
+    /**
+     * 창 크기에 따른 구분선을 반환합니다
+     */
+    private String getSeparator() {
+        switch (currentWindowSize) {
+            case SMALL:
+                return "═══════════════════════";
+            case MEDIUM:
+                return "═══════════════════════════════════";
+            case LARGE:
+                return "═══════════════════════════════════════════";
+            case XLARGE:
+            default:
+                return "═══════════════════════════════════════════════════";
+        }
     }
     
     private String getHighestScore() {
