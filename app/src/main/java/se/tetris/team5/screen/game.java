@@ -8,11 +8,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.Random;
 
-import javax.swing.BorderFactory;
 import javax.swing.JPanel;
-import javax.swing.JTextPane;
 import javax.swing.Timer;
-import javax.swing.border.CompoundBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -25,23 +22,34 @@ import se.tetris.team5.blocks.OBlock;
 import se.tetris.team5.blocks.SBlock;
 import se.tetris.team5.blocks.TBlock;
 import se.tetris.team5.blocks.ZBlock;
+import se.tetris.team5.component.game.GameBoard;
+import se.tetris.team5.component.game.NextBlockBoard;
+import se.tetris.team5.component.game.ScoreBoard;
 import se.tetris.team5.util.ScoreManager;
 
 public class game extends JPanel implements KeyListener {
 
   private static final long serialVersionUID = 2434035659171694595L;
 
-  public static final int HEIGHT = 19;
-  public static final int WIDTH = 10;
-  public static final char BORDER_CHAR = 'X';
+  // GameBoard 클래스의 상수들을 사용
+  public static final int HEIGHT = GameBoard.HEIGHT;
+  public static final int WIDTH = GameBoard.WIDTH;
+  public static final char BORDER_CHAR = GameBoard.BORDER_CHAR;
 
   private home parentHome;
-  private JTextPane pane; // 게임 화면 표시용 텍스트 패널
-  private int[][] board; // 보드 상태 저장 (0: 빈칸, 1: 고정된 블록, 2: 움직이는 블록)
-  private Color[][] boardColors; // 각 셀의 색상 정보 저장
+  
+  // UI 컴포넌트들
+  private GameBoard gameBoard;
+  private NextBlockBoard nextBlockBoard;
+  private ScoreBoard scoreBoard;
+  
+  // 게임 상태 관리
+  private int[][] board;
+  private Color[][] boardColors;
   private SimpleAttributeSet styleSet; // 텍스트 스타일 설정
   private Timer timer; // 블록 자동 낙하 타이머
   private Block curr; // 현재 움직이는 블록
+  private Block next; // 다음 블록
   int x = 3; // Default Position.
   int y = 0;
 
@@ -50,6 +58,11 @@ public class game extends JPanel implements KeyListener {
   private int linesCleared = 0; // 제거된 줄 수
   private int level = 1; // 현재 레벨
   private long gameStartTime; // 게임 시작 시간
+
+  // 일시정지 관련 변수
+  private boolean isPaused = false;
+  private int pauseMenuIndex = 0; // 0: 게임 계속, 1: 메뉴로 나가기
+  private String[] pauseMenuOptions = {"게임 계속", "메뉴로 나가기"};
 
   private static final int initInterval = 1000;
 
@@ -64,20 +77,31 @@ public class game extends JPanel implements KeyListener {
   }
 
   private void initComponents() {
-    // Board display setting.
-    pane = new JTextPane();
-    pane.setEditable(false);
-    pane.setBackground(Color.BLACK);
-    CompoundBorder border = BorderFactory.createCompoundBorder(
-        BorderFactory.createLineBorder(Color.GRAY, 10),
-        BorderFactory.createLineBorder(Color.DARK_GRAY, 5));
-    pane.setBorder(border);
-    add(pane, BorderLayout.CENTER);
+    // 전체 레이아웃 설정
+    setLayout(new BorderLayout());
+    
+    // 게임 보드 (왼쪽)
+    gameBoard = new GameBoard();
+    add(gameBoard, BorderLayout.CENTER);
+    
+    // 오른쪽 패널 (다음 블록 + 점수)
+    JPanel rightPanel = new JPanel(new BorderLayout());
+    rightPanel.setBackground(Color.BLACK);
+    
+    // 다음 블록 보드 (오른쪽 위)
+    nextBlockBoard = new NextBlockBoard();
+    rightPanel.add(nextBlockBoard, BorderLayout.NORTH);
+    
+    // 점수 보드 (오른쪽 아래)
+    scoreBoard = new ScoreBoard();
+    rightPanel.add(scoreBoard, BorderLayout.CENTER);
+    
+    add(rightPanel, BorderLayout.EAST);
 
     // Document default style.
     styleSet = new SimpleAttributeSet();
     StyleConstants.setFontSize(styleSet, 18);
-    StyleConstants.setFontFamily(styleSet, "Source Code Pro");
+    StyleConstants.setFontFamily(styleSet, "Courier New");
     StyleConstants.setBold(styleSet, true);
     StyleConstants.setForeground(styleSet, Color.WHITE);
     StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
@@ -87,23 +111,22 @@ public class game extends JPanel implements KeyListener {
       @Override
       public void actionPerformed(ActionEvent e) {
         moveDown();
-        drawBoard();
+        updateAllBoards();
       }
     });
 
-    // Initialize board for the game.
+    // Initialize game board data
     board = new int[HEIGHT][WIDTH];
     boardColors = new Color[HEIGHT][WIDTH];
 
     // 게임 시작 시간 설정
     gameStartTime = System.currentTimeMillis();
 
-    // Create the first block and draw.
+    // Create the first block and next block
     curr = getRandomBlock();
+    next = getRandomBlock();
     placeBlock();
-    drawBoard();
-    timer.start();
-    drawBoard();
+    updateAllBoards();
     timer.start();
   }
 
@@ -225,8 +248,9 @@ public class game extends JPanel implements KeyListener {
       // 가득 찬 줄이 있는지 확인하고 제거
       clearLines();
 
-      // 새로운 블록 생성
-      curr = getRandomBlock();
+      // 새로운 블록 생성 (다음 블록을 현재 블록으로)
+      curr = next;
+      next = getRandomBlock();
       x = 3;
       y = 0;
 
@@ -276,8 +300,9 @@ public class game extends JPanel implements KeyListener {
     // 가득 찬 줄이 있는지 확인하고 제거
     clearLines();
     
-    // 새로운 블록 생성
-    curr = getRandomBlock();
+    // 새로운 블록 생성 (다음 블록을 현재 블록으로)
+    curr = next;
+    next = getRandomBlock();
     x = 3;
     y = 0;
     
@@ -291,21 +316,27 @@ public class game extends JPanel implements KeyListener {
     placeBlock();
   }
 
-  public void drawBoard() {
+  /**
+   * 모든 보드를 업데이트합니다
+   */
+  private void updateAllBoards() {
+    updateGameBoard();
+    updateScoreBoard();
+    updateNextBlockBoard();
+  }
+  
+  /**
+   * 게임 보드를 업데이트합니다
+   */
+  private void updateGameBoard() {
     StringBuffer sb = new StringBuffer();
 
-    // 점수 정보 표시
-    sb.append("SCORE: ").append(String.format("%,d", currentScore)).append("\n");
-    sb.append("LINES: ").append(linesCleared).append("\n");
-    sb.append("LEVEL: ").append(level).append("\n");
-    sb.append("\n"); // 빈 줄 추가
-    sb.append("Controls: ↑Rotate ↓Soft ←→Move SPACE HardDrop ESC Exit").append("\n");
-    sb.append("\n"); // 빈 줄 추가
-
     // 게임 보드 테두리
-    for (int t = 0; t < WIDTH + 2; t++)
+    for (int t = 0; t < WIDTH + 2; t++) {
       sb.append(BORDER_CHAR);
+    }
     sb.append("\n");
+    
     for (int i = 0; i < board.length; i++) {
       sb.append(BORDER_CHAR);
       for (int j = 0; j < board[i].length; j++) {
@@ -318,59 +349,190 @@ public class game extends JPanel implements KeyListener {
       sb.append(BORDER_CHAR);
       sb.append("\n");
     }
-    for (int t = 0; t < WIDTH + 2; t++)
+    
+    for (int t = 0; t < WIDTH + 2; t++) {
       sb.append(BORDER_CHAR);
+    }
 
-    pane.setText(sb.toString());
-    StyledDocument doc = pane.getStyledDocument();
+    gameBoard.setText(sb.toString());
+    StyledDocument doc = gameBoard.getStyledDocument();
 
     // 기본 스타일 적용 (테두리 색상을 하얀색으로 고정)
     SimpleAttributeSet borderStyle = new SimpleAttributeSet();
     StyleConstants.setForeground(borderStyle, Color.WHITE);
-    StyleConstants.setFontSize(borderStyle, 16);
+    StyleConstants.setFontSize(borderStyle, 18);
     StyleConstants.setFontFamily(borderStyle, "Courier New");
     StyleConstants.setBold(borderStyle, true);
-    StyleConstants.setLineSpacing(borderStyle, -0.4f); // 줄 간격 더 많이 줄이기
+    StyleConstants.setLineSpacing(borderStyle, -0.4f);
     doc.setCharacterAttributes(0, doc.getLength(), borderStyle, false);
     doc.setParagraphAttributes(0, doc.getLength(), borderStyle, false);
 
-    // 점수 정보 부분을 다른 색상으로 표시
-    SimpleAttributeSet scoreStyle = new SimpleAttributeSet(borderStyle);
-    StyleConstants.setForeground(scoreStyle, Color.YELLOW);
-    String text = sb.toString();
-    int scoreEndIndex = text.indexOf("Controls:"); // 컨트롤 정보 시작 지점까지
-    if (scoreEndIndex > 0) {
-      doc.setCharacterAttributes(0, scoreEndIndex, scoreStyle, false);
+    // 각 블록에 색상 적용
+    int textOffset = WIDTH + 3; // 첫 번째 줄(위쪽 테두리) 건너뛰기
+    for (int i = 0; i < board.length; i++) {
+      for (int j = 0; j < board[i].length; j++) {
+        if ((board[i][j] == 1 || board[i][j] == 2) && boardColors[i][j] != null) {
+          SimpleAttributeSet colorStyle = new SimpleAttributeSet(borderStyle); // 기본 스타일 복사
+          StyleConstants.setForeground(colorStyle, boardColors[i][j]); // 색상만 변경
+
+          int charPos = textOffset + j + 1; // +1은 왼쪽 테두리
+          if (charPos < doc.getLength()) {
+            doc.setCharacterAttributes(charPos, 1, colorStyle, false);
+          }
+        }
+      }
+      textOffset += WIDTH + 3; // 다음 줄로 이동 (테두리 2개 + 줄바꿈 1개)
+    }
+  }
+  
+  /**
+   * 점수 보드를 업데이트합니다
+   */
+  private void updateScoreBoard() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("점수: ").append(String.format("%,d", currentScore)).append("\n");
+    sb.append("레벨: ").append(level).append("\n");
+    sb.append("줄: ").append(linesCleared).append("\n");
+    sb.append("\n");
+    sb.append("조작법:\n");
+    sb.append("↑: 회전\n");
+    sb.append("↓: 소프트 드롭\n");
+    sb.append("←→: 이동\n");
+    sb.append("Space: 하드 드롭\n");
+    sb.append("ESC: 나가기\n");
+    
+    scoreBoard.getTextPane().setText(sb.toString());
+    scoreBoard.getTextPane().getStyledDocument().setCharacterAttributes(
+        0, scoreBoard.getTextPane().getDocument().getLength(), 
+        scoreBoard.getStyleSet(), false);
+  }
+  
+  /**
+   * 다음 블록 보드를 업데이트합니다
+   */
+  private void updateNextBlockBoard() {
+    StringBuilder sb = new StringBuilder();
+    
+    if (next != null) {
+      // 4x4 크기의 블록 표시 영역
+      for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+          if (row < next.height() && col < next.width() && next.getShape(col, row) == 1) {
+            sb.append("O");
+          } else {
+            sb.append(" ");
+          }
+        }
+        sb.append("\n");
+      }
+    } else {
+      // next가 null인 경우 빈 영역 표시
+      for (int i = 0; i < 4; i++) {
+        sb.append("    \n");
+      }
     }
     
-    // 컨트롤 정보를 회색으로 표시
-    SimpleAttributeSet controlStyle = new SimpleAttributeSet(borderStyle);
-    StyleConstants.setForeground(controlStyle, Color.LIGHT_GRAY);
-    StyleConstants.setFontSize(controlStyle, 12);
-    int controlStartIndex = scoreEndIndex;
-    int controlEndIndex = text.indexOf("\n\nXXXXXXXXXX"); // 게임 보드 시작 전까지
-    if (controlStartIndex > 0 && controlEndIndex > controlStartIndex) {
-      doc.setCharacterAttributes(controlStartIndex, controlEndIndex - controlStartIndex, controlStyle, false);
-    }
-
-    // 각 블록에 색상 적용
-    int boardStartIndex = text.indexOf("XXXXXXXXXXXX"); // 게임 보드 테두리 시작점 찾기
-    if (boardStartIndex > 0) {
-      int textOffset = boardStartIndex + WIDTH + 3; // 첫 번째 줄(테두리) 건너뛰기
-      for (int i = 0; i < board.length; i++) {
-        for (int j = 0; j < board[i].length; j++) {
-          if ((board[i][j] == 1 || board[i][j] == 2) && boardColors[i][j] != null) {
-            SimpleAttributeSet colorStyle = new SimpleAttributeSet(borderStyle); // 기본 스타일 복사
-            StyleConstants.setForeground(colorStyle, boardColors[i][j]); // 색상만 변경
-
-            int charPos = textOffset + j + 1; // +1은 왼쪽 테두리
+    nextBlockBoard.getTextPane().setText(sb.toString());
+    StyledDocument doc = nextBlockBoard.getTextPane().getStyledDocument();
+    
+    // 기본 스타일 적용
+    SimpleAttributeSet baseStyle = new SimpleAttributeSet(nextBlockBoard.getStyleSet());
+    doc.setCharacterAttributes(0, doc.getLength(), baseStyle, false);
+    
+    // 다음 블록에 색상 적용
+    if (next != null) {
+      int textOffset = 0;
+      for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+          if (row < next.height() && col < next.width() && next.getShape(col, row) == 1) {
+            SimpleAttributeSet colorStyle = new SimpleAttributeSet(baseStyle);
+            StyleConstants.setForeground(colorStyle, next.getColor());
+            
+            int charPos = textOffset + col;
             if (charPos < doc.getLength()) {
               doc.setCharacterAttributes(charPos, 1, colorStyle, false);
             }
           }
         }
-        textOffset += WIDTH + 3; // 다음 줄로 이동 (테두리 2개 + 줄바꿈 1개)
+        textOffset += 5; // 4개 문자 + 줄바꿈 1개
       }
+    }
+  }
+  
+  /**
+   * 호환성을 위한 drawBoard 메서드
+   */
+  public void drawBoard() {
+    updateAllBoards();
+  }
+  
+  /**
+   * 게임을 일시정지합니다
+   */
+  private void pauseGame() {
+    isPaused = true;
+    timer.stop();
+    drawPauseMenu();
+  }
+  
+  /**
+   * 게임을 재개합니다
+   */
+  private void resumeGame() {
+    isPaused = false;
+    pauseMenuIndex = 0;
+    timer.start();
+    updateAllBoards(); // 게임 화면 복원
+  }
+  
+  /**
+   * 일시정지 메뉴를 그립니다 (단순한 디자인)
+   */
+  private void drawPauseMenu() {
+    StringBuilder sb = new StringBuilder();
+    
+    // 단순한 일시정지 화면
+    sb.append("\n\n\n\n\n");
+    sb.append("          === 게임 일시정지 ===\n\n");
+    
+    // 메뉴 옵션들 (단순하게)
+    for (int i = 0; i < pauseMenuOptions.length; i++) {
+      sb.append("          ");
+      if (i == pauseMenuIndex) {
+        sb.append("> ");
+      } else {
+        sb.append("  ");
+      }
+      sb.append(pauseMenuOptions[i]);
+      sb.append("\n\n");
+    }
+    
+    sb.append("\n");
+    sb.append("     ↑↓: 선택    Enter: 확인    ESC: 계속\n");
+    
+    // 게임 보드에 일시정지 메뉴 표시
+    gameBoard.setText(sb.toString());
+    StyledDocument doc = gameBoard.getStyledDocument();
+    
+    // 기본 스타일 적용
+    SimpleAttributeSet baseStyle = new SimpleAttributeSet();
+    StyleConstants.setForeground(baseStyle, Color.WHITE);
+    StyleConstants.setFontSize(baseStyle, 16);
+    StyleConstants.setFontFamily(baseStyle, "Courier New");
+    StyleConstants.setBold(baseStyle, true);
+    StyleConstants.setAlignment(baseStyle, StyleConstants.ALIGN_CENTER);
+    
+    doc.setCharacterAttributes(0, doc.getLength(), baseStyle, false);
+    doc.setParagraphAttributes(0, doc.getLength(), baseStyle, false);
+    
+    // 선택된 메뉴 항목을 노란색으로 강조
+    String text = sb.toString();
+    String selectedOption = "> " + pauseMenuOptions[pauseMenuIndex];
+    int selectedIndex = text.indexOf(selectedOption);
+    if (selectedIndex >= 0) {
+      SimpleAttributeSet highlightStyle = new SimpleAttributeSet(baseStyle);
+      StyleConstants.setForeground(highlightStyle, Color.YELLOW);
+      doc.setCharacterAttributes(selectedIndex, selectedOption.length(), highlightStyle, false);
     }
   }
 
@@ -443,8 +605,10 @@ public class game extends JPanel implements KeyListener {
   }
 
   public void reset() {
-    this.board = new int[HEIGHT][WIDTH];
-    this.boardColors = new Color[HEIGHT][WIDTH];
+    // 보드 리셋
+    board = new int[HEIGHT][WIDTH];
+    boardColors = new Color[HEIGHT][WIDTH];
+    
     this.currentScore = 0;
     this.linesCleared = 0;
     this.level = 1;
@@ -452,10 +616,11 @@ public class game extends JPanel implements KeyListener {
 
     // 새 블록 생성 및 게임 재시작
     curr = getRandomBlock();
+    next = getRandomBlock();
     x = 3;
     y = 0;
     placeBlock();
-    drawBoard();
+    updateAllBoards();
   }
 
   private void gameOver() {
@@ -475,10 +640,43 @@ public class game extends JPanel implements KeyListener {
 
   @Override
   public void keyPressed(KeyEvent e) {
+    // 일시정지 상태일 때의 키 처리
+    if (isPaused) {
+      switch (e.getKeyCode()) {
+        case KeyEvent.VK_UP:
+          pauseMenuIndex = (pauseMenuIndex - 1 + pauseMenuOptions.length) % pauseMenuOptions.length;
+          drawPauseMenu();
+          break;
+        case KeyEvent.VK_DOWN:
+          pauseMenuIndex = (pauseMenuIndex + 1) % pauseMenuOptions.length;
+          drawPauseMenu();
+          break;
+        case KeyEvent.VK_ENTER:
+          if (pauseMenuIndex == 0) { // 게임 계속
+            resumeGame();
+          } else { // 메뉴로 나가기
+            // 게임 완전 정지 및 상태 리셋
+            timer.stop();
+            isPaused = false;
+            pauseMenuIndex = 0;
+            // 부모 윈도우로 포커스 전환 후 홈 화면 표시
+            parentHome.setVisible(true);
+            parentHome.showHomeScreen();
+            // 현재 게임 패널을 숨김
+            setVisible(false);
+          }
+          break;
+        case KeyEvent.VK_ESCAPE:
+          resumeGame(); // ESC로도 게임 계속할 수 있게
+          break;
+      }
+      return; // 일시정지 상태에서는 다른 키 무시
+    }
+    
+    // 게임 진행 중일 때의 키 처리
     switch (e.getKeyCode()) {
       case KeyEvent.VK_ESCAPE:
-        timer.stop(); // 타이머 정지
-        parentHome.showHomeScreen();
+        pauseGame();
         break;
       case KeyEvent.VK_DOWN:
         moveDown();
