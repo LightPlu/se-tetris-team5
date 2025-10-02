@@ -144,13 +144,10 @@ public class home extends JFrame implements KeyListener {
         
         // 메뉴 옵션들
         for(int i = 0; i < menuOptions.length; i++) {
-            // 창 크기에 따른 메뉴 들여쓰기 조정
-            String indent = getMenuIndent();
-            
             if(i == selectedMenu) {
-                sb.append(indent).append("►►  ");
+                sb.append("►►  ");
             } else {
-                sb.append(indent).append("   ");
+                sb.append("   ");
             }
             
             // 메뉴 아이콘 추가
@@ -168,9 +165,9 @@ public class home extends JFrame implements KeyListener {
             }
             sb.append("\n");
             
-            // 선택된 메뉴의 설명 표시 (창 크기에 따라 조정)
+            // 선택된 메뉴의 설명 표시
             if(i == selectedMenu && currentWindowSize != Title.WindowSize.SMALL) {
-                sb.append(indent).append("   💬 ").append(menuDescriptions[i]).append("\n");
+                sb.append("💬 ").append(menuDescriptions[i]).append("\n");
             }
             sb.append("\n");
         }
@@ -185,33 +182,18 @@ public class home extends JFrame implements KeyListener {
     private String getMenuHeader() {
         switch (currentWindowSize) {
             case SMALL:
-                return "┌─────── 메뉴 ───────┐";
+                return "◆═══════ 메뉴 ═══════◆";
             case MEDIUM:
-                return "┌─────────────── 메뉴 ───────────────┐";
+                return "◆════════════ 메뉴 ════════════◆";
             case LARGE:
-                return "┌─────────────────── 메뉴 ───────────────────┐";
+                return "◆═══════════════ 메뉴 ═══════════════◆";
             case XLARGE:
             default:
-                return "┌─────────────────── 메뉴 ───────────────────┐";
+                return "◆═══════════════════ 메뉴 ═══════════════════◆";
         }
     }
     
-    /**
-     * 창 크기에 따른 메뉴 들여쓰기를 반환합니다
-     */
-    private String getMenuIndent() {
-        switch (currentWindowSize) {
-            case SMALL:
-                return " ";
-            case MEDIUM:
-                return "  ";
-            case LARGE:
-                return "   ";
-            case XLARGE:
-            default:
-                return "  ";
-        }
-    }
+
     
     /**
      * 창 크기에 따른 메뉴 푸터를 반환합니다
@@ -219,14 +201,14 @@ public class home extends JFrame implements KeyListener {
     private String getMenuFooter() {
         switch (currentWindowSize) {
             case SMALL:
-                return "└─────────────────────┘";
+                return "◆═══════════════════◆";
             case MEDIUM:
-                return "└─────────────────────────────────────┘";
+                return "◆══════════════════════════════◆";
             case LARGE:
-                return "└─────────────────────────────────────────────┘";
+                return "◆════════════════════════════════════◆";
             case XLARGE:
             default:
-                return "└─────────────────────────────────────────────┘";
+                return "◆════════════════════════════════════════════◆";
         }
     }
     
@@ -237,8 +219,8 @@ public class home extends JFrame implements KeyListener {
         String separator = getSeparator();
         sb.append(separator).append("\n");
         sb.append("🎮 조작법:\n");
-        sb.append("   ↑↓ : 메뉴 선택    Enter : 확인\n");
-        sb.append("   ESC : 게임 종료\n");
+        sb.append("↑↓ : 메뉴 선택    Enter : 확인\n");
+        sb.append("ESC : 게임 종료\n");
         sb.append(separator).append("\n\n");
     }
     
@@ -252,9 +234,9 @@ public class home extends JFrame implements KeyListener {
             sb.append("🏆 최고: ").append(getHighestScore()).append("점\n");
         } else {
             sb.append("📋 게임 정보:\n");
-            sb.append("   버전: 1.0.0\n");
-            sb.append("   개발팀: 5조\n");
-            sb.append("   최고 기록: ").append(getHighestScore()).append("점\n");
+            sb.append("버전: 1.0.0\n");
+            sb.append("개발팀: 5조\n");
+            sb.append("최고 기록: ").append(getHighestScore()).append("점\n");
         }
     }
     
@@ -264,14 +246,14 @@ public class home extends JFrame implements KeyListener {
     private String getSeparator() {
         switch (currentWindowSize) {
             case SMALL:
-                return "═══════════════════════";
+                return "♦═══════════════════♦";
             case MEDIUM:
-                return "═══════════════════════════════════";
+                return "♦═══════════════════════════════♦";
             case LARGE:
-                return "═══════════════════════════════════════════";
+                return "♦═══════════════════════════════════════♦";
             case XLARGE:
             default:
-                return "═══════════════════════════════════════════════════";
+                return "♦═══════════════════════════════════════════════♦";
         }
     }
     
@@ -296,11 +278,7 @@ public class home extends JFrame implements KeyListener {
         doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
         doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
         
-        // TETRIS 제목 부분 색상 적용 (창 크기별로 다른 패턴 검색)
-        applyTitleColors(doc, text);
-        
-        // 5조 테트리스 부분 색상 (모든 창 크기 패턴)
-        applySubtitleColors(doc, text);
+
         
         // 선택된 메뉴 강조
         String selectedText = "►►  " + getMenuIcon(selectedMenu) + menuOptions[selectedMenu] + "  ◄◄";
@@ -361,60 +339,7 @@ public class home extends JFrame implements KeyListener {
         }
     }
     
-    /**
-     * 창 크기에 따른 TETRIS 제목 색상을 적용합니다
-     */
-    private void applyTitleColors(StyledDocument doc, String text) {
-        String[] tetrisPatterns = {
-            "🎯 T E T R I S 🎯",     // 모든 크기에서 공통으로 사용할 패턴
-            "T E T R I S"             // 텍스트만 있는 패턴
-        };
-        
-        for (String pattern : tetrisPatterns) {
-            int tetrisStart = text.indexOf(pattern);
-            if (tetrisStart != -1) {
-                // 패턴에 따라 끝점을 찾습니다
-                int tetrisEnd = findTetrisEnd(text, tetrisStart, pattern);
-                if (tetrisEnd > tetrisStart) {
-                    SimpleAttributeSet titleStyle = new SimpleAttributeSet(styleSet);
-                    StyleConstants.setForeground(titleStyle, Color.RED);
-                    StyleConstants.setBold(titleStyle, true);
-                    doc.setCharacterAttributes(tetrisStart, tetrisEnd - tetrisStart, titleStyle, false);
-                }
-                break; // 첫 번째 매치에서 중단
-            }
-        }
-    }
-    
-    /**
-     * TETRIS 패턴의 끝점을 찾습니다
-     */
-    private int findTetrisEnd(String text, int start, String pattern) {
-        // 새로운 간단한 패턴에서는 해당 패턴 길이만큼만 색칠
-        return start + pattern.length();
-    }
-    
-    /**
-     * "5조 테트리스" 부분의 색상을 적용합니다
-     */
-    private void applySubtitleColors(StyledDocument doc, String text) {
-        String[] subtitlePatterns = {
-            "🎮 5조 테트리스",
-            "🎮 5조 테트리스 🎮",
-            "🎮  5조 테트리스  🎮"
-        };
-        
-        for (String pattern : subtitlePatterns) {
-            int subtitleIndex = text.indexOf(pattern);
-            if (subtitleIndex != -1) {
-                SimpleAttributeSet subtitleStyle = new SimpleAttributeSet(styleSet);
-                StyleConstants.setForeground(subtitleStyle, Color.RED);
-                StyleConstants.setBold(subtitleStyle, true);
-                doc.setCharacterAttributes(subtitleIndex, pattern.length(), subtitleStyle, false);
-                break; // 첫 번째 매치에서 중단
-            }
-        }
-    }
+
     
     private void selectCurrentMenu() {
         switch (selectedMenu) {
@@ -436,14 +361,14 @@ public class home extends JFrame implements KeyListener {
     private void showExitConfirmation() {
         StringBuilder sb = new StringBuilder();
         sb.append("\n\n\n");
-        sb.append("═══════════════════════════════════════════════════\n");
-        sb.append("                  게임 종료\n");
-        sb.append("═══════════════════════════════════════════════════\n\n");
-        sb.append("            정말로 게임을 종료하시겠습니까?\n\n");
-        sb.append("              Y: 종료    N: 취소\n\n");
-        sb.append("═══════════════════════════════════════════════════\n");
-        sb.append("                  감사합니다!\n");
-        sb.append("═══════════════════════════════════════════════════\n");
+        sb.append("════════════════════════════════════════\n");
+        sb.append("게임 종료\n");
+        sb.append("════════════════════════════════════════\n\n");
+        sb.append("정말로 게임을 종료하시겠습니까?\n\n");
+        sb.append("Y: 종료    N: 취소\n\n");
+        sb.append("════════════════════════════════════════\n");
+        sb.append("감사합니다!\n");
+        sb.append("════════════════════════════════════════\n");
         
         updateDisplay(sb.toString());
         
