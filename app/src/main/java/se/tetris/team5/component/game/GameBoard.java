@@ -15,7 +15,7 @@ public class GameBoard extends JTextPane {
     
     private static final long serialVersionUID = 1L;
     
-    public static final int HEIGHT = 19;
+    public static final int HEIGHT = 20;
     public static final int WIDTH = 10;
     public static final char BORDER_CHAR = 'X';
     
