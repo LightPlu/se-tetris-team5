@@ -1,4 +1,4 @@
-package se.tetris.team5.util;
+package se.tetris.team5.utils.setting;
 
 import java.io.*;
 import java.util.Properties;
@@ -48,7 +48,7 @@ public class GameSettings {
     }
     
     public void setDefaultSettings() {
-        properties.setProperty("window.size", WINDOW_SIZE_MEDIUM);
+        properties.setProperty("window.size", WINDOW_SIZE_LARGE);
         properties.setProperty("game.speed", "5");
         properties.setProperty("sound.enabled", "true");
         properties.setProperty("colorblind.mode", "false");
@@ -62,12 +62,22 @@ public class GameSettings {
     }
     
     public String getWindowSize() {
-        return properties.getProperty("window.size", WINDOW_SIZE_MEDIUM);
+        return properties.getProperty("window.size", WINDOW_SIZE_LARGE);
     }
     
     public void setWindowSize(String size) {
         properties.setProperty("window.size", size);
         saveSettings();
+    }
+    
+    public int getWindowWidth() {
+        String size = getWindowSize();
+        return Integer.parseInt(size.split("x")[0]);
+    }
+    
+    public int getWindowHeight() {
+        String size = getWindowSize();
+        return Integer.parseInt(size.split("x")[1]);
     }
     
     public int getGameSpeed() {
@@ -132,6 +142,6 @@ public class GameSettings {
     
     public void resetScores() {
         // ScoreManager를 통해 스코어 초기화
-        ScoreManager.getInstance().clearAllScores();
+        se.tetris.team5.utils.score.ScoreManager.getInstance().clearAllScores();
     }
 }

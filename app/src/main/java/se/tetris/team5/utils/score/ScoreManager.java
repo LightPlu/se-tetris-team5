@@ -1,4 +1,4 @@
-package se.tetris.team5.util;
+package se.tetris.team5.utils.score;
 
 import java.io.*;
 import java.text.SimpleDateFormat;

@@ -1,28 +1,24 @@
-package se.tetris.team5.screen;
+package se.tetris.team5.screens;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-import javax.swing.BorderFactory;
-import javax.swing.JFrame;
 import javax.swing.JTextPane;
-import javax.swing.border.CompoundBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
-import se.tetris.team5.util.GameSettings;
-import se.tetris.team5.component.home.Title;
+import se.tetris.team5.components.home.Title;
+import se.tetris.team5.utils.setting.GameSettings;
+import se.tetris.team5.ScreenController;
 
-public class home extends JFrame implements KeyListener {
+public class home implements KeyListener {
     
-    private static final long serialVersionUID = 1L;
-    
-    private JTextPane pane;
+    private ScreenController screenController;
     private SimpleAttributeSet styleSet;
     private int selectedMenu = 0; // 0: 게임시작, 1: 스코어보기, 2: 설정, 3: 종료
+    private JTextPane currentTextPane; // 현재 사용 중인 textPane 저장
     
     // 창 크기 정보
     private int windowWidth;
@@ -46,16 +42,13 @@ public class home extends JFrame implements KeyListener {
         "게임을 종료합니다"
     };
     
-    public home() {
-        super("5조 테트리스");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    public home(ScreenController screenController) {
+        this.screenController = screenController;
         
         // GameSettings에서 창 크기 가져오기 및 윈도우 크기 설정
         GameSettings settings = GameSettings.getInstance();
-        String windowSize = settings.getWindowSize();
-        String[] sizeParts = windowSize.split("x");
-        windowWidth = Integer.parseInt(sizeParts[0]);
-        windowHeight = Integer.parseInt(sizeParts[1]);
+        windowWidth = settings.getWindowWidth();
+        windowHeight = settings.getWindowHeight();
         
         // 창 크기에 따른 레이아웃 모드 결정
         currentWindowSize = Title.determineWindowSize(windowWidth, windowHeight);
@@ -63,27 +56,10 @@ public class home extends JFrame implements KeyListener {
         // Title 컴포넌트 초기화
         titleComponent = new Title(currentWindowSize);
         
-        setSize(windowWidth, windowHeight);
-        setLocationRelativeTo(null);
-        setResizable(false);
-        
-        initializeUI();
-        setVisible(true);
+        initializeStyles();
     }
     
-
-    
-    private void initializeUI() {
-        // 화면 설정
-        pane = new JTextPane();
-        pane.setEditable(false);
-        pane.setBackground(Color.BLACK);
-        CompoundBorder border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY, 10),
-                BorderFactory.createLineBorder(Color.DARK_GRAY, 5));
-        pane.setBorder(border);
-        this.getContentPane().add(pane, BorderLayout.CENTER);
-        
+    private void initializeStyles() {
         // 텍스트 스타일 설정 (유니코드 지원 개선)
         styleSet = new SimpleAttributeSet();
         StyleConstants.setFontSize(styleSet, 16);
@@ -102,22 +78,16 @@ public class home extends JFrame implements KeyListener {
         StyleConstants.setBold(styleSet, true);
         StyleConstants.setForeground(styleSet, Color.WHITE);
         StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
-        
-        // 키 리스너 설정
-        addKeyListener(this);
-        setFocusable(true);
-        requestFocus();
-        
-        // 화면 그리기
-        showHomeScreen();
     }
     
-    public void showHomeScreen() {
-        drawHomeScreen();
-        requestFocus();
+    public void display(JTextPane textPane) {
+        this.currentTextPane = textPane; // textPane 저장
+        textPane.setBackground(Color.BLACK);
+        textPane.addKeyListener(this); // KeyListener 추가
+        drawHomeScreen(textPane);
     }
     
-    private void drawHomeScreen() {
+    private void drawHomeScreen(JTextPane textPane) {
         StringBuilder sb = new StringBuilder();
         
         // Title 컴포넌트를 사용하여 제목 그리기
@@ -130,7 +100,7 @@ public class home extends JFrame implements KeyListener {
         drawControls(sb);
         drawGameInfo(sb);
         
-        updateDisplay(sb.toString());
+        updateDisplay(textPane, sb.toString());
     }
     
 
@@ -259,7 +229,7 @@ public class home extends JFrame implements KeyListener {
     
     private String getHighestScore() {
         try {
-            se.tetris.team5.util.ScoreManager scoreManager = se.tetris.team5.util.ScoreManager.getInstance();
+            se.tetris.team5.utils.score.ScoreManager scoreManager = se.tetris.team5.utils.score.ScoreManager.getInstance();
             var topScores = scoreManager.getTopScores(1);
             if (!topScores.isEmpty()) {
                 return String.format("%,d", topScores.get(0).getScore());
@@ -270,9 +240,9 @@ public class home extends JFrame implements KeyListener {
         return "없음";
     }
     
-    private void updateDisplay(String text) {
-        pane.setText(text);
-        StyledDocument doc = pane.getStyledDocument();
+    private void updateDisplay(JTextPane textPane, String text) {
+        textPane.setText(text);
+        StyledDocument doc = textPane.getStyledDocument();
         
         // 기본 스타일 적용
         doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
@@ -344,13 +314,13 @@ public class home extends JFrame implements KeyListener {
     private void selectCurrentMenu() {
         switch (selectedMenu) {
             case 0: // 게임 시작
-                showGameScreen();
+                screenController.showScreen("game");
                 break;
             case 1: // 스코어 보기
-                showScoreScreen();
+                screenController.showScreen("score");
                 break;
             case 2: // 설정
-                showSettingScreen();
+                screenController.showScreen("setting");
                 break;
             case 3: // 종료
                 showExitConfirmation();
@@ -358,33 +328,60 @@ public class home extends JFrame implements KeyListener {
         }
     }
     
+    private boolean isExitConfirmMode = false;
+    
     private void showExitConfirmation() {
+        isExitConfirmMode = true;
         StringBuilder sb = new StringBuilder();
         sb.append("\n\n\n");
         sb.append("════════════════════════════════════════\n");
-        sb.append("게임 종료\n");
+        sb.append("         게임 종료 확인\n");
         sb.append("════════════════════════════════════════\n\n");
-        sb.append("정말로 게임을 종료하시겠습니까?\n\n");
-        sb.append("Y: 종료    N: 취소\n\n");
-        sb.append("════════════════════════════════════════\n");
-        sb.append("감사합니다!\n");
+        sb.append("정말로 게임을 종료하시겠습니까?\n\n\n");
+        sb.append("   Y: 종료    N: 취소\n\n\n");
         sb.append("════════════════════════════════════════\n");
         
-        updateDisplay(sb.toString());
-        
-        // 임시로 바로 종료 (Y/N 입력 구현 가능)
-        new Thread(() -> {
-            try {
-                Thread.sleep(1500);
-                System.exit(0);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        if (currentTextPane != null) {
+            updateDisplay(currentTextPane, sb.toString());
+        }
     }
     
+    private void handleExitConfirm(boolean confirm) {
+        isExitConfirmMode = false;
+        if (confirm) {
+            // 종료 메시지 표시
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n\n\n\n\n");
+            sb.append("════════════════════════════════════════\n");
+            sb.append("      테트리스를 플레이해 주셔서\n");
+            sb.append("           감사합니다!\n");
+            sb.append("════════════════════════════════════════\n");
+            
+            if (currentTextPane != null) {
+                updateDisplay(currentTextPane, sb.toString());
+            }
+            
+            // 1초 후 종료
+            new Thread(() -> {
+                try {
+                    Thread.sleep(1000);
+                    System.exit(0);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        } else {
+            // 취소 - 홈 화면으로 돌아가기
+            if (currentTextPane != null) {
+                drawHomeScreen(currentTextPane);
+            }
+        }
+    }
+    
+    /*
+    // 이제 ScreenController를 통해 네비게이션하므로 이 메소드들은 불필요
     private void showGameScreen() {
-        setVisible(false);
+        // setVisible(false); // TODO: ScreenController 패턴에서는 불필요
         // 모듈화된 게임 화면 사용
         JFrame gameFrame = new JFrame("5조 테트리스 - 게임");
         gameFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -401,7 +398,7 @@ public class home extends JFrame implements KeyListener {
         gameFrame.setResizable(false);
         
         // 모듈화된 game 패널 추가
-        se.tetris.team5.screen.game gamePanel = new se.tetris.team5.screen.game(this);
+        se.tetris.team5.screens.game gamePanel = new se.tetris.team5.screens.game(screenController);
         gameFrame.add(gamePanel);
         
         gameFrame.setVisible(true);
@@ -409,27 +406,49 @@ public class home extends JFrame implements KeyListener {
     }
     
     private void showScoreScreen() {
-        setVisible(false);
+        // setVisible(false); // TODO: ScreenController 패턴에서는 불필요
         score scoreWindow = new score();
         scoreWindow.setVisible(true);
     }
     
     private void showSettingScreen() {
-        setVisible(false);
+        // setVisible(false); // TODO: ScreenController 패턴에서는 불필요
         setting settingWindow = new setting();
         settingWindow.setVisible(true);
     }
+    */
 
     @Override
     public void keyPressed(KeyEvent e) {
+        e.consume(); // 이벤트 소비하여 전파 방지
+        
+        // 종료 확인 모드일 때
+        if (isExitConfirmMode) {
+            switch (e.getKeyCode()) {
+                case KeyEvent.VK_Y:
+                    handleExitConfirm(true);
+                    break;
+                case KeyEvent.VK_N:
+                case KeyEvent.VK_ESCAPE:
+                    handleExitConfirm(false);
+                    break;
+            }
+            return;
+        }
+        
+        // 일반 메뉴 모드일 때
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
                 selectedMenu = (selectedMenu - 1 + menuOptions.length) % menuOptions.length;
-                drawHomeScreen();
+                if (currentTextPane != null) {
+                    drawHomeScreen(currentTextPane);
+                }
                 break;
             case KeyEvent.VK_DOWN:
                 selectedMenu = (selectedMenu + 1) % menuOptions.length;
-                drawHomeScreen();
+                if (currentTextPane != null) {
+                    drawHomeScreen(currentTextPane);
+                }
                 break;
             case KeyEvent.VK_ENTER:
                 selectCurrentMenu();
