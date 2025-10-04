@@ -1,4 +1,4 @@
-package se.tetris.team5.component.home;
+package se.tetris.team5.components.home;
 
 /**
  * 홈 화면의 제목을 담당하는 컴포넌트 클래스

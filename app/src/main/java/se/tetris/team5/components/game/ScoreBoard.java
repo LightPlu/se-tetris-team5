@@ -1,4 +1,4 @@
-package se.tetris.team5.component.game;
+package se.tetris.team5.components.game;
 
 import java.awt.BorderLayout;
 import java.awt.Color;

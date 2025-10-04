@@ -1,27 +1,22 @@
-package se.tetris.team5.screen;
+package se.tetris.team5.screens;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-import javax.swing.BorderFactory;
-import javax.swing.JFrame;
 import javax.swing.JTextPane;
-import javax.swing.border.CompoundBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
-import se.tetris.team5.util.GameSettings;
+import se.tetris.team5.utils.setting.GameSettings;
+import se.tetris.team5.ScreenController;
 
-public class setting extends JFrame {
+public class setting {
     
-    private static final long serialVersionUID = 1L;
-    
-    private JTextPane pane;
+    private ScreenController screenController;
+    private JTextPane currentTextPane;
     private SimpleAttributeSet styleSet;
-    private KeyListener keyListener;
     private GameSettings gameSettings;
     
     private int selectedOption = 0;
@@ -50,27 +45,11 @@ public class setting extends JFrame {
     private String[] keyActionKeys = {"down", "left", "right", "rotate", "drop", "pause"};
     private int currentKeyIndex = 0;
     
-    public setting() {
-        super("5조 테트리스 - 설정");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    public setting(ScreenController screenController) {
+        this.screenController = screenController;
         
         gameSettings = GameSettings.getInstance();
         initializeCurrentSettings();
-        
-        // 화면 설정
-        pane = new JTextPane();
-        pane.setEditable(false);
-        pane.setBackground(Color.BLACK);
-        CompoundBorder border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY, 10),
-                BorderFactory.createLineBorder(Color.DARK_GRAY, 5));
-        pane.setBorder(border);
-        this.getContentPane().add(pane, BorderLayout.CENTER);
-        
-        // 창 크기 설정
-        setSize(500, 650);
-        setResizable(false);
-        setLocationRelativeTo(null);
         
         // 텍스트 스타일 설정
         styleSet = new SimpleAttributeSet();
@@ -79,14 +58,12 @@ public class setting extends JFrame {
         StyleConstants.setBold(styleSet, true);
         StyleConstants.setForeground(styleSet, Color.WHITE);
         StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
-        
-        // 키 리스너 설정
-        keyListener = new SettingKeyListener();
-        addKeyListener(keyListener);
-        setFocusable(true);
-        requestFocus();
-        
-        // 화면 그리기
+    }
+    
+    public void display(JTextPane textPane) {
+        this.currentTextPane = textPane;
+        textPane.setBackground(Color.BLACK);
+        textPane.addKeyListener(new SettingKeyListener());
         drawSettingScreen();
     }
     
@@ -203,19 +180,22 @@ public class setting extends JFrame {
     }
     
     private void updateDisplay(String text) {
-        pane.setText(text);
-        StyledDocument doc = pane.getStyledDocument();
-        doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
-        doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
-        
-        // 선택된 항목 색상 변경
-        if (text.contains("►") && text.contains("◄")) {
-            int startIndex = text.indexOf("►");
-            int endIndex = text.indexOf("◄", startIndex) + 1;
-            if (startIndex != -1 && endIndex != -1) {
-                SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
-                StyleConstants.setForeground(selectedStyle, Color.YELLOW);
-                doc.setCharacterAttributes(startIndex, endIndex - startIndex, selectedStyle, false);
+        if (currentTextPane != null) {
+            currentTextPane.setText(text);
+            StyledDocument doc = currentTextPane.getStyledDocument();
+            doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
+            doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
+            
+            // 선택된 항목 색상 변경
+            if (text.contains("►") && text.contains("◄")) {
+                int startIndex = text.indexOf("►");
+                int endIndex = text.indexOf("◄") + 1;
+                if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+                    SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
+                    StyleConstants.setForeground(selectedStyle, Color.YELLOW);
+                    StyleConstants.setBold(selectedStyle, true);
+                    doc.setCharacterAttributes(startIndex, endIndex - startIndex, selectedStyle, false);
+                }
             }
         }
     }
@@ -249,8 +229,8 @@ public class setting extends JFrame {
                 showConfirmation("기본 설정으로 복원되었습니다!");
                 break;
             case 7: // 뒤로 가기
-                setVisible(false);
-                new se.tetris.team5.screen.home();
+                // ScreenController를 통해 홈으로 돌아가기
+                screenController.showScreen("home");
                 break;
         }
     }
@@ -285,8 +265,9 @@ public class setting extends JFrame {
         String[] sizeParts = windowSizeValues[currentSizeIndex].split("x");
         int width = Integer.parseInt(sizeParts[0]);
         int height = Integer.parseInt(sizeParts[1]);
-        setSize(width, height);
-        setLocationRelativeTo(null); // 화면 중앙에 재배치
+        // ScreenController 패턴에서는 창 크기 변경이 불필요
+        // setSize(width, height);
+        // setLocationRelativeTo(null); // 화면 중앙에 재배치
     }
     
     private void showConfirmation(String message) {
@@ -315,10 +296,14 @@ public class setting extends JFrame {
     
     public class SettingKeyListener implements KeyListener {
         @Override
-        public void keyTyped(KeyEvent e) {}
+        public void keyTyped(KeyEvent e) {
+            e.consume(); // 이벤트 소비
+        }
 
         @Override
         public void keyPressed(KeyEvent e) {
+            e.consume(); // 이벤트 소비하여 전파 방지
+            
             if (currentKeyAction.isEmpty()) {
                 // 일반 메뉴 모드
                 switch(e.getKeyCode()) {
@@ -363,8 +348,8 @@ public class setting extends JFrame {
                             isKeySettingMode = false;
                             drawSettingScreen();
                         } else {
-                            setVisible(false);
-                            new se.tetris.team5.screen.home();
+                            // ScreenController를 통해 홈으로 돌아가기
+                            screenController.showScreen("home");
                         }
                         break;
                 }
@@ -383,6 +368,8 @@ public class setting extends JFrame {
         }
 
         @Override
-        public void keyReleased(KeyEvent e) {}
+        public void keyReleased(KeyEvent e) {
+            e.consume(); // 이벤트 소비
+        }
     }
 }

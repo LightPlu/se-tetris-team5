@@ -1,4 +1,4 @@
-package se.tetris.team5.screen;
+package se.tetris.team5.screens;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -9,11 +9,13 @@ import java.awt.event.KeyListener;
 import java.util.Random;
 
 import javax.swing.JPanel;
+import javax.swing.JTextPane;
 import javax.swing.Timer;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
+import se.tetris.team5.ScreenController;
 import se.tetris.team5.blocks.Block;
 import se.tetris.team5.blocks.IBlock;
 import se.tetris.team5.blocks.JBlock;
@@ -22,10 +24,10 @@ import se.tetris.team5.blocks.OBlock;
 import se.tetris.team5.blocks.SBlock;
 import se.tetris.team5.blocks.TBlock;
 import se.tetris.team5.blocks.ZBlock;
-import se.tetris.team5.component.game.GameBoard;
-import se.tetris.team5.component.game.NextBlockBoard;
-import se.tetris.team5.component.game.ScoreBoard;
-import se.tetris.team5.util.ScoreManager;
+import se.tetris.team5.components.game.GameBoard;
+import se.tetris.team5.components.game.NextBlockBoard;
+import se.tetris.team5.components.game.ScoreBoard;
+import se.tetris.team5.utils.score.ScoreManager;
 
 public class game extends JPanel implements KeyListener {
 
@@ -36,7 +38,7 @@ public class game extends JPanel implements KeyListener {
   public static final int WIDTH = GameBoard.WIDTH;
   public static final char BORDER_CHAR = GameBoard.BORDER_CHAR;
 
-  private home parentHome;
+  private ScreenController screenController;
   
   // UI 컴포넌트들
   private GameBoard gameBoard;
@@ -66,14 +68,20 @@ public class game extends JPanel implements KeyListener {
 
   private static final int initInterval = 1000;
 
-  public game(home parent) {
-    this.parentHome = parent;
+  public game(ScreenController screenController) {
+    this.screenController = screenController;
     setLayout(new BorderLayout());
     setBackground(Color.BLACK);
 
     initComponents();
     setFocusable(true);
     addKeyListener(this);
+  }
+  
+  // ScreenController의 display 패턴을 위한 메서드 (사용하지 않지만 호환성 유지)
+  public void display(JTextPane textPane) {
+    // 이 메서드는 game이 JPanel이므로 직접 화면에 추가되기 때문에 사용하지 않음
+    // 하지만 ScreenController 패턴 호환성을 위해 유지
   }
 
   private void initComponents() {
@@ -634,8 +642,8 @@ public class game extends JPanel implements KeyListener {
     String playerName = "Player"; // 기본 플레이어 이름 (추후 입력 받도록 개선 가능)
     scoreManager.addScore(playerName, currentScore, level, linesCleared, playTime);
 
-    // 게임 화면을 벗어나서 홈 화면으로 돌아가기
-    parentHome.showHomeScreen();
+    // ScreenController를 통해 홈 화면으로 돌아가기
+    screenController.showScreen("home");
   }
 
   @Override
@@ -659,11 +667,8 @@ public class game extends JPanel implements KeyListener {
             timer.stop();
             isPaused = false;
             pauseMenuIndex = 0;
-            // 부모 윈도우로 포커스 전환 후 홈 화면 표시
-            parentHome.setVisible(true);
-            parentHome.showHomeScreen();
-            // 현재 게임 패널을 숨김
-            setVisible(false);
+            // ScreenController를 통해 홈으로 돌아가기
+            screenController.showScreen("home");
           }
           break;
         case KeyEvent.VK_ESCAPE:
