@@ -1,6 +1,10 @@
 ### SE 2025 Team Project Tetris - Team 5
 2025년 2학기 소프트웨어 공학 5팀
 
+
+<img width="612" height="622" alt="image" src="https://github.com/user-attachments/assets/9ff91c63-2074-493f-8df8-1343f2a11fc9" />
+
+
 PULL REQUEST
 ---
 name: Pull Request
