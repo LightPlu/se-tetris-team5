@@ -325,6 +325,113 @@ public class game extends JPanel implements KeyListener {
   }
 
   /**
+   * 블록을 회전시키는 메서드 (Wall Kick 포함)
+   */
+  protected void rotateBlock() {
+    // 원본 블록 상태 저장
+    Block originalBlock = copyBlock(curr);
+    int originalX = x;
+    int originalY = y;
+    
+    // 블록 회전 시도
+    curr.rotate();
+    
+    // Wall Kick 오프셋 배열 (시도할 위치 조정값들)
+    // 오른쪽, 왼쪽, 위, 아래 순서로 시도
+    int[][] wallKickOffsets = {
+      {0, 0},   // 현재 위치에서 회전 가능한지 먼저 확인
+      {-1, 0},  // 왼쪽으로 1칸 이동
+      {1, 0},   // 오른쪽으로 1칸 이동
+      {0, -1},  // 위로 1칸 이동
+      {-3, 0},  // 왼쪽으로 3칸 이동 (I블록 등을 위해)
+      {2, 0},   // 오른쪽으로 2칸 이동
+      {0, 1},   // 아래로 1칸 이동
+      {-1, -1}, // 왼쪽 위 대각선
+      {1, -1},  // 오른쪽 위 대각선
+    };
+    
+    // Wall Kick 시도
+    boolean rotationSuccessful = false;
+    for (int[] offset : wallKickOffsets) {
+      int testX = originalX + offset[0];
+      int testY = originalY + offset[1];
+      
+      if (canMove(testX, testY, curr)) {
+        // 회전 성공
+        x = testX;
+        y = testY;
+        rotationSuccessful = true;
+        break;
+      }
+    }
+    
+    // 모든 Wall Kick 시도가 실패하면 원래 상태로 복원
+    if (!rotationSuccessful) {
+      curr = originalBlock;
+      x = originalX;
+      y = originalY;
+    }
+  }
+  
+  /**
+   * 블록 복사 메서드 (회전 상태 복사)
+   */
+  private Block copyBlock(Block original) {
+    // 블록 타입에 따라 새 인스턴스 생성
+    Block copy = null;
+    
+    if (original instanceof IBlock) {
+      copy = new IBlock();
+    } else if (original instanceof JBlock) {
+      copy = new JBlock();
+    } else if (original instanceof LBlock) {
+      copy = new LBlock();
+    } else if (original instanceof OBlock) {
+      copy = new OBlock();
+    } else if (original instanceof SBlock) {
+      copy = new SBlock();
+    } else if (original instanceof TBlock) {
+      copy = new TBlock();
+    } else if (original instanceof ZBlock) {
+      copy = new ZBlock();
+    }
+    
+    if (copy != null) {
+      // 현재 블록의 회전 상태를 복사하기 위해 블록의 크기와 모양을 비교
+      // 각 블록마다 최대 4번 회전하면 원래 상태로 돌아오므로 4번까지만 시도
+      for (int rotations = 0; rotations < 4; rotations++) {
+        if (isSameShape(copy, original)) {
+          break;
+        }
+        copy.rotate();
+      }
+    }
+    
+    return copy;
+  }
+  
+  /**
+   * 두 블록의 모양이 같은지 비교하는 메서드
+   */
+  private boolean isSameShape(Block block1, Block block2) {
+    // 크기가 다르면 다른 모양
+    if (block1.width() != block2.width() || block1.height() != block2.height()) {
+      return false;
+    }
+    
+    // 각 위치의 값을 비교
+    for (int i = 0; i < block1.width(); i++) {
+      for (int j = 0; j < block1.height(); j++) {
+        if (block1.getShape(i, j) != block2.getShape(i, j)) {
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  }
+
+  /**
    * 모든 보드를 업데이트합니다
    */
   private void updateAllBoards() {
@@ -697,14 +804,7 @@ public class game extends JPanel implements KeyListener {
         break;
       case KeyEvent.VK_UP:
         eraseCurr();
-        curr.rotate();
-        // 회전 후 위치가 유효한지 확인
-        if (!canMove(x, y, curr)) {
-          // 회전이 불가능하면 다시 되돌림
-          curr.rotate();
-          curr.rotate();
-          curr.rotate();
-        }
+        rotateBlock();
         placeBlock();
         drawBoard();
         break;
