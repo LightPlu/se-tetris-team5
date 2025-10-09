@@ -8,7 +8,7 @@ import java.awt.Color;
 public class BoardManager {
     
     // 보드 크기 상수
-    public static final int HEIGHT = 19;
+    public static final int HEIGHT = 20;
     public static final int WIDTH = 10;
     public static final char BORDER_CHAR = 'X';
     

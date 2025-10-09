@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run App (UTF-8)",
+      "request": "launch",
+      "mainClass": "se.tetris.team5.App",
+      "vmArgs": "-Dfile.encoding=UTF-8"
+    }
+  ]
+}

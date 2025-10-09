@@ -24,11 +24,15 @@ hs_err_pid*
 replay_pid*
 
 # IDE files
-.vscode/
+.vscode/*
 .idea/
 *.iml
 *.ipr
 *.iws
+
+# Keep VSCode settings
+!.vscode/settings.json
+!.vscode/launch.json
 
 # Eclipse files
 .eclipse

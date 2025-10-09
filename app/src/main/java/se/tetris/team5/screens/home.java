@@ -111,13 +111,15 @@ public class home implements KeyListener {
     private void drawMenu(StringBuilder sb) {
         String menuHeader = getMenuHeader();
         sb.append(menuHeader).append("\n");
+        sb.append("\n");
+        
         
         // 메뉴 옵션들
         for(int i = 0; i < menuOptions.length; i++) {
             if(i == selectedMenu) {
                 sb.append("►►  ");
             } else {
-                sb.append("   ");
+                sb.append("");
             }
             
             // 메뉴 아이콘 추가
@@ -139,6 +141,9 @@ public class home implements KeyListener {
             if(i == selectedMenu && currentWindowSize != Title.WindowSize.SMALL) {
                 sb.append("💬 ").append(menuDescriptions[i]).append("\n");
             }
+            else {
+            sb.append("\n");
+            }
             sb.append("\n");
         }
         
@@ -152,14 +157,14 @@ public class home implements KeyListener {
     private String getMenuHeader() {
         switch (currentWindowSize) {
             case SMALL:
-                return "◆═══════ 메뉴 ═══════◆";
+                return "◆══════ 메뉴 ═══════◆";
             case MEDIUM:
                 return "◆════════════ 메뉴 ════════════◆";
             case LARGE:
-                return "◆═══════════════ 메뉴 ═══════════════◆";
+                return "◆═══════════════ 메뉴 ════════════════◆";
             case XLARGE:
             default:
-                return "◆═══════════════════ 메뉴 ═══════════════════◆";
+                return "◆══════════════════ 메뉴 ═══════════════════◆";
         }
     }
     
@@ -335,7 +340,7 @@ public class home implements KeyListener {
         StringBuilder sb = new StringBuilder();
         sb.append("\n\n\n");
         sb.append("════════════════════════════════════════\n");
-        sb.append("         게임 종료 확인\n");
+        sb.append("게임 종료 확인\n");
         sb.append("════════════════════════════════════════\n\n");
         sb.append("정말로 게임을 종료하시겠습니까?\n\n\n");
         sb.append("   Y: 종료    N: 취소\n\n\n");
@@ -353,8 +358,8 @@ public class home implements KeyListener {
             StringBuilder sb = new StringBuilder();
             sb.append("\n\n\n\n\n");
             sb.append("════════════════════════════════════════\n");
-            sb.append("      테트리스를 플레이해 주셔서\n");
-            sb.append("           감사합니다!\n");
+            sb.append("테트리스를 플레이해 주셔서\n");
+            sb.append("감사합니다!\n");
             sb.append("════════════════════════════════════════\n");
             
             if (currentTextPane != null) {
