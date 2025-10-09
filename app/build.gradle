@@ -19,7 +19,7 @@ repositories {
 dependencies {
     // This dependency is used by the application.
     implementation libs.guava
-    
+
     // Annotation processor configuration to resolve build issues
     annotationProcessor libs.guava
 }
@@ -44,4 +44,17 @@ java {
 application {
     // Define the main class for the application.
     mainClass = 'se.tetris.team5.App'
+}
+
+/* ✅ 팀 전체 UTF-8 인코딩 강제 설정 (운영체제 무관) */
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs "-Dfile.encoding=UTF-8"
+}
+
+tasks.withType(Test) {
+    systemProperty "file.encoding", "UTF-8"
 }
