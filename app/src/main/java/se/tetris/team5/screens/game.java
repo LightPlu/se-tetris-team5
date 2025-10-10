@@ -6,7 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.Random;
 
 import javax.swing.JPanel;
 import javax.swing.JTextPane;
@@ -17,16 +16,12 @@ import javax.swing.text.StyledDocument;
 
 import se.tetris.team5.ScreenController;
 import se.tetris.team5.blocks.Block;
-import se.tetris.team5.blocks.IBlock;
-import se.tetris.team5.blocks.JBlock;
-import se.tetris.team5.blocks.LBlock;
-import se.tetris.team5.blocks.OBlock;
-import se.tetris.team5.blocks.SBlock;
-import se.tetris.team5.blocks.TBlock;
-import se.tetris.team5.blocks.ZBlock;
+import se.tetris.team5.gamelogic.block.BlockRotationManager;
+import se.tetris.team5.gamelogic.GameEngine;
 import se.tetris.team5.components.game.GameBoard;
 import se.tetris.team5.components.game.NextBlockBoard;
 import se.tetris.team5.components.game.ScoreBoard;
+import se.tetris.team5.components.game.BoardManager;
 import se.tetris.team5.utils.score.ScoreManager;
 
 public class game extends JPanel implements KeyListener {
@@ -39,15 +34,21 @@ public class game extends JPanel implements KeyListener {
   public static final char BORDER_CHAR = GameBoard.BORDER_CHAR;
 
   private ScreenController screenController;
-  
+
   // UI 컴포넌트들
   private GameBoard gameBoard;
   private NextBlockBoard nextBlockBoard;
   private ScoreBoard scoreBoard;
-  
-  // 게임 상태 관리
-  private int[][] board;
-  private Color[][] boardColors;
+
+  // 게임 엔진 (순수 게임 로직)
+  private GameEngine gameEngine;
+
+  // 게임 보드 관리
+  private BoardManager boardManager;
+
+  // 블록 회전 관리 (UI에서 회전 시 사용)
+  private BlockRotationManager rotationManager;
+
   private SimpleAttributeSet styleSet; // 텍스트 스타일 설정
   private Timer timer; // 블록 자동 낙하 타이머
   private Block curr; // 현재 움직이는 블록
@@ -64,7 +65,7 @@ public class game extends JPanel implements KeyListener {
   // 일시정지 관련 변수
   private boolean isPaused = false;
   private int pauseMenuIndex = 0; // 0: 게임 계속, 1: 메뉴로 나가기
-  private String[] pauseMenuOptions = {"게임 계속", "메뉴로 나가기"};
+  private String[] pauseMenuOptions = { "게임 계속", "메뉴로 나가기" };
 
   private static final int initInterval = 1000;
 
@@ -77,7 +78,7 @@ public class game extends JPanel implements KeyListener {
     setFocusable(true);
     addKeyListener(this);
   }
-  
+
   // ScreenController의 display 패턴을 위한 메서드 (사용하지 않지만 호환성 유지)
   public void display(JTextPane textPane) {
     // 이 메서드는 game이 JPanel이므로 직접 화면에 추가되기 때문에 사용하지 않음
@@ -87,23 +88,23 @@ public class game extends JPanel implements KeyListener {
   private void initComponents() {
     // 전체 레이아웃 설정
     setLayout(new BorderLayout());
-    
+
     // 게임 보드 (왼쪽)
     gameBoard = new GameBoard();
     add(gameBoard, BorderLayout.CENTER);
-    
+
     // 오른쪽 패널 (다음 블록 + 점수)
     JPanel rightPanel = new JPanel(new BorderLayout());
     rightPanel.setBackground(Color.BLACK);
-    
+
     // 다음 블록 보드 (오른쪽 위)
     nextBlockBoard = new NextBlockBoard();
     rightPanel.add(nextBlockBoard, BorderLayout.NORTH);
-    
+
     // 점수 보드 (오른쪽 아래)
     scoreBoard = new ScoreBoard();
     rightPanel.add(scoreBoard, BorderLayout.CENTER);
-    
+
     add(rightPanel, BorderLayout.EAST);
 
     // Document default style.
@@ -114,6 +115,15 @@ public class game extends JPanel implements KeyListener {
     StyleConstants.setForeground(styleSet, Color.WHITE);
     StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
 
+    // Initialize GameEngine
+    gameEngine = new GameEngine(HEIGHT, WIDTH);
+    
+    // BoardManager는 GameEngine에서 가져오기
+    boardManager = gameEngine.getBoardManager();
+
+    // Initialize BlockRotationManager
+    rotationManager = new BlockRotationManager();
+
     // Set timer for block drops.
     timer = new Timer(initInterval, new ActionListener() {
       @Override
@@ -123,205 +133,93 @@ public class game extends JPanel implements KeyListener {
       }
     });
 
-    // Initialize game board data
-    board = new int[HEIGHT][WIDTH];
-    boardColors = new Color[HEIGHT][WIDTH];
-
     // 게임 시작 시간 설정
-    gameStartTime = System.currentTimeMillis();
+    gameStartTime = gameEngine.getGameStartTime();
 
-    // Create the first block and next block
-    curr = getRandomBlock();
-    next = getRandomBlock();
-    placeBlock();
+    // GameEngine에서 블록 정보 가져오기
+    curr = gameEngine.getCurrentBlock();
+    next = gameEngine.getNextBlock();
+    x = gameEngine.getX();
+    y = gameEngine.getY();
     updateAllBoards();
     timer.start();
   }
 
-  private Block getRandomBlock() {
-    Random rnd = new Random(System.currentTimeMillis());
-    int block = rnd.nextInt(7); // 0~6까지 7개 블록
-    switch (block) {
-      case 0:
-        return new IBlock();
-      case 1:
-        return new JBlock();
-      case 2:
-        return new LBlock();
-      case 3:
-        return new ZBlock();
-      case 4:
-        return new SBlock();
-      case 5:
-        return new TBlock();
-      case 6:
-        return new OBlock();
-    }
-    return new LBlock();
-  }
-
-  private void placeBlock() {
-    // 보드 배열 업데이트만 수행 (색상은 drawBoard에서 처리)
-    for (int j = 0; j < curr.height(); j++) {
-      for (int i = 0; i < curr.width(); i++) {
-        if (y + j >= 0 && y + j < HEIGHT && x + i >= 0 && x + i < WIDTH) {
-          if (curr.getShape(i, j) == 1) {
-            board[y + j][x + i] = 2; // 움직이는 블록은 값 2로 설정
-            boardColors[y + j][x + i] = curr.getColor(); // 색상 정보도 저장
-          }
-        }
-      }
-    }
-  }
-
-  private void eraseCurr() {
-    for (int i = x; i < x + curr.width(); i++) {
-      for (int j = y; j < y + curr.height(); j++) {
-        if (curr.getShape(i - x, j - y) == 1) {
-          // 배열 경계 검사를 추가
-          if (j >= 0 && j < HEIGHT && i >= 0 && i < WIDTH) {
-            // 움직이는 블록(값 2)만 지우고, 고정된 블록(값 1)은 지우지 않음
-            if (board[j][i] == 2) {
-              board[j][i] = 0;
-              boardColors[j][i] = null; // 색상 정보도 제거
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 블록이 주어진 위치로 이동할 수 있는지 확인하는 메서드
-  private boolean canMove(int newX, int newY, Block block) {
-    // 경계 검사
-    if (newX < 0 || newX + block.width() > WIDTH ||
-        newY + block.height() > HEIGHT) {
-      return false;
-    }
-
-    // 상단 경계는 허용 (블록이 위에서 시작할 수 있도록)
-    if (newY < 0) {
-      // 블록의 일부가 보드 위에 있어도 되지만, 보드 안쪽 부분만 검사
-      for (int i = 0; i < block.width(); i++) {
-        for (int j = 0; j < block.height(); j++) {
-          if (block.getShape(i, j) == 1 && newY + j >= 0) {
-            if (board[newY + j][newX + i] == 1) {
-              return false;
-            }
-          }
-        }
-      }
-      return true;
-    }
-
-    // 고정된 블록과의 충돌 검사
-    for (int i = 0; i < block.width(); i++) {
-      for (int j = 0; j < block.height(); j++) {
-        if (block.getShape(i, j) == 1) { // 블록의 실제 부분만 검사
-          if (board[newY + j][newX + i] == 1) {
-            return false; // 이미 고정된 블록이 있음
-          }
-        }
-      }
-    }
-    return true;
-  }
-
-  // 현재 블록을 보드에 영구적으로 고정하는 메서드
-  private void fixBlock() {
-    for (int i = 0; i < curr.width(); i++) {
-      for (int j = 0; j < curr.height(); j++) {
-        if (curr.getShape(i, j) == 1 && y + j >= 0 && y + j < HEIGHT && x + i >= 0 && x + i < WIDTH) {
-          board[y + j][x + i] = 1; // 움직이는 블록을 고정된 블록으로 변환
-          boardColors[y + j][x + i] = curr.getColor(); // 색상도 고정
-        }
-      }
-    }
-  }
-
   protected void moveDown() {
-    eraseCurr();
-
-    // 한 칸 아래로 이동할 수 있는지 확인
-    if (canMove(x, y + 1, curr)) {
-      y++;
-      currentScore += 1; // 블록이 한 칸 내려갈 때마다 1점 증가
-      placeBlock();
+    if (gameEngine.moveBlockDown()) {
+      // 블록이 정상적으로 이동했을 때
+      currentScore += 1; // 소프트 드롭 점수
     } else {
-      // 더 이상 내려갈 수 없으면 현재 위치에 블록을 고정
-      // 먼저 현재 위치에 블록을 다시 그리기
-      placeBlock();
-      fixBlock();
-
-      // 가득 찬 줄이 있는지 확인하고 제거
-      clearLines();
-
-      // 새로운 블록 생성 (다음 블록을 현재 블록으로)
-      curr = next;
-      next = getRandomBlock();
-      x = 3;
-      y = 0;
-
-      // 게임 오버 체크 (새 블록이 시작 위치에 놓일 수 없는 경우)
-      if (!canMove(x, y, curr)) {
-        // 게임 오버 처리
+      // 블록이 고정되고 새 블록이 생성된 경우
+      // 줄 제거 점수는 GameEngine에서 처리됨
+      currentScore = gameEngine.getGameScoring().getCurrentScore();
+      linesCleared = gameEngine.getGameScoring().getLinesCleared();
+      
+      // 레벨 업 체크
+      int newLevel = (linesCleared / 10) + 1;
+      if (newLevel != level) {
+        level = newLevel;
+        // 속도 증가 (레벨이 올라갈 때마다 타이머 간격 단축)
+        int newInterval = Math.max(100, initInterval - ((level - 1) * 100));
+        timer.setDelay(newInterval);
+      }
+      
+      // 다음 블록 정보 업데이트
+      curr = gameEngine.getCurrentBlock();
+      next = gameEngine.getNextBlock();
+      x = gameEngine.getX();
+      y = gameEngine.getY();
+      
+      // 게임 오버 체크
+      if (gameEngine.isGameOver()) {
         gameOver();
         return;
       }
-
-      placeBlock();
     }
   }
 
   protected void moveRight() {
-    eraseCurr();
-    if (canMove(x + 1, y, curr)) {
-      x++;
-    }
-    placeBlock();
+    gameEngine.moveBlockRight();
+    // 블록 위치 동기화
+    curr = gameEngine.getCurrentBlock();
+    x = gameEngine.getX();
+    y = gameEngine.getY();
   }
 
   protected void moveLeft() {
-    eraseCurr();
-    if (canMove(x - 1, y, curr)) {
-      x--;
-    }
-    placeBlock();
+    gameEngine.moveBlockLeft();
+    // 블록 위치 동기화
+    curr = gameEngine.getCurrentBlock();
+    x = gameEngine.getX();
+    y = gameEngine.getY();
   }
 
   protected void hardDrop() {
-    eraseCurr();
-    
-    // 블록이 바닥에 닿을 때까지 y 좌표를 증가시킴
-    int dropDistance = 0;
-    while (canMove(x, y + 1, curr)) {
-      y++;
-      dropDistance++;
+    if (gameEngine.hardDrop()) {
+      // 점수 동기화
+      currentScore = gameEngine.getGameScoring().getCurrentScore();
+      linesCleared = gameEngine.getGameScoring().getLinesCleared();
+      
+      // 레벨 업 체크
+      int newLevel = gameEngine.getGameScoring().getLevel();
+      if (newLevel != level) {
+        level = newLevel;
+        // 속도 증가
+        timer.setDelay(gameEngine.getGameScoring().getTimerInterval());
+      }
+      
+      // 블록 위치 동기화
+      curr = gameEngine.getCurrentBlock();
+      next = gameEngine.getNextBlock();
+      x = gameEngine.getX();
+      y = gameEngine.getY();
+      
+      // 게임 오버 체크
+      if (gameEngine.isGameOver()) {
+        gameOver();
+        return;
+      }
     }
-    
-    // 하드드롭 시 떨어진 거리만큼 보너스 점수 (거리 * 2점)
-    currentScore += dropDistance * 2;
-    
-    placeBlock();
-    fixBlock();
-    
-    // 가득 찬 줄이 있는지 확인하고 제거
-    clearLines();
-    
-    // 새로운 블록 생성 (다음 블록을 현재 블록으로)
-    curr = next;
-    next = getRandomBlock();
-    x = 3;
-    y = 0;
-    
-    // 게임 오버 체크 (새 블록이 시작 위치에 놓일 수 없는 경우)
-    if (!canMove(x, y, curr)) {
-      // 게임 오버 처리
-      gameOver();
-      return;
-    }
-    
-    placeBlock();
   }
 
   /**
@@ -332,31 +230,31 @@ public class game extends JPanel implements KeyListener {
     Block originalBlock = copyBlock(curr);
     int originalX = x;
     int originalY = y;
-    
+
     // 블록 회전 시도
     curr.rotate();
-    
+
     // Wall Kick 오프셋 배열 (시도할 위치 조정값들)
     // 오른쪽, 왼쪽, 위, 아래 순서로 시도
     int[][] wallKickOffsets = {
-      {0, 0},   // 현재 위치에서 회전 가능한지 먼저 확인
-      {-1, 0},  // 왼쪽으로 1칸 이동
-      {1, 0},   // 오른쪽으로 1칸 이동
-      {0, -1},  // 위로 1칸 이동
-      {-3, 0},  // 왼쪽으로 3칸 이동 (I블록 등을 위해)
-      {2, 0},   // 오른쪽으로 2칸 이동
-      {0, 1},   // 아래로 1칸 이동
-      {-1, -1}, // 왼쪽 위 대각선
-      {1, -1},  // 오른쪽 위 대각선
+        { 0, 0 }, // 현재 위치에서 회전 가능한지 먼저 확인
+        { -1, 0 }, // 왼쪽으로 1칸 이동
+        { 1, 0 }, // 오른쪽으로 1칸 이동
+        { 0, -1 }, // 위로 1칸 이동
+        { -3, 0 }, // 왼쪽으로 3칸 이동 (I블록 등을 위해)
+        { 2, 0 }, // 오른쪽으로 2칸 이동
+        { 0, 1 }, // 아래로 1칸 이동
+        { -1, -1 }, // 왼쪽 위 대각선
+        { 1, -1 }, // 오른쪽 위 대각선
     };
-    
+
     // Wall Kick 시도
     boolean rotationSuccessful = false;
     for (int[] offset : wallKickOffsets) {
       int testX = originalX + offset[0];
       int testY = originalY + offset[1];
-      
-      if (canMove(testX, testY, curr)) {
+
+      if (boardManager.canMove(testX, testY, curr)) {
         // 회전 성공
         x = testX;
         y = testY;
@@ -364,7 +262,7 @@ public class game extends JPanel implements KeyListener {
         break;
       }
     }
-    
+
     // 모든 Wall Kick 시도가 실패하면 원래 상태로 복원
     if (!rotationSuccessful) {
       curr = originalBlock;
@@ -372,63 +270,12 @@ public class game extends JPanel implements KeyListener {
       y = originalY;
     }
   }
-  
+
   /**
    * 블록 복사 메서드 (회전 상태 복사)
    */
   private Block copyBlock(Block original) {
-    // 블록 타입에 따라 새 인스턴스 생성
-    Block copy = null;
-    
-    if (original instanceof IBlock) {
-      copy = new IBlock();
-    } else if (original instanceof JBlock) {
-      copy = new JBlock();
-    } else if (original instanceof LBlock) {
-      copy = new LBlock();
-    } else if (original instanceof OBlock) {
-      copy = new OBlock();
-    } else if (original instanceof SBlock) {
-      copy = new SBlock();
-    } else if (original instanceof TBlock) {
-      copy = new TBlock();
-    } else if (original instanceof ZBlock) {
-      copy = new ZBlock();
-    }
-    
-    if (copy != null) {
-      // 현재 블록의 회전 상태를 복사하기 위해 블록의 크기와 모양을 비교
-      // 각 블록마다 최대 4번 회전하면 원래 상태로 돌아오므로 4번까지만 시도
-      for (int rotations = 0; rotations < 4; rotations++) {
-        if (isSameShape(copy, original)) {
-          break;
-        }
-        copy.rotate();
-      }
-    }
-    
-    return copy;
-  }
-  
-  /**
-   * 두 블록의 모양이 같은지 비교하는 메서드
-   */
-  private boolean isSameShape(Block block1, Block block2) {
-    // 크기가 다르면 다른 모양
-    if (block1.width() != block2.width() || block1.height() != block2.height()) {
-      return false;
-    }
-    
-    // 각 위치의 값을 비교
-    for (int i = 0; i < block1.width(); i++) {
-      for (int j = 0; j < block1.height(); j++) {
-        if (block1.getShape(i, j) != block2.getShape(i, j)) {
-          return false;
-        }
-      }
-    }
-    
-    return true;
+    return rotationManager.copyBlock(original);
   }
 
   /**
@@ -439,7 +286,7 @@ public class game extends JPanel implements KeyListener {
     updateScoreBoard();
     updateNextBlockBoard();
   }
-  
+
   /**
    * 게임 보드를 업데이트합니다
    */
@@ -451,7 +298,11 @@ public class game extends JPanel implements KeyListener {
       sb.append(BORDER_CHAR);
     }
     sb.append("\n");
-    
+
+    // BoardManager에서 보드 정보 가져오기
+    int[][] board = boardManager.getBoard();
+    Color[][] boardColors = boardManager.getBoardColors();
+
     for (int i = 0; i < board.length; i++) {
       sb.append(BORDER_CHAR);
       for (int j = 0; j < board[i].length; j++) {
@@ -464,7 +315,7 @@ public class game extends JPanel implements KeyListener {
       sb.append(BORDER_CHAR);
       sb.append("\n");
     }
-    
+
     for (int t = 0; t < WIDTH + 2; t++) {
       sb.append(BORDER_CHAR);
     }
@@ -499,7 +350,7 @@ public class game extends JPanel implements KeyListener {
       textOffset += WIDTH + 3; // 다음 줄로 이동 (테두리 2개 + 줄바꿈 1개)
     }
   }
-  
+
   /**
    * 점수 보드를 업데이트합니다
    */
@@ -515,19 +366,19 @@ public class game extends JPanel implements KeyListener {
     sb.append("←→: 이동\n");
     sb.append("Space: 하드 드롭\n");
     sb.append("ESC: 나가기\n");
-    
+
     scoreBoard.getTextPane().setText(sb.toString());
     scoreBoard.getTextPane().getStyledDocument().setCharacterAttributes(
-        0, scoreBoard.getTextPane().getDocument().getLength(), 
+        0, scoreBoard.getTextPane().getDocument().getLength(),
         scoreBoard.getStyleSet(), false);
   }
-  
+
   /**
    * 다음 블록 보드를 업데이트합니다
    */
   private void updateNextBlockBoard() {
     StringBuilder sb = new StringBuilder();
-    
+
     if (next != null) {
       // 4x4 크기의 블록 표시 영역
       for (int row = 0; row < 4; row++) {
@@ -546,14 +397,14 @@ public class game extends JPanel implements KeyListener {
         sb.append("    \n");
       }
     }
-    
+
     nextBlockBoard.getTextPane().setText(sb.toString());
     StyledDocument doc = nextBlockBoard.getTextPane().getStyledDocument();
-    
+
     // 기본 스타일 적용
     SimpleAttributeSet baseStyle = new SimpleAttributeSet(nextBlockBoard.getStyleSet());
     doc.setCharacterAttributes(0, doc.getLength(), baseStyle, false);
-    
+
     // 다음 블록에 색상 적용
     if (next != null) {
       int textOffset = 0;
@@ -562,7 +413,7 @@ public class game extends JPanel implements KeyListener {
           if (row < next.height() && col < next.width() && next.getShape(col, row) == 1) {
             SimpleAttributeSet colorStyle = new SimpleAttributeSet(baseStyle);
             StyleConstants.setForeground(colorStyle, next.getColor());
-            
+
             int charPos = textOffset + col;
             if (charPos < doc.getLength()) {
               doc.setCharacterAttributes(charPos, 1, colorStyle, false);
@@ -573,14 +424,14 @@ public class game extends JPanel implements KeyListener {
       }
     }
   }
-  
+
   /**
    * 호환성을 위한 drawBoard 메서드
    */
   public void drawBoard() {
     updateAllBoards();
   }
-  
+
   /**
    * 게임을 일시정지합니다
    */
@@ -589,7 +440,7 @@ public class game extends JPanel implements KeyListener {
     timer.stop();
     drawPauseMenu();
   }
-  
+
   /**
    * 게임을 재개합니다
    */
@@ -599,17 +450,17 @@ public class game extends JPanel implements KeyListener {
     timer.start();
     updateAllBoards(); // 게임 화면 복원
   }
-  
+
   /**
    * 일시정지 메뉴를 그립니다 (단순한 디자인)
    */
   private void drawPauseMenu() {
     StringBuilder sb = new StringBuilder();
-    
+
     // 단순한 일시정지 화면
     sb.append("\n\n\n\n\n");
     sb.append("          === 게임 일시정지 ===\n\n");
-    
+
     // 메뉴 옵션들 (단순하게)
     for (int i = 0; i < pauseMenuOptions.length; i++) {
       sb.append("          ");
@@ -621,14 +472,14 @@ public class game extends JPanel implements KeyListener {
       sb.append(pauseMenuOptions[i]);
       sb.append("\n\n");
     }
-    
+
     sb.append("\n");
     sb.append("     ↑↓: 선택    Enter: 확인    ESC: 계속\n");
-    
+
     // 게임 보드에 일시정지 메뉴 표시
     gameBoard.setText(sb.toString());
     StyledDocument doc = gameBoard.getStyledDocument();
-    
+
     // 기본 스타일 적용
     SimpleAttributeSet baseStyle = new SimpleAttributeSet();
     StyleConstants.setForeground(baseStyle, Color.WHITE);
@@ -636,10 +487,10 @@ public class game extends JPanel implements KeyListener {
     StyleConstants.setFontFamily(baseStyle, "Courier New");
     StyleConstants.setBold(baseStyle, true);
     StyleConstants.setAlignment(baseStyle, StyleConstants.ALIGN_CENTER);
-    
+
     doc.setCharacterAttributes(0, doc.getLength(), baseStyle, false);
     doc.setParagraphAttributes(0, doc.getLength(), baseStyle, false);
-    
+
     // 선택된 메뉴 항목을 노란색으로 강조
     String text = sb.toString();
     String selectedOption = "> " + pauseMenuOptions[pauseMenuIndex];
@@ -651,90 +502,22 @@ public class game extends JPanel implements KeyListener {
     }
   }
 
-  // 가득 찬 줄을 제거하는 메서드
-  private void clearLines() {
-    int clearedLinesCount = 0; // 한 번에 제거된 줄 수 카운트
-
-    for (int row = HEIGHT - 1; row >= 0; row--) {
-      // 현재 줄이 가득 찼는지 확인 (고정된 블록만 고려)
-      boolean fullLine = true;
-      for (int col = 0; col < WIDTH; col++) {
-        if (board[row][col] != 1) { // 고정된 블록(값 1)만 고려
-          fullLine = false;
-          break;
-        }
-      }
-
-      // 가득 찬 줄이 있으면 제거하고 위의 줄들을 아래로 내림
-      if (fullLine) {
-        clearedLinesCount++; // 제거된 줄 수 증가
-
-        // 현재 줄부터 위의 모든 줄을 한 줄씩 아래로 이동
-        for (int moveRow = row; moveRow > 0; moveRow--) {
-          for (int col = 0; col < WIDTH; col++) {
-            board[moveRow][col] = board[moveRow - 1][col];
-            boardColors[moveRow][col] = boardColors[moveRow - 1][col];
-          }
-        }
-        // 맨 위 줄은 빈 줄로 만듦
-        for (int col = 0; col < WIDTH; col++) {
-          board[0][col] = 0;
-          boardColors[0][col] = null;
-        }
-        // 같은 줄을 다시 검사해야 하므로 row를 증가시킴
-        row++;
-      }
-    }
-
-    // 제거된 줄 수에 따른 점수 증가
-    if (clearedLinesCount > 0) {
-      linesCleared += clearedLinesCount;
-
-      switch (clearedLinesCount) {
-        case 1:
-          currentScore += 100; // 1줄 제거: 100점
-          break;
-        case 2:
-          currentScore += 300; // 2줄 제거: 300점
-          break;
-        case 3:
-          currentScore += 500; // 3줄 제거: 500점
-          break;
-        case 4:
-          currentScore += 800; // 4줄 제거: 800점 (테트리스)
-          break;
-        default:
-          currentScore += clearedLinesCount * 100; // 그 외의 경우
-          break;
-      }
-
-      // 레벨 업 체크 (10줄마다 레벨 증가)
-      int newLevel = (linesCleared / 10) + 1;
-      if (newLevel > level) {
-        level = newLevel;
-        // 레벨이 올라갈 때마다 게임 속도 증가
-        int newInterval = Math.max(100, initInterval - ((level - 1) * 100));
-        timer.setDelay(newInterval);
-      }
-    }
-  }
-
   public void reset() {
-    // 보드 리셋
-    board = new int[HEIGHT][WIDTH];
-    boardColors = new Color[HEIGHT][WIDTH];
+    // GameEngine을 통해 게임 리셋
+    gameEngine.resetGame();
     
-    this.currentScore = 0;
-    this.linesCleared = 0;
-    this.level = 1;
-    this.gameStartTime = System.currentTimeMillis();
+    // UI 상태 동기화
+    currentScore = gameEngine.getGameScoring().getCurrentScore();
+    linesCleared = gameEngine.getGameScoring().getLinesCleared();
+    level = gameEngine.getGameScoring().getLevel();
+    gameStartTime = gameEngine.getGameStartTime();
 
-    // 새 블록 생성 및 게임 재시작
-    curr = getRandomBlock();
-    next = getRandomBlock();
-    x = 3;
-    y = 0;
-    placeBlock();
+    // 블록 위치 동기화
+    curr = gameEngine.getCurrentBlock();
+    next = gameEngine.getNextBlock();
+    x = gameEngine.getX();
+    y = gameEngine.getY();
+    
     updateAllBoards();
   }
 
@@ -784,7 +567,7 @@ public class game extends JPanel implements KeyListener {
       }
       return; // 일시정지 상태에서는 다른 키 무시
     }
-    
+
     // 게임 진행 중일 때의 키 처리
     switch (e.getKeyCode()) {
       case KeyEvent.VK_ESCAPE:
@@ -803,9 +586,9 @@ public class game extends JPanel implements KeyListener {
         drawBoard();
         break;
       case KeyEvent.VK_UP:
-        eraseCurr();
+        boardManager.eraseBlock(curr, x, y);
         rotateBlock();
-        placeBlock();
+        boardManager.placeBlock(curr, x, y);
         drawBoard();
         break;
       case KeyEvent.VK_SPACE:
