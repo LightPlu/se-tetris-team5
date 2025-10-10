@@ -107,7 +107,8 @@ public class setting {
                     sb.append(": ").append(windowSizes[currentSizeIndex]);
                     break;
                 case 1: // 게임 속도
-                    sb.append(": ").append(gameSettings.getGameSpeed()).append("/10");
+                    int speed = gameSettings.getGameSpeed();
+                    sb.append(": ").append(gameSettings.getGameSpeedName(speed));
                     break;
                 case 2: // 키 설정
                     sb.append(" >");
@@ -186,13 +187,16 @@ public class setting {
             doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
             doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
             
-            // 선택된 항목 색상 변경
+            // 선택된 항목 색상 변경 (색맹 모드 대응)
             if (text.contains("►") && text.contains("◄")) {
                 int startIndex = text.indexOf("►");
                 int endIndex = text.indexOf("◄") + 1;
                 if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
                     SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
-                    StyleConstants.setForeground(selectedStyle, Color.YELLOW);
+                    // 색맹 모드일 때는 구별하기 쉬운 밝은 노란색, 일반 모드일 때는 초록색
+                    Color highlightColor = gameSettings.isColorblindMode() ? 
+                        new Color(240, 228, 66) : Color.GREEN;
+                    StyleConstants.setForeground(selectedStyle, highlightColor);
                     StyleConstants.setBold(selectedStyle, true);
                     doc.setCharacterAttributes(startIndex, endIndex - startIndex, selectedStyle, false);
                 }
@@ -213,6 +217,8 @@ public class setting {
                 break;
             case 3: // 색맹 모드
                 gameSettings.setColorblindMode(!gameSettings.isColorblindMode());
+                // 게임 화면의 색상도 업데이트
+                updateGameColors();
                 drawSettingScreen();
                 break;
             case 4: // 음향 효과
@@ -251,23 +257,105 @@ public class setting {
                 break;
             case 1: // 게임 속도
                 int speed = gameSettings.getGameSpeed();
-                if (isRight && speed < 10) {
+                if (isRight && speed < 5) {
                     gameSettings.setGameSpeed(speed + 1);
                 } else if (!isRight && speed > 1) {
                     gameSettings.setGameSpeed(speed - 1);
                 }
+                // 게임 속도 변경을 게임에 즉시 적용
+                updateGameSpeed();
                 break;
         }
         drawSettingScreen();
     }
     
     private void applySizeChange() {
-        String[] sizeParts = windowSizeValues[currentSizeIndex].split("x");
-        int width = Integer.parseInt(sizeParts[0]);
-        int height = Integer.parseInt(sizeParts[1]);
-        // ScreenController 패턴에서는 창 크기 변경이 불필요
-        // setSize(width, height);
-        // setLocationRelativeTo(null); // 화면 중앙에 재배치
+        // ScreenController를 통해 창 크기 업데이트
+        screenController.updateWindowSize();
+        
+        // 창 크기 변경 후 잠시 후 화면 다시 그리기 (포커스 복원을 위해)
+        new Thread(() -> {
+            try {
+                Thread.sleep(100); // 100ms 지연
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    drawSettingScreen();
+                    // 포커스 복원
+                    if (currentTextPane != null) {
+                        currentTextPane.requestFocusInWindow();
+                    }
+                });
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    
+    private void updateGameColors() {
+        // 현재 화면이 게임 화면인지 확인하고 색상 업데이트
+        String currentScreen = screenController.getCurrentScreen();
+        if ("game".equals(currentScreen)) {
+            // game 화면의 색상 업데이트 메소드 호출
+            try {
+                // ScreenController를 통해 game 인스턴스에 접근
+                java.lang.reflect.Field[] fields = screenController.getClass().getDeclaredFields();
+                for (java.lang.reflect.Field field : fields) {
+                    if (field.getName().equals("gameScreen")) {
+                        field.setAccessible(true);
+                        se.tetris.team5.screens.game gameInstance = (se.tetris.team5.screens.game) field.get(screenController);
+                        if (gameInstance != null) {
+                            gameInstance.updateColorsForColorblindMode();
+                        }
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                // 리플렉션 실패 시 무시
+                e.printStackTrace();
+            }
+        }
+        
+        // 설정 화면 자체의 색상도 업데이트
+        updateSettingColors();
+    }
+    
+    private void updateGameSpeed() {
+        // 현재 화면이 게임 화면인지 확인하고 속도 업데이트
+        String currentScreen = screenController.getCurrentScreen();
+        if ("game".equals(currentScreen)) {
+            // game 화면의 속도 업데이트 메소드 호출
+            try {
+                // ScreenController를 통해 game 인스턴스에 접근
+                java.lang.reflect.Field[] fields = screenController.getClass().getDeclaredFields();
+                for (java.lang.reflect.Field field : fields) {
+                    if (field.getName().equals("gameScreen")) {
+                        field.setAccessible(true);
+                        se.tetris.team5.screens.game gameInstance = (se.tetris.team5.screens.game) field.get(screenController);
+                        if (gameInstance != null) {
+                            gameInstance.updateGameSpeed();
+                        }
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                // 리플렉션 실패 시 무시
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void updateSettingColors() {
+        // 설정 화면의 색상을 색맹 모드에 맞게 업데이트
+        GameSettings settings = GameSettings.getInstance();
+        
+        // 스타일 색상 업데이트
+        if (styleSet != null) {
+            StyleConstants.setForeground(styleSet, settings.getUIColor("text"));
+        }
+        
+        // 배경색 업데이트
+        if (currentTextPane != null) {
+            currentTextPane.setBackground(settings.getUIColor("background"));
+        }
     }
     
     private void showConfirmation(String message) {
@@ -288,6 +376,70 @@ public class setting {
             try {
                 Thread.sleep(2000);
                 drawSettingScreen();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    
+    private void showKeyWarning(String message) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\n\n");
+        sb.append("═══════════════════════════════════\n");
+        sb.append("         경고\n");
+        sb.append("═══════════════════════════════════\n\n");
+        sb.append("   ").append(message).append("\n\n");
+        sb.append("═══════════════════════════════════\n");
+        sb.append("아무 키나 눌러 계속하세요...\n");
+        sb.append("═══════════════════════════════════\n");
+        
+        updateDisplay(sb.toString());
+        
+        // 2초 후 자동으로 키 설정 화면으로 돌아가기
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+                currentKeyAction = "";
+                drawKeySettingScreen();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    
+    private String findConflictingAction(int keyCode, String currentAction) {
+        String[] actions = {"down", "left", "right", "rotate", "drop", "pause"};
+        String[] actionNames = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "일시정지"};
+        
+        for (int i = 0; i < actions.length; i++) {
+            if (!actions[i].equals(currentAction)) {
+                if (gameSettings.getKeyCode(actions[i]) == keyCode) {
+                    return actionNames[i];
+                }
+            }
+        }
+        return null;
+    }
+    
+    private void showKeyConflictWarning(String conflictAction, String keyName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\n\n");
+        sb.append("═══════════════════════════════════\n");
+        sb.append("         키 중복 알림\n");
+        sb.append("═══════════════════════════════════\n\n");
+        sb.append("   '").append(keyName).append("' 키가 '").append(conflictAction).append("'에서\n");
+        sb.append("   제거되고 현재 기능에 할당됩니다.\n\n");
+        sb.append("═══════════════════════════════════\n");
+        sb.append("아무 키나 눌러 계속하세요...\n");
+        sb.append("═══════════════════════════════════\n");
+        
+        updateDisplay(sb.toString());
+        
+        // 3초 후 자동으로 키 설정 화면으로 돌아가기
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+                drawKeySettingScreen();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -360,7 +512,22 @@ public class setting {
                     drawKeySettingScreen();
                 } else {
                     // 새로운 키 설정
-                    gameSettings.setKeyCode(keyActionKeys[currentKeyIndex], e.getKeyCode());
+                    int newKeyCode = e.getKeyCode();
+                    
+                    // 설정 인터페이스에 필수적인 키만 제한
+                    if (newKeyCode == KeyEvent.VK_ESCAPE || newKeyCode == KeyEvent.VK_ENTER) {
+                        // 제한된 키에 대한 경고 메시지
+                        showKeyWarning("ESC와 Enter키는 설정할 수 없습니다.");
+                        return;
+                    }
+                    
+                    // 중복된 키가 있는지 확인하고 사용자에게 알림
+                    String conflictAction = findConflictingAction(newKeyCode, keyActionKeys[currentKeyIndex]);
+                    if (conflictAction != null) {
+                        showKeyConflictWarning(conflictAction, gameSettings.getKeyName(newKeyCode));
+                    }
+                    
+                    gameSettings.setKeyCode(keyActionKeys[currentKeyIndex], newKeyCode);
                     currentKeyAction = "";
                     drawKeySettingScreen();
                 }

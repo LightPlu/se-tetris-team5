@@ -66,7 +66,21 @@ public class game extends JPanel implements KeyListener {
   private int pauseMenuIndex = 0; // 0: 게임 계속, 1: 메뉴로 나가기
   private String[] pauseMenuOptions = {"게임 계속", "메뉴로 나가기"};
 
-  private static final int initInterval = 1000;
+  // 게임 속도 설정에 따른 초기 간격 계산 메소드
+  private int getInitialInterval() {
+    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+    int gameSpeed = settings.getGameSpeed(); // 1-5 범위
+    
+    // 각 속도별 간격 (더 체감되도록 큰 차이)
+    switch (gameSpeed) {
+        case 1: return 2000; // 매우느림: 2초
+        case 2: return 1200; // 느림: 1.2초
+        case 3: return 800;  // 보통: 0.8초
+        case 4: return 400;  // 빠름: 0.4초
+        case 5: return 150;  // 매우빠름: 0.15초
+        default: return 800; // 기본값 (보통)
+    }
+  }
 
   public game(ScreenController screenController) {
     this.screenController = screenController;
@@ -115,7 +129,7 @@ public class game extends JPanel implements KeyListener {
     StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
 
     // Set timer for block drops.
-    timer = new Timer(initInterval, new ActionListener() {
+    timer = new Timer(getInitialInterval(), new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
         moveDown();
@@ -713,7 +727,8 @@ public class game extends JPanel implements KeyListener {
       if (newLevel > level) {
         level = newLevel;
         // 레벨이 올라갈 때마다 게임 속도 증가
-        int newInterval = Math.max(100, initInterval - ((level - 1) * 100));
+        int baseInterval = getInitialInterval();
+        int newInterval = Math.max(100, baseInterval - ((level - 1) * 100));
         timer.setDelay(newInterval);
       }
     }
@@ -736,6 +751,9 @@ public class game extends JPanel implements KeyListener {
     y = 0;
     placeBlock();
     updateAllBoards();
+    
+    // 게임 속도 초기화
+    updateGameSpeed();
   }
 
   private void gameOver() {
@@ -755,6 +773,15 @@ public class game extends JPanel implements KeyListener {
 
   @Override
   public void keyPressed(KeyEvent e) {
+    // GameSettings에서 키 코드 가져오기
+    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+    int downKey = settings.getKeyCode("down");
+    int leftKey = settings.getKeyCode("left");
+    int rightKey = settings.getKeyCode("right");
+    int rotateKey = settings.getKeyCode("rotate");
+    int dropKey = settings.getKeyCode("drop");
+    int pauseKey = settings.getKeyCode("pause");
+    
     // 일시정지 상태일 때의 키 처리
     if (isPaused) {
       switch (e.getKeyCode()) {
@@ -782,36 +809,44 @@ public class game extends JPanel implements KeyListener {
           resumeGame(); // ESC로도 게임 계속할 수 있게
           break;
       }
+      
+      // 일시정지 상태에서도 설정된 일시정지 키로 게임 재개 가능
+      if (pauseKey != -1 && e.getKeyCode() == pauseKey) {
+        resumeGame();
+      }
+      
       return; // 일시정지 상태에서는 다른 키 무시
     }
     
-    // 게임 진행 중일 때의 키 처리
-    switch (e.getKeyCode()) {
-      case KeyEvent.VK_ESCAPE:
-        pauseGame();
-        break;
-      case KeyEvent.VK_DOWN:
-        moveDown();
-        drawBoard();
-        break;
-      case KeyEvent.VK_RIGHT:
-        moveRight();
-        drawBoard();
-        break;
-      case KeyEvent.VK_LEFT:
-        moveLeft();
-        drawBoard();
-        break;
-      case KeyEvent.VK_UP:
-        eraseCurr();
-        rotateBlock();
-        placeBlock();
-        drawBoard();
-        break;
-      case KeyEvent.VK_SPACE:
-        hardDrop();
-        drawBoard();
-        break;
+    // 게임 진행 중일 때의 키 처리 - 설정된 키 사용
+    int keyCode = e.getKeyCode();
+    
+    // ESC는 항상 일시정지
+    if (keyCode == KeyEvent.VK_ESCAPE) {
+      pauseGame();
+      return;
+    }
+    
+    // 설정된 키들 처리
+    if (downKey != -1 && keyCode == downKey) {
+      moveDown();
+      drawBoard();
+    } else if (rightKey != -1 && keyCode == rightKey) {
+      moveRight();
+      drawBoard();
+    } else if (leftKey != -1 && keyCode == leftKey) {
+      moveLeft();
+      drawBoard();
+    } else if (rotateKey != -1 && keyCode == rotateKey) {
+      eraseCurr();
+      rotateBlock();
+      placeBlock();
+      drawBoard();
+    } else if (dropKey != -1 && keyCode == dropKey) {
+      hardDrop();
+      drawBoard();
+    } else if (pauseKey != -1 && keyCode == pauseKey) {
+      pauseGame();
     }
   }
 
@@ -821,5 +856,70 @@ public class game extends JPanel implements KeyListener {
 
   @Override
   public void keyReleased(KeyEvent e) {
+  }
+  
+  // 색맹 모드 변경 시 모든 색상 업데이트
+  public void updateColorsForColorblindMode() {
+    // 현재 블록과 다음 블록의 색상 업데이트
+    if (curr != null) {
+      curr.updateColor();
+    }
+    if (next != null) {
+      next.updateColor();
+    }
+    
+    // 보드에 고정된 블록들의 색상 업데이트
+    updateBoardColors();
+    
+    // 화면 다시 그리기
+    updateAllBoards();
+  }
+  
+  // 게임 속도 변경 시 타이머 간격 업데이트
+  public void updateGameSpeed() {
+    if (timer != null && !isPaused) {
+      int baseInterval = getInitialInterval();
+      int newInterval = Math.max(100, baseInterval - ((level - 1) * 100));
+      timer.setDelay(newInterval);
+    }
+  }
+  
+  // 보드에 고정된 블록들의 색상을 색맹 모드에 맞게 업데이트
+  private void updateBoardColors() {
+    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+    
+    for (int i = 0; i < HEIGHT; i++) {
+      for (int j = 0; j < WIDTH; j++) {
+        if (board[i][j] == 2 && boardColors[i][j] != null) {
+          // 기존 색상을 바탕으로 블록 타입을 추정하고 새로운 색상 적용
+          String blockType = guessBlockTypeFromColor(boardColors[i][j]);
+          boardColors[i][j] = settings.getColorForBlock(blockType);
+        }
+      }
+    }
+  }
+  
+  // 색상을 바탕으로 블록 타입을 추정하는 헬퍼 메소드
+  private String guessBlockTypeFromColor(Color color) {
+    // 기본 색상을 바탕으로 블록 타입 추정
+    if (color.equals(Color.CYAN)) return "I";
+    if (color.equals(Color.YELLOW)) return "O";
+    if (color.equals(Color.MAGENTA)) return "T";
+    if (color.equals(Color.ORANGE)) return "L";
+    if (color.equals(Color.BLUE)) return "J";
+    if (color.equals(Color.GREEN)) return "S";
+    if (color.equals(Color.RED)) return "Z";
+    
+    // 색맹 모드 색상들도 체크
+    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+    if (color.equals(settings.getColorForBlock("I"))) return "I";
+    if (color.equals(settings.getColorForBlock("O"))) return "O";
+    if (color.equals(settings.getColorForBlock("T"))) return "T";
+    if (color.equals(settings.getColorForBlock("L"))) return "L";
+    if (color.equals(settings.getColorForBlock("J"))) return "J";
+    if (color.equals(settings.getColorForBlock("S"))) return "S";
+    if (color.equals(settings.getColorForBlock("Z"))) return "Z";
+    
+    return "O"; // 기본값
   }
 }

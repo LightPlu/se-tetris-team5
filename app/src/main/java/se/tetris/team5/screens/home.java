@@ -76,13 +76,19 @@ public class home implements KeyListener {
         StyleConstants.setFontFamily(styleSet, selectedFont);
         
         StyleConstants.setBold(styleSet, true);
-        StyleConstants.setForeground(styleSet, Color.WHITE);
+        
+        // 색맹 모드에 따른 색상 설정
+        GameSettings gameSettings = GameSettings.getInstance();
+        StyleConstants.setForeground(styleSet, gameSettings.getUIColor("text"));
         StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
     }
     
     public void display(JTextPane textPane) {
         this.currentTextPane = textPane; // textPane 저장
-        textPane.setBackground(Color.BLACK);
+        
+        // 색맹 모드에 따른 배경색 설정
+        GameSettings gameSettings = GameSettings.getInstance();
+        textPane.setBackground(gameSettings.getUIColor("background"));
         textPane.addKeyListener(this); // KeyListener 추가
         drawHomeScreen(textPane);
     }
@@ -255,12 +261,16 @@ public class home implements KeyListener {
         
 
         
-        // 선택된 메뉴 강조
+        // 선택된 메뉴 강조 (색맹 모드 대응)
+        GameSettings gameSettings = GameSettings.getInstance();
         String selectedText = "►►  " + getMenuIcon(selectedMenu) + menuOptions[selectedMenu] + "  ◄◄";
         int selectedIndex = text.indexOf(selectedText);
         if (selectedIndex != -1) {
             SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
-            StyleConstants.setForeground(selectedStyle, Color.GREEN);
+            // 색맹 모드일 때는 구별하기 쉬운 밝은 노란색, 일반 모드일 때는 초록색
+            Color highlightColor = gameSettings.isColorblindMode() ? 
+                new Color(240, 228, 66) : Color.GREEN; // 색맹 모드: 밝은 노란색, 일반: 초록색
+            StyleConstants.setForeground(selectedStyle, highlightColor);
             StyleConstants.setBold(selectedStyle, true);
             doc.setCharacterAttributes(selectedIndex, selectedText.length(), selectedStyle, false);
         }
@@ -270,7 +280,10 @@ public class home implements KeyListener {
         int descIndex = text.indexOf(descText);
         if (descIndex != -1) {
             SimpleAttributeSet descStyle = new SimpleAttributeSet(styleSet);
-            StyleConstants.setForeground(descStyle, Color.LIGHT_GRAY);
+            // 색맹 모드에서도 읽기 쉬운 회색 사용
+            Color descColor = gameSettings.isColorblindMode() ? 
+                new Color(180, 180, 180) : Color.LIGHT_GRAY;
+            StyleConstants.setForeground(descStyle, descColor);
             StyleConstants.setItalic(descStyle, true);
             doc.setCharacterAttributes(descIndex, descText.length(), descStyle, false);
         }
@@ -290,13 +303,15 @@ public class home implements KeyListener {
     }
     
     private void applyEmojiColors(StyledDocument doc, String text) {
+        GameSettings gameSettings = GameSettings.getInstance();
+        
         // 구분선 색상
         String[] separators = {"═══════════", "───────────"};
         for (String sep : separators) {
             int index = 0;
             while ((index = text.indexOf(sep, index)) != -1) {
                 SimpleAttributeSet sepStyle = new SimpleAttributeSet(styleSet);
-                StyleConstants.setForeground(sepStyle, Color.GRAY);
+                StyleConstants.setForeground(sepStyle, gameSettings.getUIColor("border"));
                 doc.setCharacterAttributes(index, sep.length(), sepStyle, false);
                 index += sep.length();
             }
@@ -308,7 +323,10 @@ public class home implements KeyListener {
             int index = text.indexOf(section);
             if (index != -1) {
                 SimpleAttributeSet sectionStyle = new SimpleAttributeSet(styleSet);
-                StyleConstants.setForeground(sectionStyle, Color.ORANGE);
+                // 색맹 모드에서는 주황색 대신 구별하기 쉬운 색상 사용
+                Color sectionColor = gameSettings.isColorblindMode() ? 
+                    new Color(230, 159, 0) : Color.ORANGE; // 더 진한 주황색
+                StyleConstants.setForeground(sectionStyle, sectionColor);
                 doc.setCharacterAttributes(index, section.length(), sectionStyle, false);
             }
         }

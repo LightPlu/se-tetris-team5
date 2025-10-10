@@ -1,7 +1,5 @@
 package se.tetris.team5.blocks;
 
-import java.awt.Color;
-
 public class LBlock extends Block {
 	
 	public LBlock() {
@@ -9,6 +7,7 @@ public class LBlock extends Block {
 			{1, 1, 1},
 			{1, 0, 0}
 		};
-		color = Color.ORANGE;
+		blockType = "L";
+		updateColor();
 	}
 }
