@@ -119,6 +119,9 @@ public class GameSettings {
     }
     
     public int getKeyCode(String action) {
+        if (action == null) {
+            return -1;
+        }
         switch (action) {
             case "down": return Integer.parseInt(properties.getProperty("key.down", "40"));
             case "left": return Integer.parseInt(properties.getProperty("key.left", "37"));
