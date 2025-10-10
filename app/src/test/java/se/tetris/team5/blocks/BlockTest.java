@@ -228,4 +228,175 @@ public class BlockTest {
         }
         return count;
     }
+    
+    // GameSettings 테스트 추가 - 라인 커버리지 향상을 위해
+    @Test
+    public void gameSettingsBasicTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        assertNotNull("GameSettings instance should not be null", settings);
+        
+        // 기본 설정 테스트
+        settings.setDefaultSettings();
+        assertEquals("Default game speed should be 3", 3, settings.getGameSpeed());
+        assertTrue("Default sound should be enabled", settings.isSoundEnabled());
+        assertFalse("Default colorblind mode should be disabled", settings.isColorblindMode());
+    }
+    
+    @Test
+    public void gameSettingsSpeedTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 속도 설정 테스트
+        for (int speed = 1; speed <= 5; speed++) {
+            settings.setGameSpeed(speed);
+            assertEquals("Game speed should be " + speed, speed, settings.getGameSpeed());
+        }
+        
+        // 속도 이름 테스트
+        assertEquals("Speed 1 name should be 매우느림", "매우느림", settings.getGameSpeedName(1));
+        assertEquals("Speed 2 name should be 느림", "느림", settings.getGameSpeedName(2));
+        assertEquals("Speed 3 name should be 보통", "보통", settings.getGameSpeedName(3));
+        assertEquals("Speed 4 name should be 빠름", "빠름", settings.getGameSpeedName(4));
+        assertEquals("Speed 5 name should be 매우빠름", "매우빠름", settings.getGameSpeedName(5));
+        assertEquals("Invalid speed should return 보통", "보통", settings.getGameSpeedName(0));
+    }
+    
+    @Test
+    public void gameSettingsWindowSizeTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 창 크기 설정 테스트
+        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_SMALL);
+        assertEquals("Window size should be SMALL", se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_SMALL, settings.getWindowSize());
+        assertEquals("Small window width should be 350", 350, settings.getWindowWidth());
+        assertEquals("Small window height should be 500", 500, settings.getWindowHeight());
+        
+        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_XLARGE);
+        assertEquals("XLarge window width should be 650", 650, settings.getWindowWidth());
+        assertEquals("XLarge window height should be 800", 800, settings.getWindowHeight());
+    }
+    
+    @Test
+    public void gameSettingsKeyBindingTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 키 바인딩 테스트
+        assertEquals("Default down key should be 40", 40, settings.getKeyCode("down"));
+        assertEquals("Default left key should be 37", 37, settings.getKeyCode("left"));
+        assertEquals("Default right key should be 39", 39, settings.getKeyCode("right"));
+        assertEquals("Default rotate key should be 38", 38, settings.getKeyCode("rotate"));
+        assertEquals("Default drop key should be 32", 32, settings.getKeyCode("drop"));
+        assertEquals("Default pause key should be 80", 80, settings.getKeyCode("pause"));
+        
+        // 잘못된 액션
+        assertEquals("Invalid action should return -1", -1, settings.getKeyCode("invalid"));
+        
+        // 키 변경 테스트
+        settings.setKeyCode("down", 83); // S키
+        assertEquals("Down key should be changed to 83", 83, settings.getKeyCode("down"));
+    }
+    
+    @Test
+    public void gameSettingsColorTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 일반 모드 색상 테스트
+        settings.setColorblindMode(false);
+        assertEquals("I block should be cyan in normal mode", Color.CYAN, settings.getColorForBlock("I"));
+        assertEquals("O block should be yellow in normal mode", Color.YELLOW, settings.getColorForBlock("O"));
+        assertEquals("T block should be magenta in normal mode", Color.MAGENTA, settings.getColorForBlock("T"));
+        assertEquals("L block should be orange in normal mode", Color.ORANGE, settings.getColorForBlock("L"));
+        assertEquals("J block should be blue in normal mode", Color.BLUE, settings.getColorForBlock("J"));
+        assertEquals("S block should be green in normal mode", Color.GREEN, settings.getColorForBlock("S"));
+        assertEquals("Z block should be red in normal mode", Color.RED, settings.getColorForBlock("Z"));
+        assertEquals("Unknown block should be white", Color.WHITE, settings.getColorForBlock("unknown"));
+        
+        // 색맹 모드 색상 테스트
+        settings.setColorblindMode(true);
+        assertEquals("I block should be teal in colorblind mode", new Color(0, 158, 115), settings.getColorForBlock("I"));
+        assertEquals("O block should be yellow in colorblind mode", new Color(240, 228, 66), settings.getColorForBlock("O"));
+        assertEquals("T block should be light purple in colorblind mode", new Color(204, 121, 167), settings.getColorForBlock("T"));
+    }
+    
+    @Test
+    public void gameSettingsUIColorTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 일반 모드 UI 색상
+        settings.setColorblindMode(false);
+        assertEquals("Background should be black", Color.BLACK, settings.getUIColor("background"));
+        assertEquals("Text should be white", Color.WHITE, settings.getUIColor("text"));
+        assertEquals("Highlight should be green in normal mode", Color.GREEN, settings.getUIColor("highlight"));
+        assertEquals("Border should be gray", Color.GRAY, settings.getUIColor("border"));
+        assertEquals("Unknown UI element should be white", Color.WHITE, settings.getUIColor("unknown"));
+        
+        // 색맹 모드 UI 색상
+        settings.setColorblindMode(true);
+        assertEquals("Text should be light gray in colorblind mode", new Color(240, 240, 240), settings.getUIColor("text"));
+        assertEquals("Highlight should be yellow in colorblind mode", new Color(240, 228, 66), settings.getUIColor("highlight"));
+        assertEquals("Border should be gray in colorblind mode", new Color(128, 128, 128), settings.getUIColor("border"));
+    }
+    
+    @Test
+    public void gameSettingsKeyNameTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 특수 키 이름 테스트
+        assertEquals("Arrow left should be ←", "←", settings.getKeyName(37));
+        assertEquals("Arrow up should be ↑", "↑", settings.getKeyName(38));
+        assertEquals("Arrow right should be →", "→", settings.getKeyName(39));
+        assertEquals("Arrow down should be ↓", "↓", settings.getKeyName(40));
+        assertEquals("Space should be Space", "Space", settings.getKeyName(32));
+        assertEquals("P should be P", "P", settings.getKeyName(80));
+        assertEquals("Enter should be Enter", "Enter", settings.getKeyName(10));
+        assertEquals("Esc should be Esc", "Esc", settings.getKeyName(27));
+        assertEquals("Tab should be Tab", "Tab", settings.getKeyName(9));
+        assertEquals("Shift should be Shift", "Shift", settings.getKeyName(16));
+        assertEquals("Ctrl should be Ctrl", "Ctrl", settings.getKeyName(17));
+        assertEquals("Alt should be Alt", "Alt", settings.getKeyName(18));
+        assertEquals("Invalid key should be 없음", "없음", settings.getKeyName(-1));
+        assertEquals("Unknown key should be Key999", "Key999", settings.getKeyName(999));
+        
+        // 알파벳 키 테스트
+        assertEquals("A should be A", "A", settings.getKeyName(65));
+        assertEquals("S should be S", "S", settings.getKeyName(83));
+        assertEquals("W should be W", "W", settings.getKeyName(87));
+        assertEquals("Z should be Z", "Z", settings.getKeyName(90));
+    }
+    
+    @Test
+    public void gameSettingsDuplicateKeyTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 중복 키 처리 테스트
+        settings.setKeyCode("down", 65); // A키로 설정
+        settings.setKeyCode("left", 65); // 같은 A키로 설정
+        
+        // down 키는 -1로 변경되어야 함 (비활성화)
+        assertEquals("Previous key binding should be disabled", -1, settings.getKeyCode("down"));
+        assertEquals("New key binding should be active", 65, settings.getKeyCode("left"));
+    }
+    
+    @Test
+    public void gameSettingsFileOperationsTest() {
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        // 설정 저장/로드 테스트
+        settings.setGameSpeed(5);
+        settings.setColorblindMode(true);
+        settings.setSoundEnabled(false);
+        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_SMALL);
+        
+        // 설정 저장
+        settings.saveSettings();
+        
+        // 설정 로드
+        settings.loadSettings();
+        
+        // 설정이 올바르게 로드되었는지 확인
+        assertEquals("Game speed should be persisted", 5, settings.getGameSpeed());
+        assertTrue("Colorblind mode should be persisted", settings.isColorblindMode());
+        assertFalse("Sound setting should be persisted", settings.isSoundEnabled());
+        assertEquals("Window size should be persisted", se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_SMALL, settings.getWindowSize());
+    }
 }

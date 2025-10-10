@@ -1,7 +1,5 @@
 package se.tetris.team5.blocks;
 
-import java.awt.Color;
-
 public class ZBlock extends Block {
 	
 	public ZBlock() {
@@ -9,6 +7,7 @@ public class ZBlock extends Block {
 			{1, 1, 0},
 			{0, 1, 1}
 		};
-		color = Color.RED;
+		blockType = "Z";
+		updateColor();
 	}
 }

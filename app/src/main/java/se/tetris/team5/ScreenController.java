@@ -30,7 +30,11 @@ public class ScreenController extends JFrame {
     
     private void initializeFrame() {
         setTitle("TETRIS - Team 5");
-        setSize(700, 850); // 창 크기를 크게 설정
+        
+        // GameSettings에서 창 크기 가져오기
+        GameSettings settings = GameSettings.getInstance();
+        setSize(settings.getWindowWidth(), settings.getWindowHeight());
+        
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);

@@ -1,18 +1,21 @@
 package se.tetris.team5.blocks;
 
 import java.awt.Color;
+import se.tetris.team5.utils.setting.GameSettings;
 
 public abstract class Block {
 		
 	protected int[][] shape;
 	protected Color color;
+	protected String blockType; // 블록 타입 식별자
 	
 	public Block() {
 		shape = new int[][]{ 
 				{1, 1}, 
 				{1, 1}
 		};
-		color = Color.YELLOW;
+		blockType = "O"; // 기본값
+		updateColor();
 	}
 	
 	public int getShape(int x, int y) {
@@ -21,6 +24,12 @@ public abstract class Block {
 	
 	public Color getColor() {
 		return color;
+	}
+	
+	// 색상 업데이트 메소드 - 색맹 모드 설정에 따라 색상 변경
+	public void updateColor() {
+		GameSettings settings = GameSettings.getInstance();
+		color = settings.getColorForBlock(blockType);
 	}
 	
 	public void rotate() {

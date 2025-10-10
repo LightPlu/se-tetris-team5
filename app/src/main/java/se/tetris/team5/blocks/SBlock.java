@@ -1,7 +1,5 @@
 package se.tetris.team5.blocks;
 
-import java.awt.Color;
-
 public class SBlock extends Block {
 
 	public SBlock() {
@@ -9,6 +7,7 @@ public class SBlock extends Block {
 			{0, 1, 1},
 			{1, 1, 0}
 		};
-		color = Color.GREEN;
+		blockType = "S";
+		updateColor();
 	}
 }
