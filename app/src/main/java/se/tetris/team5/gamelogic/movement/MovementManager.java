@@ -1,7 +1,7 @@
 package se.tetris.team5.gamelogic.movement;
 
 import se.tetris.team5.blocks.Block;
-import se.tetris.team5.gamelogic.board.BoardManager;
+import se.tetris.team5.components.game.BoardManager;
 
 public class MovementManager {
   private BoardManager boardManager;

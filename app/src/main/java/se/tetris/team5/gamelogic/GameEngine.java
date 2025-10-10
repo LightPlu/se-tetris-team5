@@ -3,7 +3,7 @@ package se.tetris.team5.gamelogic;
 import se.tetris.team5.blocks.Block;
 import se.tetris.team5.gamelogic.block.BlockFactory;
 import se.tetris.team5.gamelogic.block.BlockRotationManager;
-import se.tetris.team5.gamelogic.board.BoardManager;
+import se.tetris.team5.components.game.BoardManager;
 import se.tetris.team5.gamelogic.movement.MovementManager;
 import se.tetris.team5.gamelogic.scoring.GameScoring;
 
@@ -25,7 +25,7 @@ public class GameEngine {
   private static final int START_Y = 0;
 
   public GameEngine(int height, int width) {
-    boardManager = new BoardManager(height, width);
+    boardManager = new BoardManager();
     movementManager = new MovementManager(boardManager);
     rotationManager = new BlockRotationManager();
     blockFactory = new BlockFactory();
@@ -184,7 +184,7 @@ public class GameEngine {
    * 게임을 초기 상태로 리셋합니다
    */
   public void resetGame() {
-    boardManager = new BoardManager(20, 10); // 기본 크기
+    boardManager = new BoardManager(); // 기본 크기
     movementManager = new MovementManager(boardManager);
     gameScoring = new GameScoring();
     blockFactory = new BlockFactory();
