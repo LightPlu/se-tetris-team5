@@ -8,6 +8,13 @@ import se.tetris.team5.gamelogic.movement.MovementManager;
 import se.tetris.team5.gamelogic.scoring.GameScoring;
 
 public class GameEngine {
+  private KeyMappingManager keyMappingManager = KeyMappingManager.getInstance();
+
+  // 타이머 틱마다 호출 (UI 타이머에서 호출 필요)
+  public void onTick() {
+    gameScoring.tickScore();
+  }
+
   private BoardManager boardManager;
   private MovementManager movementManager;
   private BlockRotationManager rotationManager;
@@ -30,6 +37,7 @@ public class GameEngine {
     rotationManager = new BlockRotationManager();
     blockFactory = new BlockFactory();
     gameScoring = new GameScoring();
+    keyMappingManager.updateFromSettings();
 
     startNewGame();
   }
@@ -38,6 +46,7 @@ public class GameEngine {
     boardManager.reset();
     gameScoring.reset();
     gameOver = false;
+    keyMappingManager.updateFromSettings();
 
     currentBlock = blockFactory.createRandomBlock();
     nextBlock = blockFactory.createRandomBlock();
@@ -148,6 +157,10 @@ public class GameEngine {
   }
 
   // Getter methods
+  public KeyMappingManager getKeyMappingManager() {
+    return keyMappingManager;
+  }
+
   public BoardManager getBoardManager() {
     return boardManager;
   }

@@ -23,6 +23,7 @@ import se.tetris.team5.components.game.NextBlockBoard;
 import se.tetris.team5.components.game.ScoreBoard;
 import se.tetris.team5.components.game.BoardManager;
 import se.tetris.team5.utils.score.ScoreManager;
+import se.tetris.team5.gamelogic.KeyMappingManager;
 
 public class game extends JPanel implements KeyListener {
 
@@ -45,7 +46,7 @@ public class game extends JPanel implements KeyListener {
 
   // 게임 보드 관리
   private BoardManager boardManager;
-  
+
   // 블록 팩토리
   private BlockFactory blockFactory;
 
@@ -71,15 +72,21 @@ public class game extends JPanel implements KeyListener {
   private int getInitialInterval() {
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
     int gameSpeed = settings.getGameSpeed(); // 1-5 범위
-    
+
     // 각 속도별 간격 (더 체감되도록 큰 차이)
     switch (gameSpeed) {
-        case 1: return 2000; // 매우느림: 2초
-        case 2: return 1200; // 느림: 1.2초
-        case 3: return 800;  // 보통: 0.8초
-        case 4: return 400;  // 빠름: 0.4초
-        case 5: return 150;  // 매우빠름: 0.15초
-        default: return 800; // 기본값 (보통)
+      case 1:
+        return 2000; // 매우느림: 2초
+      case 2:
+        return 1200; // 느림: 1.2초
+      case 3:
+        return 800; // 보통: 0.8초
+      case 4:
+        return 400; // 빠름: 0.4초
+      case 5:
+        return 150; // 매우빠름: 0.15초
+      default:
+        return 800; // 기본값 (보통)
     }
   }
 
@@ -131,13 +138,13 @@ public class game extends JPanel implements KeyListener {
 
     // Initialize GameEngine
     gameEngine = new GameEngine(HEIGHT, WIDTH);
-    
+
     // BoardManager는 GameEngine에서 가져오기
     boardManager = gameEngine.getBoardManager();
-    
+
     // BlockFactory 초기화
     blockFactory = new BlockFactory();
-    
+
     // 보드 완전 초기화
     boardManager.reset();
 
@@ -158,15 +165,15 @@ public class game extends JPanel implements KeyListener {
     next = blockFactory.createRandomBlock();
     x = 3;
     y = 0;
-    
+
     // 초기 블록을 보드에 배치
     if (curr != null) {
       boardManager.placeBlock(curr, x, y);
     }
-    
+
     syncWithGameEngine();
     updateAllBoards();
-    
+
     // 게임 시작 시 타이머 완전 초기화 (0초부터 시작)
     int userInterval = getInitialInterval();
     timer.setDelay(userInterval);
@@ -177,7 +184,7 @@ public class game extends JPanel implements KeyListener {
   protected void moveDown() {
     // 현재 블록을 보드에서 지우기
     boardManager.eraseBlock(curr, x, y);
-    
+
     // 블록 이동 시도
     if (boardManager.canMove(x, y + 1, curr)) {
       y++;
@@ -185,7 +192,7 @@ public class game extends JPanel implements KeyListener {
     } else {
       // 블록을 고정하고 새 블록 생성
       boardManager.fixBlock(curr, x, y);
-      
+
       // 줄 제거
       int clearedLines = boardManager.clearLines();
       if (clearedLines > 0) {
@@ -193,33 +200,41 @@ public class game extends JPanel implements KeyListener {
         // 줄 제거 점수
         int points = 0;
         switch (clearedLines) {
-          case 1: points = 100 * level; break;
-          case 2: points = 300 * level; break;
-          case 3: points = 500 * level; break;
-          case 4: points = 800 * level; break;
+          case 1:
+            points = 100 * level;
+            break;
+          case 2:
+            points = 300 * level;
+            break;
+          case 3:
+            points = 500 * level;
+            break;
+          case 4:
+            points = 800 * level;
+            break;
         }
         currentScore += points;
       }
-      
+
       // 새 블록 생성
       curr = next;
       // BlockFactory에서 새로운 다음 블록 생성
       next = blockFactory.createRandomBlock();
       x = 3;
       y = 0;
-      
+
       // 게임 오버 체크
       if (!boardManager.canMove(x, y, curr)) {
         gameOver();
         return;
       }
-      
+
       // 레벨 업 체크
       int newLevel = (linesCleared / 10) + 1;
       if (newLevel != level) {
         level = newLevel;
       }
-      
+
       // 새 블록 생성 시 타이머 완전 초기화 (0초부터 다시 시작)
       int userInterval = getInitialInterval(); // 사용자가 설정한 기본 속도
       timer.stop(); // 현재 타이머 정지
@@ -227,7 +242,7 @@ public class game extends JPanel implements KeyListener {
       timer.setInitialDelay(userInterval); // 초기 지연 설정 (바로 실행 방지)
       timer.start(); // 0초부터 새로 시작
     }
-    
+
     // 블록을 새 위치에 배치
     boardManager.placeBlock(curr, x, y);
   }
@@ -247,11 +262,11 @@ public class game extends JPanel implements KeyListener {
     }
     boardManager.placeBlock(curr, x, y);
   }
-  
+
   // GameEngine과 UI 상태를 동기화하는 메서드 (next 블록만)
   private void syncWithGameEngine() {
     next = gameEngine.getNextBlock();
-    
+
     // 블록 색상 업데이트
     if (curr != null) {
       curr.updateColor();
@@ -263,20 +278,20 @@ public class game extends JPanel implements KeyListener {
 
   protected void hardDrop() {
     boardManager.eraseBlock(curr, x, y);
-    
+
     // 하드 드롭 거리 계산
     int dropDistance = 0;
     while (boardManager.canMove(x, y + 1, curr)) {
       y++;
       dropDistance++;
     }
-    
+
     // 하드 드롭 점수
     currentScore += dropDistance * 2;
-    
+
     // 블록 고정
     boardManager.fixBlock(curr, x, y);
-    
+
     // 줄 제거
     int clearedLines = boardManager.clearLines();
     if (clearedLines > 0) {
@@ -284,40 +299,48 @@ public class game extends JPanel implements KeyListener {
       // 줄 제거 점수
       int points = 0;
       switch (clearedLines) {
-        case 1: points = 100 * level; break;
-        case 2: points = 300 * level; break;
-        case 3: points = 500 * level; break;
-        case 4: points = 800 * level; break;
+        case 1:
+          points = 100 * level;
+          break;
+        case 2:
+          points = 300 * level;
+          break;
+        case 3:
+          points = 500 * level;
+          break;
+        case 4:
+          points = 800 * level;
+          break;
       }
       currentScore += points;
     }
-    
+
     // 새 블록 생성
     curr = next;
     // BlockFactory에서 새로운 다음 블록 생성
     next = blockFactory.createRandomBlock();
     x = 3;
     y = 0;
-    
+
     // 게임 오버 체크
     if (!boardManager.canMove(x, y, curr)) {
       gameOver();
       return;
     }
-    
+
     // 레벨 업 체크
     int newLevel = (linesCleared / 10) + 1;
     if (newLevel != level) {
       level = newLevel;
     }
-    
+
     // 하드드롭 후 새 블록 생성 시 타이머 완전 초기화 (0초부터 다시 시작)
     int userInterval = getInitialInterval(); // 사용자가 설정한 기본 속도
     timer.stop(); // 현재 타이머 정지
     timer.setDelay(userInterval); // 새 간격 설정
     timer.setInitialDelay(userInterval); // 초기 지연 설정 (바로 실행 방지)
     timer.start(); // 0초부터 새로 시작
-    
+
     // 새 블록 배치
     boardManager.placeBlock(curr, x, y);
   }
@@ -327,7 +350,7 @@ public class game extends JPanel implements KeyListener {
    */
   protected void rotateBlock() {
     boardManager.eraseBlock(curr, x, y);
-    
+
     // 원본 상태 저장
     Block originalBlock = createBlockCopy(curr);
     int originalX = x;
@@ -362,40 +385,48 @@ public class game extends JPanel implements KeyListener {
       x = originalX;
       y = originalY;
     }
-    
+
     boardManager.placeBlock(curr, x, y);
   }
-  
+
   // 블록 복사 메서드
   private Block createBlockCopy(Block original) {
     // BlockFactory를 통해 같은 타입의 새 블록 생성 후 회전 상태 맞추기
     Block copy = null;
-    
-    if (original instanceof se.tetris.team5.blocks.IBlock) copy = new se.tetris.team5.blocks.IBlock();
-    else if (original instanceof se.tetris.team5.blocks.JBlock) copy = new se.tetris.team5.blocks.JBlock();
-    else if (original instanceof se.tetris.team5.blocks.LBlock) copy = new se.tetris.team5.blocks.LBlock();
-    else if (original instanceof se.tetris.team5.blocks.OBlock) copy = new se.tetris.team5.blocks.OBlock();
-    else if (original instanceof se.tetris.team5.blocks.SBlock) copy = new se.tetris.team5.blocks.SBlock();
-    else if (original instanceof se.tetris.team5.blocks.TBlock) copy = new se.tetris.team5.blocks.TBlock();
-    else if (original instanceof se.tetris.team5.blocks.ZBlock) copy = new se.tetris.team5.blocks.ZBlock();
-    
+
+    if (original instanceof se.tetris.team5.blocks.IBlock)
+      copy = new se.tetris.team5.blocks.IBlock();
+    else if (original instanceof se.tetris.team5.blocks.JBlock)
+      copy = new se.tetris.team5.blocks.JBlock();
+    else if (original instanceof se.tetris.team5.blocks.LBlock)
+      copy = new se.tetris.team5.blocks.LBlock();
+    else if (original instanceof se.tetris.team5.blocks.OBlock)
+      copy = new se.tetris.team5.blocks.OBlock();
+    else if (original instanceof se.tetris.team5.blocks.SBlock)
+      copy = new se.tetris.team5.blocks.SBlock();
+    else if (original instanceof se.tetris.team5.blocks.TBlock)
+      copy = new se.tetris.team5.blocks.TBlock();
+    else if (original instanceof se.tetris.team5.blocks.ZBlock)
+      copy = new se.tetris.team5.blocks.ZBlock();
+
     if (copy != null) {
       // 원본과 같은 회전 상태로 맞추기
       for (int i = 0; i < 4; i++) {
-        if (isSameShape(copy, original)) break;
+        if (isSameShape(copy, original))
+          break;
         copy.rotate();
       }
     }
-    
+
     return copy;
   }
-  
+
   // 두 블록의 모양이 같은지 확인
   private boolean isSameShape(Block block1, Block block2) {
     if (block1.width() != block2.width() || block1.height() != block2.height()) {
       return false;
     }
-    
+
     for (int i = 0; i < block1.width(); i++) {
       for (int j = 0; j < block1.height(); j++) {
         if (block1.getShape(i, j) != block2.getShape(i, j)) {
@@ -403,11 +434,9 @@ public class game extends JPanel implements KeyListener {
         }
       }
     }
-    
+
     return true;
   }
-
-
 
   /**
    * 모든 보드를 업데이트합니다
@@ -638,13 +667,13 @@ public class game extends JPanel implements KeyListener {
     if (timer != null) {
       timer.stop();
     }
-    
+
     // 보드 완전 초기화
     boardManager.reset();
-    
+
     // GameEngine을 통해 게임 리셋
     gameEngine.resetGame();
-    
+
     // UI 상태 초기화
     curr = blockFactory.createRandomBlock();
     next = blockFactory.createRandomBlock();
@@ -656,14 +685,14 @@ public class game extends JPanel implements KeyListener {
     gameStartTime = gameEngine.getGameStartTime();
     isPaused = false;
     pauseMenuIndex = 0;
-    
+
     // 초기 블록을 보드에 배치
     if (curr != null) {
       boardManager.placeBlock(curr, x, y);
     }
-    
+
     updateAllBoards();
-    
+
     // 새 게임 시작 시 사용자 설정 속도로 타이머 완전 초기화
     int userInterval = getInitialInterval(); // 최신 사용자 설정 속도 가져오기
     timer.setDelay(userInterval);
@@ -693,15 +722,15 @@ public class game extends JPanel implements KeyListener {
 
   @Override
   public void keyPressed(KeyEvent e) {
-    // GameSettings에서 키 코드 가져오기
-    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-    int downKey = settings.getKeyCode("down");
-    int leftKey = settings.getKeyCode("left");
-    int rightKey = settings.getKeyCode("right");
-    int rotateKey = settings.getKeyCode("rotate");
-    int dropKey = settings.getKeyCode("drop");
-    int pauseKey = settings.getKeyCode("pause");
-    
+    // KeyMappingManager에서 키 코드 가져오기
+    KeyMappingManager keyMapping = KeyMappingManager.getInstance();
+    int downKey = keyMapping.getKeyCode("down");
+    int leftKey = keyMapping.getKeyCode("left");
+    int rightKey = keyMapping.getKeyCode("right");
+    int rotateKey = keyMapping.getKeyCode("rotate");
+    int dropKey = keyMapping.getKeyCode("drop");
+    int pauseKey = keyMapping.getKeyCode("pause");
+
     // 일시정지 상태일 때의 키 처리
     if (isPaused) {
       switch (e.getKeyCode()) {
@@ -721,12 +750,12 @@ public class game extends JPanel implements KeyListener {
             timer.stop();
             isPaused = false;
             pauseMenuIndex = 0;
-            
+
             // 현재 블록을 보드에서 제거 (다음 게임에 영향 안주도록)
             if (curr != null) {
               boardManager.eraseBlock(curr, x, y);
             }
-            
+
             // ScreenController를 통해 홈으로 돌아가기
             screenController.showScreen("home");
           }
@@ -735,18 +764,18 @@ public class game extends JPanel implements KeyListener {
           resumeGame(); // ESC로도 게임 계속할 수 있게
           break;
       }
-      
+
       // 일시정지 상태에서도 설정된 일시정지 키로 게임 재개 가능
       if (pauseKey != -1 && e.getKeyCode() == pauseKey) {
         resumeGame();
       }
-      
+
       return; // 일시정지 상태에서는 다른 키 무시
     }
 
     // 게임 진행 중일 때의 키 처리 (설정된 키 사용)
     int keyCode = e.getKeyCode();
-    
+
     if (keyCode == KeyEvent.VK_ESCAPE) {
       pauseGame();
     } else if (keyCode == downKey) {
@@ -776,7 +805,7 @@ public class game extends JPanel implements KeyListener {
   @Override
   public void keyReleased(KeyEvent e) {
   }
-  
+
   // 색맹 모드 변경 시 모든 색상 업데이트
   public void updateColorsForColorblindMode() {
     // 현재 블록과 다음 블록의 색상 업데이트
@@ -786,14 +815,14 @@ public class game extends JPanel implements KeyListener {
     if (next != null) {
       next.updateColor();
     }
-    
+
     // 보드에 고정된 블록들의 색상 업데이트
     updateBoardColors();
-    
+
     // 화면 다시 그리기
     updateAllBoards();
   }
-  
+
   // 게임 속도 변경 시 타이머 간격 업데이트
   public void updateGameSpeed() {
     if (timer != null && !isPaused) {
@@ -805,15 +834,15 @@ public class game extends JPanel implements KeyListener {
       timer.start(); // 0초부터 새로 시작
     }
   }
-  
+
   // 보드에 고정된 블록들의 색상을 색맹 모드에 맞게 업데이트
   private void updateBoardColors() {
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-    
+
     // BoardManager를 통해 보드와 색상 정보 접근
     int[][] board = boardManager.getBoard();
     Color[][] boardColors = boardManager.getBoardColors();
-    
+
     for (int i = 0; i < HEIGHT; i++) {
       for (int j = 0; j < WIDTH; j++) {
         if (board[i][j] == 2 && boardColors[i][j] != null) {
@@ -824,28 +853,42 @@ public class game extends JPanel implements KeyListener {
       }
     }
   }
-  
+
   // 색상을 바탕으로 블록 타입을 추정하는 헬퍼 메소드
   private String guessBlockTypeFromColor(Color color) {
     // 기본 색상을 바탕으로 블록 타입 추정
-    if (color.equals(Color.CYAN)) return "I";
-    if (color.equals(Color.YELLOW)) return "O";
-    if (color.equals(Color.MAGENTA)) return "T";
-    if (color.equals(Color.ORANGE)) return "L";
-    if (color.equals(Color.BLUE)) return "J";
-    if (color.equals(Color.GREEN)) return "S";
-    if (color.equals(Color.RED)) return "Z";
-    
+    if (color.equals(Color.CYAN))
+      return "I";
+    if (color.equals(Color.YELLOW))
+      return "O";
+    if (color.equals(Color.MAGENTA))
+      return "T";
+    if (color.equals(Color.ORANGE))
+      return "L";
+    if (color.equals(Color.BLUE))
+      return "J";
+    if (color.equals(Color.GREEN))
+      return "S";
+    if (color.equals(Color.RED))
+      return "Z";
+
     // 색맹 모드 색상들도 체크
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-    if (color.equals(settings.getColorForBlock("I"))) return "I";
-    if (color.equals(settings.getColorForBlock("O"))) return "O";
-    if (color.equals(settings.getColorForBlock("T"))) return "T";
-    if (color.equals(settings.getColorForBlock("L"))) return "L";
-    if (color.equals(settings.getColorForBlock("J"))) return "J";
-    if (color.equals(settings.getColorForBlock("S"))) return "S";
-    if (color.equals(settings.getColorForBlock("Z"))) return "Z";
-    
+    if (color.equals(settings.getColorForBlock("I")))
+      return "I";
+    if (color.equals(settings.getColorForBlock("O")))
+      return "O";
+    if (color.equals(settings.getColorForBlock("T")))
+      return "T";
+    if (color.equals(settings.getColorForBlock("L")))
+      return "L";
+    if (color.equals(settings.getColorForBlock("J")))
+      return "J";
+    if (color.equals(settings.getColorForBlock("S")))
+      return "S";
+    if (color.equals(settings.getColorForBlock("Z")))
+      return "Z";
+
     return "O"; // 기본값
   }
 }
