@@ -447,7 +447,6 @@ public class GameTest {
     public void testGameConstants() {
         assertEquals("게임 높이 상수가 올바르게 설정되어야 합니다", 20, game.HEIGHT);
         assertEquals("게임 너비 상수가 올바르게 설정되어야 합니다", 10, game.WIDTH);
-        assertEquals("경계 문자가 올바르게 설정되어야 합니다", 'X', game.BORDER_CHAR);
     }
     
     @Test  

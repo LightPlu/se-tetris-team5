@@ -105,7 +105,6 @@ public class IntegrationTest {
         // 게임 상수들이 일관성 있게 정의되어있는지 확인
         assertTrue("게임 높이는 양수여야 합니다", se.tetris.team5.screens.game.HEIGHT > 0);
         assertTrue("게임 너비는 양수여야 합니다", se.tetris.team5.screens.game.WIDTH > 0);
-        assertNotNull("경계 문자가 정의되어야 합니다", se.tetris.team5.screens.game.BORDER_CHAR);
         
         // 일반적인 테트리스 게임 크기 확인
         assertEquals("표준 테트리스 높이여야 합니다", 20, se.tetris.team5.screens.game.HEIGHT);
