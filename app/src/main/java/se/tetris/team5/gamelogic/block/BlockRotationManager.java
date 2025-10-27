@@ -5,28 +5,66 @@ import se.tetris.team5.blocks.*;
 public class BlockRotationManager {
 
   public boolean rotateBlockWithWallKick(Block block, int x, int y, int[][] board) {
-    Block originalBlock = copyBlock(block);
+  Block originalBlock = copyBlock(block);
+  int prevState = block.getRotationState();
+  block.rotate();
+  int nextState = block.getRotationState();
 
-    block.rotate();
+  // SRS Wall Kick 데이터 (일반 블록)
+  int[][][] srsNormal = {
+    // 0->R, R->0, R->2, 2->R, 2->L, L->2, L->0, 0->L
+    { {0,0},{-1,0},{-1,1},{0,-2},{-1,-2} }, // 0->R
+    { {0,0},{1,0},{1,1},{0,-2},{1,-2} },   // R->0
+    { {0,0},{1,0},{1,-1},{0,2},{1,2} },    // R->2
+    { {0,0},{-1,0},{-1,-1},{0,2},{-1,2} }, // 2->R
+    { {0,0},{1,0},{1,1},{0,-2},{1,-2} },   // 2->L
+    { {0,0},{-1,0},{-1,1},{0,-2},{-1,-2} },// L->2
+    { {0,0},{-1,0},{-1,-1},{0,2},{-1,2} }, // L->0
+    { {0,0},{1,0},{1,-1},{0,2},{1,2} }     // 0->L
+  };
+  // SRS Wall Kick 데이터 (I블록)
+  int[][][] srsI = {
+    { {0,0},{-2,0},{1,0},{-2,-1},{1,2} },  // 0->R
+    { {0,0},{2,0},{-1,0},{2,1},{-1,-2} },  // R->0
+    { {0,0},{-1,0},{2,0},{-1,2},{2,-1} },  // R->2
+    { {0,0},{1,0},{-2,0},{1,-2},{-2,1} },  // 2->R
+    { {0,0},{2,0},{-1,0},{2,1},{-1,-2} },  // 2->L
+    { {0,0},{-2,0},{1,0},{-2,-1},{1,2} },  // L->2
+    { {0,0},{1,0},{-2,0},{1,-2},{-2,1} },  // L->0
+    { {0,0},{-1,0},{2,0},{-1,2},{2,-1} }   // 0->L
+  };
 
-    int[][] wallKickOffsets = {
-        { 0, 0 }, { -1, 0 }, { 1, 0 }, { 0, -1 },
-        { -3, 0 }, { 2, 0 }, { 0, 1 },
-        { -1, -1 }, { 1, -1 }
-    };
+  // 회전 방향 인덱스 계산
+  int dir = -1;
+  if (prevState == 0 && nextState == 1) dir = 0; // 0->R
+  else if (prevState == 1 && nextState == 0) dir = 1; // R->0
+  else if (prevState == 1 && nextState == 2) dir = 2; // R->2
+  else if (prevState == 2 && nextState == 1) dir = 3; // 2->R
+  else if (prevState == 2 && nextState == 3) dir = 4; // 2->L
+  else if (prevState == 3 && nextState == 2) dir = 5; // L->2
+  else if (prevState == 3 && nextState == 0) dir = 6; // L->0
+  else if (prevState == 0 && nextState == 3) dir = 7; // 0->L
+  if (dir == -1) dir = 0; // fallback
 
-    for (int[] offset : wallKickOffsets) {
-      int testX = x + offset[0];
-      int testY = y + offset[1];
+  int[][] kicks;
+  if (block instanceof IBlock) {
+    kicks = srsI[dir];
+  } else {
+    kicks = srsNormal[dir];
+  }
 
-      if (canPlaceBlock(block, testX, testY, board)) {
-        return true;
-      }
+  for (int[] offset : kicks) {
+    int testX = x + offset[0];
+    int testY = y + offset[1];
+    if (canPlaceBlock(block, testX, testY, board)) {
+      return true;
     }
+  }
 
-    // 회전 실패시 원래 상태로 복원
-    restoreBlock(block, originalBlock);
-    return false;
+  // 회전 실패시 원래 상태로 복원
+  restoreBlock(block, originalBlock);
+  block.setRotationState(prevState);
+  return false;
   }
 
   public Block copyBlock(Block original) {

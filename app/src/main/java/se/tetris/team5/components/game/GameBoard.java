@@ -23,6 +23,7 @@ public class GameBoard extends JPanel {
     private BoardManager boardManager;
 
     public GameBoard(BoardManager boardManager) {
+        System.out.println("[DEBUG] GameBoard constructor called. boardManager=" + (boardManager == null ? "null" : "ok"));
         this.boardManager = boardManager;
         setPreferredSize(new Dimension(
             (WIDTH * CELL_SIZE) + OUTER_BORDER * 2,
@@ -30,11 +31,17 @@ public class GameBoard extends JPanel {
         ));
         setBackground(new Color(18, 22, 40)); // 어두운 남색 계열
         setFocusable(true);
+        System.out.println("[DEBUG] GameBoard setPreferredSize and setBackground done");
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        System.out.println("[DEBUG] paintComponent called. boardManager=" + (boardManager == null ? "null" : "ok") + ", parent=" + getParent());
+        if (boardManager == null) {
+            System.out.println("[DEBUG] paintComponent: boardManager is null, skipping draw");
+            return;
+        }
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 

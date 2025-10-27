@@ -22,6 +22,9 @@ public class ScoreBoardPanel extends JPanel {
     private int totalPages = 1;
     private ScoreEntry highlightEntry;
 
+    private JPanel paginationPanel;
+    private JPanel centerPanel;
+
     public ScoreBoardPanel(List<ScoreEntry> scores, ScoreEntry highlight) {
         setLayout(new BorderLayout());
         setBackground(new Color(30, 32, 48));
@@ -127,7 +130,7 @@ public class ScoreBoardPanel extends JPanel {
         }
 
         // 페이지네이션 패널 (centerPanel 위에 올릴 수 있도록 먼저 선언)
-        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+    paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         paginationPanel.setBackground(new Color(30, 32, 48));
         prevButton = new JButton("이전");
         nextButton = new JButton("다음");
@@ -151,15 +154,10 @@ public class ScoreBoardPanel extends JPanel {
         paginationPanel.add(nextButton);
 
         // 테이블+순위대+페이지네이션을 수직으로 쌓는 패널
-        JPanel centerPanel = new JPanel();
+        centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setBackground(new Color(30, 32, 48));
-        // 페이지네이션은 10개 초과일 때만 보이도록
-        if (allScores.size() > pageSize) {
-            centerPanel.add(paginationPanel);
-        } else {
-            centerPanel.add(Box.createVerticalStrut(32)); // 높이 맞춤용
-        }
+        centerPanel.add(paginationPanel);
         centerPanel.add(scrollPane);
         centerPanel.add(Box.createVerticalStrut(10));
         centerPanel.add(podiumPanel);
@@ -226,6 +224,16 @@ public class ScoreBoardPanel extends JPanel {
     }
 
     private void updateTable() {
+        // 페이지네이션 동적 표시/숨김
+        if (allScores.size() > pageSize) {
+            paginationPanel.setVisible(true);
+        } else {
+            paginationPanel.setVisible(false);
+        }
+        // 최신 점수 개수로 totalPages 재계산
+        totalPages = Math.max(1, (int)Math.ceil((double)allScores.size() / pageSize));
+        // 현재 페이지가 범위 초과 시 마지막 페이지로 보정
+        if (currentPage > totalPages) currentPage = totalPages;
         tableModel.setRowCount(0);
         int start = (currentPage - 1) * pageSize;
         int end = Math.min(start + pageSize, allScores.size());
@@ -247,9 +255,9 @@ public class ScoreBoardPanel extends JPanel {
         if (highlightRow >= 0) {
             table.addRowSelectionInterval(highlightRow, highlightRow);
         }
-    pageLabel.setText(currentPage + " / " + totalPages);
-    // 키보드 포커스 유지
-    requestFocusInWindow();
+        pageLabel.setText(currentPage + " / " + totalPages);
+        // 키보드 포커스 유지
+        requestFocusInWindow();
         prevButton.setEnabled(currentPage > 1);
         nextButton.setEnabled(currentPage < totalPages);
     }

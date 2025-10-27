@@ -83,6 +83,7 @@ public class BoardManager {
    * 블록을 보드에 배치합니다 (움직이는 블록)
    */
   public void placeBlock(Block block, int x, int y) {
+  System.out.println("[DEBUG] placeBlock: x=" + x + ", y=" + y + ", width=" + block.width() + ", height=" + block.height());
     for (int j = 0; j < block.height(); j++) {
       for (int i = 0; i < block.width(); i++) {
         if (y + j >= 0 && y + j < HEIGHT && x + i >= 0 && x + i < WIDTH) {
@@ -99,13 +100,16 @@ public class BoardManager {
    * 블록을 보드에서 제거합니다
    */
   public void eraseBlock(Block block, int x, int y) {
-    for (int i = x; i < x + block.width(); i++) {
-      for (int j = y; j < y + block.height(); j++) {
-        if (block.getShape(i - x, j - y) == 1) {
-          if (j >= 0 && j < HEIGHT && i >= 0 && i < WIDTH) {
-            if (board[j][i] == 2) { // 움직이는 블록만 제거
-              board[j][i] = 0;
-              boardColors[j][i] = null;
+  System.out.println("[DEBUG] eraseBlock: x=" + x + ", y=" + y + ", width=" + block.width() + ", height=" + block.height());
+    for (int j = 0; j < block.height(); j++) {
+      for (int i = 0; i < block.width(); i++) {
+        int boardX = x + i;
+        int boardY = y + j;
+        if (block.getShape(i, j) == 1) {
+          if (boardY >= 0 && boardY < HEIGHT && boardX >= 0 && boardX < WIDTH) {
+            if (board[boardY][boardX] == 2) { // 움직이는 블록만 제거
+              board[boardY][boardX] = 0;
+              boardColors[boardY][boardX] = null;
             }
           }
         }

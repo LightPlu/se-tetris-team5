@@ -16,9 +16,10 @@ public class score {
     public void display(JTextPane textPane) {
         // 기존 텍스트 UI 대신 새 ScoreBoardPanel 사용
         ScoreManager sm = ScoreManager.getInstance();
-        java.util.List<ScoreManager.ScoreEntry> top = sm.getTopScores(20);
-    ScoreManager.ScoreEntry lastSaved = null; // getLastSavedEntry()가 없으면 null 처리
-        ScoreBoardPanel panel = new ScoreBoardPanel(top, lastSaved);
+        java.util.List<ScoreManager.ScoreEntry> all = new java.util.ArrayList<>(sm.getTopScores(100));
+        // getTopScores(100) 대신 getAllScores()가 있으면 그걸 사용하세요
+        ScoreManager.ScoreEntry lastSaved = null; // getLastSavedEntry()가 없으면 null 처리
+        ScoreBoardPanel panel = new ScoreBoardPanel(all, lastSaved);
         this.currentPanel = panel;
         // 홈 버튼 클릭 시 홈 화면으로 이동
         panel.getHomeButton().addActionListener(e -> screenController.showScreen("home"));
