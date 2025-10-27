@@ -1,87 +1,35 @@
 package se.tetris.team5.screens;
-
-
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import javax.swing.JTextPane;
-import javax.swing.text.SimpleAttributeSet;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
+import javax.swing.*;
+import se.tetris.team5.components.score.ScoreBoardPanel;
+import se.tetris.team5.utils.score.ScoreManager;
 import se.tetris.team5.ScreenController;
 import se.tetris.team5.utils.setting.GameSettings;
 
 public class score {
     private ScreenController screenController;
-    private JTextPane currentTextPane;
-    private SimpleAttributeSet styleSet;
+    private JPanel currentPanel;
 
     public score(ScreenController screenController) {
         this.screenController = screenController;
-        
-        // 텍스트 스타일 설정
-        styleSet = new SimpleAttributeSet();
-        StyleConstants.setFontSize(styleSet, 14);
-        StyleConstants.setFontFamily(styleSet, "Source Code Pro");
-        StyleConstants.setBold(styleSet, true);
-        
-        // 색맹 모드에 따른 색상 설정
-        GameSettings gameSettings = GameSettings.getInstance();
-        StyleConstants.setForeground(styleSet, gameSettings.getUIColor("text"));
-        StyleConstants.setAlignment(styleSet, StyleConstants.ALIGN_CENTER);
     }
     
     public void display(JTextPane textPane) {
-        this.currentTextPane = textPane;
-        
-        // 색맹 모드에 따른 배경색 설정
-        GameSettings gameSettings = GameSettings.getInstance();
-        textPane.setBackground(gameSettings.getUIColor("background"));
-        textPane.addKeyListener(new ScoreKeyListener());
-        drawScoreScreen();
-    }
-    
-    private void drawScoreScreen() {
-        StringBuilder sb = new StringBuilder();
-        
-        sb.append("\n\n\n");
-        sb.append("═══════════════════════════════════════════════════\n");
-        sb.append("                    스코어 보드                    \n");
-        sb.append("═══════════════════════════════════════════════════\n\n");
-        
-        sb.append("스코어 보드 기능을 구현 중입니다...\n\n");
-        sb.append("ESC : 홈으로 돌아가기\n");
-        
-        updateDisplay(sb.toString());
-    }
-    
-    private void updateDisplay(String text) {
-        if (currentTextPane != null) {
-            currentTextPane.setText(text);
-            StyledDocument doc = currentTextPane.getStyledDocument();
-            doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
-            doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
-        }
-    }
-
-    private class ScoreKeyListener implements KeyListener {
-        @Override
-        public void keyTyped(KeyEvent e) {
-            e.consume(); // 이벤트 소비
-        }
-
-        @Override
-        public void keyPressed(KeyEvent e) {
-            e.consume(); // 이벤트 소비하여 전파 방지
-            switch(e.getKeyCode()) {
-                case KeyEvent.VK_ESCAPE:
-                    screenController.showScreen("home");
-                    break;
-            }
-        }
-
-        @Override
-        public void keyReleased(KeyEvent e) {
-            e.consume(); // 이벤트 소비
+        // 기존 텍스트 UI 대신 새 ScoreBoardPanel 사용
+        ScoreManager sm = ScoreManager.getInstance();
+        java.util.List<ScoreManager.ScoreEntry> all = new java.util.ArrayList<>(sm.getTopScores(100));
+        // getTopScores(100) 대신 getAllScores()가 있으면 그걸 사용하세요
+        ScoreManager.ScoreEntry lastSaved = null; // getLastSavedEntry()가 없으면 null 처리
+        ScoreBoardPanel panel = new ScoreBoardPanel(all, lastSaved);
+        this.currentPanel = panel;
+        // 홈 버튼 클릭 시 홈 화면으로 이동
+        panel.getHomeButton().addActionListener(e -> screenController.showScreen("home"));
+        // 프레임에 패널 추가
+        JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(textPane);
+        if (frame != null) {
+            frame.getContentPane().removeAll();
+            frame.getContentPane().add(panel);
+            frame.revalidate();
+            frame.repaint();
         }
     }
 }

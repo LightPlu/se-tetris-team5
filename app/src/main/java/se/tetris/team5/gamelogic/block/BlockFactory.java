@@ -1,18 +1,38 @@
 package se.tetris.team5.gamelogic.block;
 
 import java.util.Random;
+import java.util.ArrayList;
+import java.util.Collections;
 import se.tetris.team5.blocks.*;
 
 public class BlockFactory {
   private Random random;
+  private ArrayList<Integer> bag;
+  private int bagIndex;
 
   public BlockFactory() {
     this.random = new Random();
+    this.bag = new ArrayList<>();
+    this.bagIndex = 0;
+    refillBag();
   }
 
   public Block createRandomBlock() {
-    int blockType = random.nextInt(7);
+    if (bagIndex >= bag.size()) {
+      refillBag();
+    }
+    int blockType = bag.get(bagIndex);
+    bagIndex++;
     return createBlock(blockType);
+  }
+
+  private void refillBag() {
+    bag.clear();
+    for (int i = 0; i < 7; i++) {
+      bag.add(i);
+    }
+    Collections.shuffle(bag, random);
+    bagIndex = 0;
   }
 
   public Block createBlock(int blockType) {

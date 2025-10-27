@@ -8,6 +8,7 @@ public abstract class Block {
 	protected int[][] shape;
 	protected Color color;
 	protected String blockType; // 블록 타입 식별자
+	protected int rotationState = 0; // 0: spawn, 1: right, 2: reverse, 3: left
 	
 	public Block() {
 		shape = new int[][]{ 
@@ -45,6 +46,15 @@ public abstract class Block {
 		}
 		
 		shape = rotated;
+		rotationState = (rotationState + 1) % 4;
+	}
+    
+	public int getRotationState() {
+		return rotationState;
+	}
+    
+	public void setRotationState(int state) {
+		this.rotationState = state % 4;
 	}
 	
 	public int height() {
