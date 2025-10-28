@@ -7,6 +7,15 @@ import se.tetris.team5.blocks.Block;
  * 게임 보드의 상태 관리 및 블록 배치/제거 등을 담당하는 클래스
  */
 public class BoardManager {
+  /**
+   * (x, y) 좌표의 아이템을 반환합니다 (없으면 null)
+   */
+  public se.tetris.team5.items.Item getBoardItem(int x, int y) {
+    if (y >= 0 && y < HEIGHT && x >= 0 && x < WIDTH) {
+      return boardItems[y][x];
+    }
+    return null;
+  }
 
   // 보드 크기 상수
   public static final int HEIGHT = 20;
@@ -16,6 +25,8 @@ public class BoardManager {
   // 보드 상태와 색상 정보
   private int[][] board;
   private Color[][] boardColors;
+  // 각 칸별 아이템 정보 (null이면 아이템 없음)
+  private se.tetris.team5.items.Item[][] boardItems;
 
   /**
    * BoardManager 생성자
@@ -30,6 +41,7 @@ public class BoardManager {
   public void initializeBoard() {
     board = new int[HEIGHT][WIDTH];
     boardColors = new Color[HEIGHT][WIDTH];
+    boardItems = new se.tetris.team5.items.Item[HEIGHT][WIDTH];
   }
 
   /**
@@ -122,9 +134,18 @@ public class BoardManager {
         if (block.getShape(i, j) == 1 && y + j >= 0 && y + j < HEIGHT && x + i >= 0 && x + i < WIDTH) {
           board[y + j][x + i] = 1; // 고정된 블록은 값 1
           boardColors[y + j][x + i] = block.getColor();
+          // 블록의 해당 칸에 아이템이 있으면 보드에도 복사
+          se.tetris.team5.items.Item item = block.getItem(i, j);
+          boardItems[y + j][x + i] = item;
         }
       }
     }
+  }
+  /**
+   * 각 칸의 아이템 정보를 반환합니다
+   */
+  public se.tetris.team5.items.Item[][] getBoardItems() {
+    return boardItems;
   }
 
   /**
@@ -177,25 +198,23 @@ public class BoardManager {
       for (int col = 0; col < WIDTH; col++) {
         if (board[row][col] != 1) { // 고정된 블록(값 1)만 고려
           fullLine = false;
-          break;
         }
       }
-
-      // 가득 찬 줄이 있으면 제거하고 위의 줄들을 아래로 내림
       if (fullLine) {
-        clearedLinesCount++; // 제거된 줄 수 증가
-
-        // 현재 줄부터 위의 모든 줄을 한 줄씩 아래로 이동
+        clearedLinesCount++;
+        // 아래 줄을 한 칸씩 내림
         for (int moveRow = row; moveRow > 0; moveRow--) {
           for (int col = 0; col < WIDTH; col++) {
             board[moveRow][col] = board[moveRow - 1][col];
             boardColors[moveRow][col] = boardColors[moveRow - 1][col];
+            boardItems[moveRow][col] = boardItems[moveRow - 1][col];
           }
         }
         // 맨 위 줄은 빈 줄로 만듦
         for (int col = 0; col < WIDTH; col++) {
           board[0][col] = 0;
           boardColors[0][col] = null;
+          boardItems[0][col] = null;
         }
         // 같은 줄을 다시 검사해야 하므로 row를 증가시킴
         row++;

@@ -117,17 +117,26 @@ public class ScreenController extends JFrame {
             case "home":
                 getContentPane().add(textPane);
                 homeScreen.display(textPane);
-                // 약간의 지연 후 포커스 설정 (렌더링 완료 대기)
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     textPane.requestFocusInWindow();
                 });
                 break;
             case "game":
-                // game은 JPanel이므로 직접 추가
                 getContentPane().add(gameScreen);
-                gameScreen.reset(); // 게임 상태 리셋
+                gameScreen.reset();
+                // macOS 대응: 여러 번 포커스 요청 (딜레이 포함)
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     gameScreen.requestFocusInWindow();
+                    // 2차 딜레이 포커스
+                    new java.util.Timer().schedule(
+                        new java.util.TimerTask() {
+                            @Override
+                            public void run() {
+                                javax.swing.SwingUtilities.invokeLater(() -> gameScreen.requestFocusInWindow());
+                            }
+                        },
+                        150
+                    );
                 });
                 break;
             case "score":

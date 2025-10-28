@@ -9,5 +9,6 @@ public class OBlock extends Block {
 		};
 		blockType = "O";
 		updateColor();
+		items = new se.tetris.team5.items.Item[shape.length][shape[0].length];
 	}
 }

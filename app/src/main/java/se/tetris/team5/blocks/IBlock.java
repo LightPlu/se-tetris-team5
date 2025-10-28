@@ -8,5 +8,6 @@ public class IBlock extends Block {
 		};
 		blockType = "I";
 		updateColor();
+		items = new se.tetris.team5.items.Item[shape.length][shape[0].length];
 	}
 }
