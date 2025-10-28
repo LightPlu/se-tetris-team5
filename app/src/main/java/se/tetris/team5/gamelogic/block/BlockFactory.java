@@ -12,7 +12,7 @@ public class BlockFactory {
 
   public Block createRandomBlock() {
     int blockType = random.nextInt(7);
-    return createBlock(0);
+    return createBlock(blockType);
   }
 
   /**
