@@ -129,14 +129,40 @@ public class BoardManager {
    * 블록을 보드에 고정합니다 (고정된 블록)
    */
   public void fixBlock(Block block, int x, int y) {
+    java.util.Set<Integer> lineClearRows = new java.util.HashSet<>();
     for (int i = 0; i < block.width(); i++) {
       for (int j = 0; j < block.height(); j++) {
         if (block.getShape(i, j) == 1 && y + j >= 0 && y + j < HEIGHT && x + i >= 0 && x + i < WIDTH) {
           board[y + j][x + i] = 1; // 고정된 블록은 값 1
           boardColors[y + j][x + i] = block.getColor();
-          // 블록의 해당 칸에 아이템이 있으면 보드에도 복사
           se.tetris.team5.items.Item item = block.getItem(i, j);
           boardItems[y + j][x + i] = item;
+          // 줄삭제 아이템이 있으면 해당 줄을 기록
+          if (item instanceof se.tetris.team5.items.LineClearItem) {
+            lineClearRows.add(y + j);
+          }
+        }
+      }
+    }
+    // 줄삭제 아이템이 있는 줄을 즉시 삭제 (가득 차지 않아도)
+    if (!lineClearRows.isEmpty()) {
+      // 내림차순 정렬(아래줄부터 삭제해야 인덱스 꼬임 방지)
+      java.util.List<Integer> sortedRows = new java.util.ArrayList<>(lineClearRows);
+      sortedRows.sort(java.util.Collections.reverseOrder());
+      for (int row : sortedRows) {
+        // 줄 삭제: 위의 줄을 한 칸씩 내림
+        for (int moveRow = row; moveRow > 0; moveRow--) {
+          for (int col = 0; col < WIDTH; col++) {
+            board[moveRow][col] = board[moveRow - 1][col];
+            boardColors[moveRow][col] = boardColors[moveRow - 1][col];
+            boardItems[moveRow][col] = boardItems[moveRow - 1][col];
+          }
+        }
+        // 맨 위 줄은 빈 줄로 만듦
+        for (int col = 0; col < WIDTH; col++) {
+          board[0][col] = 0;
+          boardColors[0][col] = null;
+          boardItems[0][col] = null;
         }
       }
     }

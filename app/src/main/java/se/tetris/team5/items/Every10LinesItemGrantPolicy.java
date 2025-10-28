@@ -13,7 +13,7 @@ public class Every10LinesItemGrantPolicy implements ItemGrantPolicy {
   public void grantItem(Block block, ItemGrantContext context) {
     if (block == null || context == null)
       return;
-    if (context.totalClearedLines > 0 && context.totalClearedLines % 10 == 0) {
+    if (context.totalClearedLines > 0 && context.totalClearedLines % 1 == 0) {
       int w = block.width();
       int h = block.height();
       int x, y;

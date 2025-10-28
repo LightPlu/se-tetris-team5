@@ -156,12 +156,12 @@ public class GameEngine {
     // (BoardManager에 collectClearedLineItems()가 있다고 가정, 없으면 아래처럼 직접 구현)
     // BoardManager에 collectClearedLineItems()가 없다면 임시로 빈 리스트 반환
     // 실제 구현 시: boardManager.collectClearedLineItems()로 대체
-    // for (se.tetris.team5.items.Item item : collected) {
-    // if (item != null) {
-    // acquiredItem = item;
-    // System.out.println("[아이템 획득] " + item);
-    // }
-    // }
+  // for (se.tetris.team5.items.Item item : collected) {
+  // if (item != null) {
+  // acquiredItem = item;
+  // System.out.println("[아이템 획득] " + item);
+  // }
+  // }
     // 임시: 아이템이 실제로 부여된 블록이 삭제된 경우 획득 처리 (현재는 1개만 생성되므로 nextBlock의 아이템을 획득했다고 가정)
     // 실제로는 boardManager에서 삭제된 줄의 아이템을 반환해야 함
     if (nextBlock != null) {
@@ -170,7 +170,7 @@ public class GameEngine {
           se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
           if (item != null) {
             acquiredItem = item;
-            System.out.println("[DEBUG][아이템] 획득: " + item);
+            System.out.println("[아이템 획득] " + item);
             // 아이템은 한 번만 획득(즉시 break)
             break;
           }
@@ -187,10 +187,8 @@ public class GameEngine {
   // 아이템 사용(사용 후 null 처리)
   public void useAcquiredItem() {
     if (acquiredItem != null) {
-      System.out.println("[DEBUG][아이템] 사용: " + acquiredItem.getName());
+      System.out.println("[아이템 사용] " + acquiredItem.getName());
       acquiredItem = null;
-    } else {
-      System.out.println("[DEBUG][아이템] 사용: (보유한 아이템 없음)");
     }
   }
 
@@ -202,13 +200,13 @@ public class GameEngine {
       return;
     // 정책 객체를 통해 아이템 부여 위임
     itemGrantPolicy.grantItem(nextBlock, new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory));
-    // 아이템 부여 상태 전체 출력
+    // 아이템 부여 위치 및 종류만 출력
     int w = nextBlock.width();
     int h = nextBlock.height();
     for (int j = 0; j < h; j++) {
       for (int i = 0; i < w; i++) {
         if (nextBlock.getItem(i, j) != null) {
-          System.out.println("[DEBUG] nextBlock.items[" + j + "][" + i + "] = " + nextBlock.getItem(i, j));
+          System.out.println("[아이템 부여] 위치: (" + i + "," + j + ") " + nextBlock.getItem(i, j));
         }
       }
     }
@@ -216,15 +214,6 @@ public class GameEngine {
 
   private void spawnNextBlock() {
     currentBlock = nextBlock;
-    // currentBlock의 아이템 상태 출력
-    System.out.println("[DEBUG] spawnNextBlock: currentBlock(" + currentBlock.getBlockType() + ")의 아이템 상태");
-    for (int j = 0; j < currentBlock.height(); j++) {
-      for (int i = 0; i < currentBlock.width(); i++) {
-        if (currentBlock.getItem(i, j) != null) {
-          System.out.println("[DEBUG] currentBlock.items[" + j + "][" + i + "] = " + currentBlock.getItem(i, j));
-        }
-      }
-    }
     nextBlock = blockFactory.createRandomBlock();
     x = START_X;
     y = START_Y;
