@@ -219,6 +219,7 @@ public class GameSettings {
                 case "J": return new java.awt.Color(86, 180, 233);   // 하늘색 (Sky Blue)
                 case "S": return new java.awt.Color(0, 114, 178);    // 진한 파란색 (Blue)
                 case "Z": return new java.awt.Color(213, 94, 0);     // 진한 주황색 (Vermillion)
+                case "W": return new java.awt.Color(128, 128, 128);  // 회색 (Gray) - 무게추 블록
                 default: return java.awt.Color.WHITE;
             }
         } else {
@@ -231,6 +232,7 @@ public class GameSettings {
                 case "J": return java.awt.Color.BLUE;
                 case "S": return java.awt.Color.GREEN;
                 case "Z": return java.awt.Color.RED;
+                case "W": return new java.awt.Color(64, 64, 64);     // 진한 회색 - 무게추 블록
                 default: return java.awt.Color.WHITE;
             }
         }

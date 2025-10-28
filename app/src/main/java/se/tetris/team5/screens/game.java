@@ -695,6 +695,8 @@ public class game extends JPanel implements KeyListener {
       return "S";
     if (color.equals(Color.RED))
       return "Z";
+    if (color.equals(new Color(64, 64, 64)))
+      return "W";
 
     // 색맹 모드 색상들도 체크
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
@@ -712,6 +714,8 @@ public class game extends JPanel implements KeyListener {
       return "S";
     if (color.equals(settings.getColorForBlock("Z")))
       return "Z";
+    if (color.equals(settings.getColorForBlock("W")))
+      return "W";
 
     return "O"; // 기본값
   }

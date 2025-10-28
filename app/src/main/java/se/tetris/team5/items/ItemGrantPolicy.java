@@ -8,8 +8,9 @@ public interface ItemGrantPolicy {
    * 
    * @param block   아이템을 부여할 블록
    * @param context 정책에 필요한 추가 정보(예: 누적 삭제 줄 수 등)
+   * @return 부여된 아이템 (부여되지 않았으면 null)
    */
-  void grantItem(Block block, ItemGrantContext context);
+  Item grantItem(Block block, ItemGrantContext context);
 
   /**
    * 정책에 필요한 컨텍스트 정보 전달용 내부 클래스
