@@ -15,6 +15,14 @@ public class BlockFactory {
     return createBlock(blockType);
   }
 
+  /**
+   * 무게추 블록(WBlock)을 생성합니다.
+   * 10줄 삭제 시 일반 블록 대신 생성될 수 있는 특수 블록입니다.
+   */
+  public Block createWeightBlock() {
+    return new WBlock();
+  }
+
   public Block createBlock(int blockType) {
     switch (blockType) {
       case 0:

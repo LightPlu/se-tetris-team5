@@ -1,3 +1,4 @@
+
 package se.tetris.team5.gamelogic;
 
 import se.tetris.team5.blocks.Block;
@@ -6,8 +7,13 @@ import se.tetris.team5.gamelogic.block.BlockRotationManager;
 import se.tetris.team5.components.game.BoardManager;
 import se.tetris.team5.gamelogic.movement.MovementManager;
 import se.tetris.team5.gamelogic.scoring.GameScoring;
+import se.tetris.team5.items.ItemGrantPolicy;
 
 public class GameEngine {
+  private static final int START_X = 3;
+  private static final int START_Y = 0;
+  // 아이템 관련: 총 삭제 줄 수 추적
+  private int totalClearedLines = 0;
   private BoardManager boardManager;
   private MovementManager movementManager;
   private BlockRotationManager rotationManager;
@@ -21,8 +27,10 @@ public class GameEngine {
   private boolean gameRunning;
   private long gameStartTime;
 
-  private static final int START_X = 3;
-  private static final int START_Y = 0;
+  // 플레이어가 획득한 아이템 (1개만 보유, 큐로 확장 가능)
+  private se.tetris.team5.items.Item acquiredItem = null;
+  private se.tetris.team5.items.ItemFactory itemFactory;
+  private se.tetris.team5.items.ItemGrantPolicy itemGrantPolicy;
 
   public GameEngine(int height, int width) {
     boardManager = new BoardManager();
@@ -30,6 +38,8 @@ public class GameEngine {
     rotationManager = new BlockRotationManager();
     blockFactory = new BlockFactory();
     gameScoring = new GameScoring();
+    itemFactory = new se.tetris.team5.items.ItemFactory();
+    itemGrantPolicy = new se.tetris.team5.items.Every10LinesItemGrantPolicy();
 
     startNewGame();
   }
@@ -38,6 +48,12 @@ public class GameEngine {
     boardManager.reset();
     gameScoring.reset();
     gameOver = false;
+    totalClearedLines = 0;
+    
+    // 정책 리셋 (10줄 카운터 초기화)
+    if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
+      ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
+    }
 
     currentBlock = blockFactory.createRandomBlock();
     nextBlock = blockFactory.createRandomBlock();
@@ -61,10 +77,9 @@ public class GameEngine {
     } else {
       boardManager.placeBlock(currentBlock, x, y);
       boardManager.fixBlock(currentBlock, x, y);
-
       int clearedLines = boardManager.clearLines();
       gameScoring.addLinesCleared(clearedLines);
-
+      handleItemSpawnAndCollect(clearedLines);
       spawnNextBlock();
       return false;
     }
@@ -105,10 +120,17 @@ public class GameEngine {
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
-    if (rotationManager.rotateBlockWithWallKick(currentBlock, x, y, boardManager.getBoard())) {
+    se.tetris.team5.gamelogic.block.BlockRotationManager.WallKickResult result = 
+        rotationManager.rotateBlockWithWallKick(currentBlock, x, y, boardManager.getBoard());
+    
+    if (result.success) {
+      // Wall Kick 성공: 오프셋 적용
+      x += result.offsetX;
+      y += result.offsetY;
       boardManager.placeBlock(currentBlock, x, y);
       return true;
     } else {
+      // 회전 실패: 원래 위치에 다시 배치
       boardManager.placeBlock(currentBlock, x, y);
       return false;
     }
@@ -125,17 +147,91 @@ public class GameEngine {
 
     boardManager.placeBlock(currentBlock, x, y);
     boardManager.fixBlock(currentBlock, x, y);
-
     int clearedLines = boardManager.clearLines();
     gameScoring.addLinesCleared(clearedLines);
-
+    handleItemSpawnAndCollect(clearedLines);
     spawnNextBlock();
     return true;
   }
 
+  /**
+   * 라인 삭제 후 아이템 생성 및 획득 처리
+   */
+  private void handleItemSpawnAndCollect(int clearedLines) {
+    if (clearedLines <= 0)
+      return;
+    totalClearedLines += clearedLines;
+
+    // 정책을 통해 아이템 부여 (10줄 체크는 정책 내부에서 처리)
+    se.tetris.team5.items.Item grantedItem = grantItemToNextBlock();
+    
+    if (grantedItem != null) {
+      // 아이템이 부여된 경우
+      if (grantedItem instanceof se.tetris.team5.items.WeightBlockItem) {
+        // WeightBlockItem인 경우: 다음 블록을 무게추 블록으로 교체
+        nextBlock = blockFactory.createWeightBlock();
+        System.out.println("[특수 블록] 무게추 블록(WBlock) 생성!");
+      } else if (grantedItem instanceof se.tetris.team5.items.LineClearItem) {
+        // LineClearItem인 경우: 일반 블록 + 아이템 유지
+        System.out.println("[특수 블록] 줄삭제 아이템 블록 생성!");
+      } else if (grantedItem instanceof se.tetris.team5.items.BombItem) {
+        // DotBlockItem인 경우: 다음 블록을 DotBlock으로 교체
+        nextBlock = new se.tetris.team5.blocks.DotBlock();
+        System.out.println("[특수 블록] 도트 블록(DotBlock) 생성!");
+      }
+    }
+
+    // 아이템 획득 처리
+    if (nextBlock != null) {
+      for (int j = 0; j < nextBlock.height(); j++) {
+        for (int i = 0; i < nextBlock.width(); i++) {
+          se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
+          if (item != null) {
+            acquiredItem = item;
+            System.out.println("[아이템 획득 대기] " + item);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // 아이템 보유 여부 반환
+  public boolean hasAcquiredItem() {
+    return acquiredItem != null;
+  }
+
+  // 아이템 사용(사용 후 null 처리)
+  public void useAcquiredItem() {
+    if (acquiredItem != null) {
+      System.out.println("[아이템 사용] " + acquiredItem.getName());
+      acquiredItem = null;
+    }
+  }
+
+  /**
+   * 다음 블록에 아이템 부여 (정책을 통해)
+   * @return 부여된 아이템 (부여되지 않았으면 null)
+   */
+  private se.tetris.team5.items.Item grantItemToNextBlock() {
+    if (nextBlock == null)
+      return null;
+    
+    // 정책 객체를 통해 아이템 부여 위임 (10줄 체크는 정책 내부에서)
+    se.tetris.team5.items.Item grantedItem = itemGrantPolicy.grantItem(
+        nextBlock, 
+        new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory)
+    );
+    
+    return grantedItem;
+  }
+
   private void spawnNextBlock() {
     currentBlock = nextBlock;
+    
+    // 일반 블록 생성 (특수 블록은 handleItemSpawnAndCollect에서 처리)
     nextBlock = blockFactory.createRandomBlock();
+    
     x = START_X;
     y = START_Y;
 
@@ -189,6 +285,11 @@ public class GameEngine {
     gameScoring = new GameScoring();
     blockFactory = new BlockFactory();
     rotationManager = new BlockRotationManager();
+    
+    // 정책 리셋 (10줄 카운터 초기화)
+    if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
+      ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
+    }
 
     currentBlock = blockFactory.createRandomBlock();
     nextBlock = blockFactory.createRandomBlock();
@@ -197,6 +298,7 @@ public class GameEngine {
     gameRunning = true;
     gameOver = false;
     gameStartTime = System.currentTimeMillis();
+    totalClearedLines = 0;
   }
 
   /**

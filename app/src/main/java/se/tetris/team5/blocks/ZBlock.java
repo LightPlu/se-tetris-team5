@@ -9,5 +9,6 @@ public class ZBlock extends Block {
 		};
 		blockType = "Z";
 		updateColor();
+		items = new se.tetris.team5.items.Item[shape.length][shape[0].length];
 	}
 }

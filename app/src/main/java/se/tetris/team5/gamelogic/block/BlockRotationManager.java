@@ -4,7 +4,26 @@ import se.tetris.team5.blocks.*;
 
 public class BlockRotationManager {
 
-  public boolean rotateBlockWithWallKick(Block block, int x, int y, int[][] board) {
+  /**
+   * Wall Kick 결과를 저장하는 내부 클래스
+   */
+  public static class WallKickResult {
+    public final boolean success;
+    public final int offsetX;
+    public final int offsetY;
+    
+    public WallKickResult(boolean success, int offsetX, int offsetY) {
+      this.success = success;
+      this.offsetX = offsetX;
+      this.offsetY = offsetY;
+    }
+  }
+
+  /**
+   * Wall Kick을 적용하여 블록을 회전시킵니다.
+   * 성공 시 적용된 오프셋을 반환합니다.
+   */
+  public WallKickResult rotateBlockWithWallKick(Block block, int x, int y, int[][] board) {
     Block originalBlock = copyBlock(block);
 
     block.rotate();
@@ -20,13 +39,14 @@ public class BlockRotationManager {
       int testY = y + offset[1];
 
       if (canPlaceBlock(block, testX, testY, board)) {
-        return true;
+        // 성공: 적용된 오프셋 반환
+        return new WallKickResult(true, offset[0], offset[1]);
       }
     }
 
     // 회전 실패시 원래 상태로 복원
     restoreBlock(block, originalBlock);
-    return false;
+    return new WallKickResult(false, 0, 0);
   }
 
   public Block copyBlock(Block original) {
@@ -46,6 +66,8 @@ public class BlockRotationManager {
       copy = new TBlock();
     else if (original instanceof ZBlock)
       copy = new ZBlock();
+    else if (original instanceof WBlock)
+      copy = new WBlock();
 
     if (copy != null) {
       for (int rotations = 0; rotations < 4; rotations++) {
