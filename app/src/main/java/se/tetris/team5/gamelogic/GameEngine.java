@@ -32,6 +32,9 @@ public class GameEngine {
   private se.tetris.team5.items.ItemFactory itemFactory;
   private se.tetris.team5.items.ItemGrantPolicy itemGrantPolicy;
 
+  // 타임스톱 관련
+  private boolean hasTimeStopCharge = false; // 타임스톱 사용 가능 여부
+
   public GameEngine(int height, int width) {
     boardManager = new BoardManager();
     movementManager = new MovementManager(boardManager);
@@ -49,6 +52,7 @@ public class GameEngine {
     gameScoring.reset();
     gameOver = false;
     totalClearedLines = 0;
+    hasTimeStopCharge = false; // 타임스톱 충전 초기화
     
     // 정책 리셋 (10줄 카운터 초기화)
     if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
@@ -178,6 +182,9 @@ public class GameEngine {
         // DotBlockItem인 경우: 다음 블록을 DotBlock으로 교체
         nextBlock = new se.tetris.team5.blocks.DotBlock();
         System.out.println("[특수 블록] 도트 블록(DotBlock) 생성!");
+      } else if (grantedItem instanceof se.tetris.team5.items.TimeStopItem) {
+        // TimeStopItem인 경우: 일반 블록 + 아이템 유지
+        System.out.println("[특수 블록] 타임스톱 아이템 블록 생성!");
       }
     }
 
@@ -188,6 +195,11 @@ public class GameEngine {
           se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
           if (item != null) {
             acquiredItem = item;
+            // TimeStopItem인 경우 충전 상태로 변경
+            if (item instanceof se.tetris.team5.items.TimeStopItem) {
+              hasTimeStopCharge = true;
+              System.out.println("[타임스톱 충전] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+            }
             System.out.println("[아이템 획득 대기] " + item);
             break;
           }
@@ -206,6 +218,19 @@ public class GameEngine {
     if (acquiredItem != null) {
       System.out.println("[아이템 사용] " + acquiredItem.getName());
       acquiredItem = null;
+    }
+  }
+
+  // 타임스톱 충전 여부 반환
+  public boolean hasTimeStopCharge() {
+    return hasTimeStopCharge;
+  }
+
+  // 타임스톱 사용 (충전 소모)
+  public void useTimeStop() {
+    if (hasTimeStopCharge) {
+      hasTimeStopCharge = false;
+      System.out.println("[타임스톱 사용] 게임이 5초간 멈춥니다!");
     }
   }
 
@@ -299,6 +324,7 @@ public class GameEngine {
     gameOver = false;
     gameStartTime = System.currentTimeMillis();
     totalClearedLines = 0;
+    hasTimeStopCharge = false; // 타임스톱 충전 초기화
   }
 
   /**

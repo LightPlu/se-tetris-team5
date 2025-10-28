@@ -50,6 +50,10 @@ public class game extends JPanel implements KeyListener {
   private int pauseMenuIndex = 0; // 0: 게임 계속, 1: 메뉴로 나가기
   private String[] pauseMenuOptions = { "게임 계속", "메뉴로 나가기" };
 
+  // 타임스톱 관련 변수
+  private boolean isTimeStopped = false; // 타임스톱 활성화 상태
+  private Timer timeStopTimer; // 타임스톱 종료용 타이머
+
   // 게임 속도 설정에 따른 초기 간격 계산 메소드
   private int getInitialInterval() {
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
@@ -261,14 +265,22 @@ public class game extends JPanel implements KeyListener {
         if (isCurrentBlock) {
           se.tetris.team5.items.Item item = currBlock.getItem(j - currX, i - currY);
           if (item != null) {
-            sb.append("★");
+            if (item instanceof se.tetris.team5.items.TimeStopItem) {
+              sb.append("⏱");
+            } else {
+              sb.append("★");
+            }
           } else {
             sb.append("O");
           }
         } else if (board[i][j] == 1 || board[i][j] == 2) {
           se.tetris.team5.items.Item item = gameEngine.getBoardManager().getBoardItem(j, i);
           if (item != null) {
-            sb.append("★");
+            if (item instanceof se.tetris.team5.items.TimeStopItem) {
+              sb.append("⏱");
+            } else {
+              sb.append("★");
+            }
           } else {
             sb.append("O");
           }
@@ -340,6 +352,14 @@ public class game extends JPanel implements KeyListener {
   sb.append("레벨: ").append(gameEngine.getGameScoring().getLevel()).append("\n");
   sb.append("줄: ").append(gameEngine.getGameScoring().getLinesCleared()).append("\n");
     sb.append("\n");
+    
+    // 타임스톱 충전 상태 표시
+    if (gameEngine.hasTimeStopCharge()) {
+      sb.append("⏱️ 타임스톱: 사용가능\n");
+      sb.append("(Shift로 5초 정지)\n");
+      sb.append("\n");
+    }
+    
     sb.append("조작법:\n");
     sb.append("↑: 회전\n");
     sb.append("↓: 소프트 드롭\n");
@@ -365,10 +385,14 @@ public class game extends JPanel implements KeyListener {
       for (int row = 0; row < 4; row++) {
         for (int col = 0; col < 4; col++) {
           if (row < nextBlock.height() && col < nextBlock.width() && nextBlock.getShape(col, row) == 1) {
-            // 아이템이 있으면 ★, 없으면 O
+            // 아이템이 있으면 종류에 따라 다른 모양 표시
             se.tetris.team5.items.Item item = nextBlock.getItem(col, row);
             if (item != null) {
-              sb.append("★");
+              if (item instanceof se.tetris.team5.items.TimeStopItem) {
+                sb.append("⏱");
+              } else {
+                sb.append("★");
+              }
             } else {
               sb.append("O");
             }
@@ -494,6 +518,13 @@ public class game extends JPanel implements KeyListener {
     if (timer != null) {
       timer.stop();
     }
+    
+    // 타임스톱 타이머 정지 및 초기화
+    if (timeStopTimer != null) {
+      timeStopTimer.stop();
+      timeStopTimer = null;
+    }
+    isTimeStopped = false;
 
     // GameEngine을 통해 게임 리셋
     gameEngine.resetGame();
@@ -613,13 +644,87 @@ public class game extends JPanel implements KeyListener {
       hardDrop();
       drawBoard();
     } else if (keyCode == KeyEvent.VK_SHIFT) {
-      // shift 키로 아이템 사용: 실제로 아이템을 보유하고 있을 때만 사용
-      if (gameEngine.hasAcquiredItem()) {
-        gameEngine.useAcquiredItem();
+      // shift 키로 타임스톱 사용
+      if (gameEngine.hasTimeStopCharge() && !isTimeStopped) {
+        activateTimeStop();
       }
     } else if (keyCode == pauseKey) {
       pauseGame();
     }
+  }
+
+  /**
+   * 타임스톱을 활성화합니다 (5초간 게임 멈춤)
+   */
+  private void activateTimeStop() {
+    isTimeStopped = true;
+    gameEngine.useTimeStop(); // 충전 소모
+    timer.stop(); // 게임 타이머 정지
+    
+    // 화면 업데이트 (타임스톱 상태 표시 제거)
+    updateAllBoards();
+    
+    // 타임스톱 메시지 표시
+    showTimeStopMessage();
+    
+    // 5초 후 타임스톱 해제
+    timeStopTimer = new Timer(5000, new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        deactivateTimeStop();
+      }
+    });
+    timeStopTimer.setRepeats(false); // 한 번만 실행
+    timeStopTimer.start();
+  }
+
+  /**
+   * 타임스톱을 해제합니다
+   */
+  private void deactivateTimeStop() {
+    isTimeStopped = false;
+    
+    // 타임스톱 타이머 정리
+    if (timeStopTimer != null) {
+      timeStopTimer.stop();
+      timeStopTimer = null;
+    }
+    
+    // 게임 타이머 재시작
+    if (!isPaused && !gameEngine.isGameOver()) {
+      timer.start();
+    }
+    
+    // 화면 복원
+    updateAllBoards();
+  }
+
+  /**
+   * 타임스톱 메시지를 표시합니다
+   */
+  private void showTimeStopMessage() {
+    StringBuilder sb = new StringBuilder();
+
+    // 타임스톱 메시지 화면
+    sb.append("\n\n\n\n\n");
+    sb.append("          ⏱️  타임스톱 활성화  ⏱️\n\n");
+    sb.append("          게임이 5초간 멈춥니다!\n\n");
+    sb.append("          잠시 숨을 고르세요...\n");
+
+    // 게임 보드에 메시지 표시
+    gameBoard.setText(sb.toString());
+    StyledDocument doc = gameBoard.getStyledDocument();
+
+    // 스타일 적용
+    SimpleAttributeSet messageStyle = new SimpleAttributeSet();
+    StyleConstants.setForeground(messageStyle, Color.CYAN);
+    StyleConstants.setFontSize(messageStyle, 18);
+    StyleConstants.setFontFamily(messageStyle, "Courier New");
+    StyleConstants.setBold(messageStyle, true);
+    StyleConstants.setAlignment(messageStyle, StyleConstants.ALIGN_CENTER);
+
+    doc.setCharacterAttributes(0, doc.getLength(), messageStyle, false);
+    doc.setParagraphAttributes(0, doc.getLength(), messageStyle, false);
   }
 
   @Override
