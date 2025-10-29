@@ -24,6 +24,11 @@ public class BlockRotationManager {
    * 성공 시 적용된 오프셋을 반환합니다.
    */
   public WallKickResult rotateBlockWithWallKick(Block block, int x, int y, int[][] board) {
+    // 무게추 블록(WBlock)은 회전 불가
+    if (block instanceof WBlock) {
+      return new WallKickResult(false, 0, 0);
+    }
+    
     Block originalBlock = copyBlock(block);
 
     block.rotate();
