@@ -42,6 +42,9 @@ public class ScreenController extends JFrame {
     private void initializeFrame() {
         setTitle("TETRIS - Team 5");
         
+        // 게임 아이콘 설정
+        setApplicationIcon();
+        
         // GameSettings에서 창 크기 가져오기
         GameSettings settings = GameSettings.getInstance();
         setSize(settings.getWindowWidth(), settings.getWindowHeight());
@@ -336,5 +339,132 @@ public class ScreenController extends JFrame {
             }
         });
         fadeTimer.start();
+    }
+    
+    /**
+     * 애플리케이션 아이콘 설정 (작업표시줄 및 창 아이콘)
+     */
+    private void setApplicationIcon() {
+        try {
+            Image iconImage = null;
+            
+            // 1. ICO 파일 먼저 시도
+            URL iconUrl = getClass().getResource("/Tetris_icon.ico");
+            if (iconUrl != null) {
+                try {
+                    iconImage = Toolkit.getDefaultToolkit().getImage(iconUrl);
+                    System.out.println("✅ ICO 아이콘 로드 성공: " + iconUrl);
+                } catch (Exception e) {
+                    System.out.println("⚠️ ICO 파일 로드 실패, PNG로 시도합니다.");
+                }
+            }
+            
+            // 2. PNG 파일 시도 (ICO가 실패했거나 없을 경우)
+            if (iconImage == null) {
+                iconUrl = getClass().getResource("/Tetris_icon.png");
+                if (iconUrl != null) {
+                    iconImage = Toolkit.getDefaultToolkit().getImage(iconUrl);
+                    System.out.println("✅ PNG 아이콘 로드 성공: " + iconUrl);
+                }
+            }
+            
+            // 3. 다른 이미지 형식들 시도
+            if (iconImage == null) {
+                String[] extensions = {".jpg", ".jpeg", ".gif"};
+                for (String ext : extensions) {
+                    iconUrl = getClass().getResource("/Tetris_icon" + ext);
+                    if (iconUrl != null) {
+                        iconImage = Toolkit.getDefaultToolkit().getImage(iconUrl);
+                        System.out.println("✅ " + ext.toUpperCase() + " 아이콘 로드 성공: " + iconUrl);
+                        break;
+                    }
+                }
+            }
+            
+            // 4. 아이콘이 로드되었으면 여러 크기로 적용
+            if (iconImage != null) {
+                // 단일 아이콘 설정
+                setIconImage(iconImage);
+                
+                // 여러 크기 아이콘 생성 및 설정 (Windows에서 상황에 맞게 선택)
+                java.util.List<Image> iconImages = new java.util.ArrayList<>();
+                iconImages.add(iconImage); // 원본
+                
+                // 일반적인 Windows 아이콘 크기들
+                int[] sizes = {16, 20, 24, 32, 40, 48, 64, 128, 256};
+                for (int size : sizes) {
+                    Image scaledIcon = iconImage.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+                    iconImages.add(scaledIcon);
+                }
+                
+                // 다중 크기 아이콘 설정 (Windows에서 더 나은 표시를 위해)
+                setIconImages(iconImages);
+                
+                System.out.println("✅ 게임 아이콘이 작업표시줄에 적용되었습니다 (" + iconImages.size() + "개 크기).");
+            } else {
+                System.out.println("⚠️ 아이콘 파일을 찾을 수 없습니다. 기본 아이콘을 생성합니다.");
+                setDefaultIcon();
+            }
+            
+        } catch (Exception e) {
+            System.out.println("❌ 아이콘 설정 중 오류 발생: " + e.getMessage());
+            setDefaultIcon();
+        }
+    }
+    
+    /**
+     * 기본 아이콘 설정 (아이콘 파일이 없을 경우)
+     */
+    private void setDefaultIcon() {
+        try {
+            // 여러 크기의 아이콘 생성 (16x16, 32x32, 48x48)
+            java.util.List<Image> iconImages = new java.util.ArrayList<>();
+            
+            int[] sizes = {16, 32, 48};
+            for (int size : sizes) {
+                java.awt.image.BufferedImage icon = new java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2d = icon.createGraphics();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // 그라데이션 배경
+                GradientPaint gradient = new GradientPaint(0, 0, new Color(255, 69, 0), size, size, new Color(255, 140, 0));
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(2, 2, size-4, size-4, 4, 4);
+                
+                // 테트리스 블록 모양 그리기
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(1.5f));
+                int fontSize = Math.max(8, size / 2);
+                g2d.setFont(new Font("Arial", Font.BOLD, fontSize));
+                FontMetrics fm = g2d.getFontMetrics();
+                int x = (size - fm.stringWidth("T")) / 2;
+                int y = (size - fm.getHeight()) / 2 + fm.getAscent();
+                g2d.drawString("T", x, y);
+                
+                g2d.dispose();
+                iconImages.add(icon);
+            }
+            
+            // 여러 크기 아이콘 설정 (Windows에서 상황에 맞게 선택)
+            setIconImages(iconImages);
+            System.out.println("✅ 기본 아이콘이 설정되었습니다 (다중 크기).");
+        } catch (Exception e) {
+            System.out.println("❌ 기본 아이콘 생성 실패: " + e.getMessage());
+            // 최후의 수단: 단일 아이콘
+            try {
+                java.awt.image.BufferedImage fallbackIcon = new java.awt.image.BufferedImage(32, 32, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2d = fallbackIcon.createGraphics();
+                g2d.setColor(new Color(255, 69, 0));
+                g2d.fillRect(0, 0, 32, 32);
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Arial", Font.BOLD, 20));
+                g2d.drawString("T", 10, 22);
+                g2d.dispose();
+                setIconImage(fallbackIcon);
+                System.out.println("✅ 폴백 아이콘이 설정되었습니다.");
+            } catch (Exception ex) {
+                System.out.println("❌ 폴백 아이콘 생성도 실패: " + ex.getMessage());
+            }
+        }
     }
 }

@@ -170,8 +170,68 @@ task packageForDistribution {
     description = '네이티브 EXE 배포 패키지 생성'
     
     doLast {
-        println "✅ 모든 배포 패키지가 준비되었습니다."
-        println "📁 위치: $buildDir/distributions/"
+    dependsOn fatJar
+    group = 'distribution'
+    description = '진짜 .exe 파일 생성 (Launch4j 필요)'
+    
+    doLast {
+        def exeDir = new File(project.buildDir, "exe-package")
+        exeDir.mkdirs()
+        
+        // Launch4j XML 설정 파일 생성
+        def launch4jConfig = """<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>${project.buildDir}/libs/${project.name}-fat.jar</jar>
+  <outfile>${exeDir}/ChainSaw-Tetris.exe</outfile>
+  <errTitle>ChainSaw Tetris - Error</errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl>https://adoptium.net/</downloadUrl>
+  <supportUrl>https://github.com/Team5</supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon>${project.projectDir}/src/main/resources/Tetris_icon.ico</icon>
+  <jre>
+    <path></path>
+    <bundledJre64Bit>false</bundledJre64Bit>
+    <bundledJreAsFallback>false</bundledJreAsFallback>
+    <minVersion>1.8.0</minVersion>
+    <maxVersion></maxVersion>
+    <jdkPreference>preferJre</jdkPreference>
+    <runtimeBits>64/32</runtimeBits>
+  </jre>
+  <versionInfo>
+    <fileVersion>1.0.0.0</fileVersion>
+    <txtFileVersion>1.0.0</txtFileVersion>
+    <fileDescription>ChainSaw Tetris Game - Team 5</fileDescription>
+    <copyright>Team 5</copyright>
+    <productVersion>1.0.0.0</productVersion>
+    <txtProductVersion>1.0.0</txtProductVersion>
+    <productName>ChainSaw Tetris</productName>
+    <companyName>Team 5</companyName>
+    <internalName>ChainSaw-Tetris</internalName>
+    <originalFilename>ChainSaw-Tetris.exe</originalFilename>
+  </versionInfo>
+</launch4jConfig>"""
+        
+        def configFile = new File(project.buildDir, "launch4j-config.xml")
+        configFile.text = launch4jConfig
+        
+        println "⚠️  EXE 파일 생성을 위해서는 Launch4j가 필요합니다."
+        println "📥 다운로드: http://launch4j.sourceforge.net/"
+        println "📄 설정 파일 생성됨: $configFile"
+        println "🔧 Launch4j로 이 설정 파일을 열어서 EXE를 생성하세요."
+        println ""
+        println "📋 Launch4j 사용 방법:"
+        println "1. Launch4j 다운로드 및 설치"
+        println "2. Launch4j 실행"
+        println "3. 생성된 launch4j-config.xml 파일 열기"
+        println "4. Build wrapper 버튼 클릭"
+        println "5. ChainSaw-Tetris.exe 파일 생성 완료!"
     }
 }
 
@@ -220,4 +280,27 @@ task createNativeExecutable {
     }
 }
 
-
+// 모든 배포 패키지를 한 번에 생성하는 통합 작업
+task packageForDistribution {
+    dependsOn createDistributionZip, createWindowsExe
+    group = 'distribution'
+    description = '게임 배포를 위한 모든 패키지 생성'
+    
+    doLast {
+        println ""
+        println "🚀 ChainSaw Tetris 배포 패키지 생성 완료!"
+        println "=" * 50
+        println "📁 Windows 패키지: $buildDir/windows-package/"
+        println "📦 배포용 ZIP: $buildDir/distributions/ChainSaw-Tetris-v1.0-Windows.zip"
+        println "⚙️  EXE 설정 파일: $buildDir/launch4j-config.xml"
+        println ""
+        println "🎮 사용자 실행 방법:"
+        println "1. ZIP 파일을 압축 해제"
+        println "2. ChainSaw-Tetris.bat 더블클릭"
+        println ""
+        println "🔧 EXE 파일 생성:"
+        println "1. Launch4j 설치 후 설정파일로 EXE 생성"
+        println "2. 또는 Java 14+에서 './gradlew createNativeExecutable' 실행"
+        println ""
+    }
+}
