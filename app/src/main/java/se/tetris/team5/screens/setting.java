@@ -62,7 +62,16 @@ public class setting {
     
     public void display(JTextPane textPane) {
         this.currentTextPane = textPane;
-        textPane.setBackground(Color.BLACK);
+    // Clear any child components left in the shared textPane and reset background
+    textPane.removeAll();
+    // Use the configured background color from GameSettings instead of a hardcoded black
+    // Ensure the textPane is opaque so the background color is actually painted
+    textPane.setOpaque(true);
+    textPane.setBackground(gameSettings.getUIColor("background"));
+        // Remove previous key listeners and add our own to avoid duplicates
+        for (KeyListener kl : textPane.getKeyListeners()) {
+            textPane.removeKeyListener(kl);
+        }
         textPane.addKeyListener(new SettingKeyListener());
         drawSettingScreen();
     }
