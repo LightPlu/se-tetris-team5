@@ -56,10 +56,29 @@ public class DoubleScoreBadge extends JComponent {
     g2.setColor(new Color(120, 180, 255));
     g2.fillRoundRect(0, 0, w, h, arc, arc);
 
-  // draw progress ring on left side (make ring visually larger)
-  int ringSize = Math.min(h - 2, 24);
-  int ringX = 6;
+    // draw progress ring and text centered as a group
+    int ringSize = Math.min(h - 2, 24);
+    String x2 = "x2";
+    Font fMain = new Font("Segoe UI", Font.BOLD, Math.max(8, h * 2 / 6));
+    g2.setFont(fMain);
+    FontMetrics fmMain = g2.getFontMetrics();
+    int x2W = fmMain.stringWidth(x2);
+    int spacing = Math.max(6, h / 8);
+    String secsText = "";
+    if (remainingMillis > 0) {
+      int secs = (int) ((remainingMillis + 500) / 1000);
+      secsText = String.valueOf(secs) + "s";
+    }
+    Font fSmall = new Font("Segoe UI", Font.PLAIN, Math.max(10, h / 3));
+    g2.setFont(fSmall);
+    FontMetrics fmSmall = g2.getFontMetrics();
+    int secsW = (secsText.isEmpty() ? 0 : fmSmall.stringWidth(secsText));
+
+    int totalW = ringSize + spacing + x2W + (secsW > 0 ? spacing + secsW : 0);
+    int groupX = Math.max(4, (w - totalW) / 2);
+    int ringX = groupX;
     int ringY = (h - ringSize) / 2;
+
     // background ring
     g2.setColor(new Color(255, 255, 255, 60));
     g2.fillOval(ringX, ringY, ringSize, ringSize);
@@ -67,7 +86,6 @@ public class DoubleScoreBadge extends JComponent {
     if (remainingMillis > 0) {
       double frac = Math.max(0.0, Math.min(1.0, (double) remainingMillis / (double) totalMillis));
       double sweep = 360.0 * frac;
-      // arc color transitions: full -> pale blue, nearing end -> orange/red
       Color arcColor = new Color(255, 255, 255, 200);
       if (frac < 0.25) arcColor = new Color(255, 140, 60, 220);
       else if (frac < 0.5) arcColor = new Color(255, 190, 100, 220);
@@ -75,21 +93,24 @@ public class DoubleScoreBadge extends JComponent {
       g2.setColor(arcColor);
       java.awt.BasicStroke stroke = new java.awt.BasicStroke(Math.max(2f, ringSize / 6f), java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
       g2.setStroke(stroke);
-      // draw arc from top (-90 deg) clockwise
       int pad = 2;
       g2.drawArc(ringX + pad, ringY + pad, ringSize - pad * 2, ringSize - pad * 2, 90, -(int) Math.round(sweep));
     }
 
-  // draw text "x2" vertically centered, placed right of ring (use smaller font)
-  String text = "x2";
-  Font f = new Font("Segoe UI", Font.BOLD, Math.max(8, h * 2 / 6));
-    g2.setFont(f);
-    FontMetrics fm = g2.getFontMetrics();
-  // tuck the text closer to the ring so overall width can be smaller
-  int tx = ringX + ringSize + 4;
-    int ty = (h + fm.getAscent()) / 2 - 2;
+    // draw x2
+    int textX = ringX + ringSize + spacing;
+    int textY = (h + fmMain.getAscent()) / 2 - 2;
+    g2.setFont(fMain);
     g2.setColor(Color.WHITE);
-    g2.drawString(text, tx, ty);
+    g2.drawString(x2, textX, textY);
+
+    // draw seconds (if any) to the right of x2, smaller font
+    if (!secsText.isEmpty()) {
+      int secsX = textX + x2W + spacing;
+      int secsY = (h + fmSmall.getAscent()) / 2 - 1;
+      g2.setFont(fSmall);
+      g2.drawString(secsText, secsX, secsY);
+    }
 
     g2.dispose();
   }

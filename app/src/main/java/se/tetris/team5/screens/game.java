@@ -27,9 +27,9 @@ import se.tetris.team5.ScreenController;
 import se.tetris.team5.blocks.Block;
 import se.tetris.team5.gamelogic.GameEngine;
 import se.tetris.team5.components.game.GameBoard;
-import se.tetris.team5.components.game.DoubleScoreBadge;
 import se.tetris.team5.components.game.NextBlockBoard;
 import se.tetris.team5.components.game.ScoreBoard;
+import se.tetris.team5.components.game.DoubleScoreBadge;
 import se.tetris.team5.utils.score.ScoreManager;
 
 public class game extends JPanel implements KeyListener {
@@ -104,7 +104,6 @@ public class game extends JPanel implements KeyListener {
         return 800; // 기본값 (보통)
     }
   }
-
   public game(ScreenController screenController) {
     // 마우스 클릭 시 포커스 강제 요청 (클릭 후 키 입력 안 먹는 현상 방지)
     addMouseListener(new java.awt.event.MouseAdapter() {
@@ -339,7 +338,7 @@ public class game extends JPanel implements KeyListener {
   itemDescPane.setFont(new Font("Segoe UI", Font.PLAIN, 13));
   itemDescPane.setForeground(new Color(220, 220, 220));
   itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
-  JPanel itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
+  JPanel itemDescWrapper = createTitledPanel("보유 아이템", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
   itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
   rightPanel.add(itemDescWrapper);
@@ -738,7 +737,7 @@ public class game extends JPanel implements KeyListener {
         0, scoreBoard.getTextPane().getDocument().getLength(),
         scoreBoard.getStyleSet(), false);
 
-    // Double-score visual indicator
+    // Double-score visual indicator (badge) — show remaining time when active
     try {
       long rem = gameEngine.getDoubleScoreRemainingMillis();
       if (rem > 0) {
@@ -824,36 +823,37 @@ public class game extends JPanel implements KeyListener {
       }
     }
 
-    // Prefer showing an already-acquired item (the one the player is holding) if present.
-    String itemDesc = "다음 블록에 포함된 아이템이 없거나, 대기 중입니다.";
+    // Show held item state ONLY for TimeStop. DoubleScore is not shown as a held item.
     se.tetris.team5.items.Item held = gameEngine.getAcquiredItem();
-    if (held != null) {
-      itemDesc = describeItem(held, true);
+    String itemDesc;
+    if (held != null && held instanceof se.tetris.team5.items.TimeStopItem) {
+      itemDesc = "타임스톱 보유중";
     } else {
-      // otherwise check the next block's internal item
-      if (nextBlock != null) {
-        se.tetris.team5.items.Item found = null;
-        outer: for (int r = 0; r < nextBlock.height(); r++) {
-          for (int c = 0; c < nextBlock.width(); c++) {
-            se.tetris.team5.items.Item it = nextBlock.getItem(c, r);
-            if (it != null) {
-              found = it;
-              break outer;
-            }
-          }
-        }
-        if (found != null) {
-          itemDesc = describeItem(found, false);
-        }
-      }
+      itemDesc = "보유한 아이템 없음";
     }
+
+    // Debug log to help verify UI update timing
+    System.out.println("[UI DEBUG] updateNextBlockBoard held=" + (held == null ? "null" : held.getClass().getSimpleName()) + ", hasTimeStop=" + gameEngine.hasTimeStopCharge());
 
     if (itemDescPane != null) {
       itemDescPane.setText(itemDesc);
       try {
-        itemDescPane.getStyledDocument().setCharacterAttributes(0, itemDescPane.getDocument().getLength(), new SimpleAttributeSet(), false);
+        // center-align the paragraph and apply a slightly larger font for visibility
+        SimpleAttributeSet sas = new SimpleAttributeSet();
+        StyleConstants.setAlignment(sas, StyleConstants.ALIGN_CENTER);
+        StyleConstants.setFontSize(sas, 16);
+        StyleConstants.setBold(sas, true);
+        StyleConstants.setForeground(sas, new Color(240,240,240));
+        itemDescPane.getStyledDocument().setParagraphAttributes(0, itemDescPane.getDocument().getLength(), sas, false);
       } catch (Exception ex) {
         // ignore styling errors
+      }
+      // Ensure the change is repainted immediately
+      try {
+        itemDescPane.revalidate();
+        itemDescPane.repaint();
+      } catch (Exception ex) {
+        // ignore
       }
     }
     // Ensure the graphical preview repaints immediately so the UI stays in sync with engine state
@@ -865,43 +865,7 @@ public class game extends JPanel implements KeyListener {
     }
   }
 
-  /**
-   * Return a user-facing description for an item. If held==true, wording will reflect possession.
-   */
-  private String describeItem(se.tetris.team5.items.Item it, boolean held) {
-    if (it == null) return "다음 블록에 포함된 아이템이 없거나, 대기 중입니다.";
-    // Prefer using instanceof checks but fall back to item.getName() to handle any classloader/mapping issues.
-    String name = it.getName();
-    if (held) {
-      if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
-        return "(보유) 타임스톱(⏱): Shift 키로 게임을 5초간 멈출 수 있는 충전입니다.";
-      if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
-        return "(보유) 폭탄(B): 사용 시 주변 블록을 제거합니다.";
-      if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
-        return "(보유) 줄삭제(L): 사용 시 특정 줄을 즉시 삭제합니다.";
-      if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
-        se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
-        return "(보유) 점수 아이템(+): 즉시 " + si.getScoreAmount() + " 점을 획득합니다.";
-      }
-      if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
-        return "(보유) 무게추(W): 사용 시 무게추 블록을 소환합니다.";
-      return "(보유) 아이템: " + name;
-    } else {
-      if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
-        return "다음 블록: 타임스톱(⏱) — 줄 삭제 시 획득하면 Shift로 5초 정지 충전.";
-      if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
-        return "다음 블록: 폭탄(B) — 블록 고정 시 폭발로 블록 제거.";
-      if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
-        return "다음 블록: 줄삭제(L) — 블록 고정 시 해당 줄 즉시 삭제.";
-      if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
-        se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
-        return "다음 블록: 점수 아이템(+" + si.getScoreAmount() + ") — 고정 시 점수 획득.";
-      }
-      if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
-        return "다음 블록: 무게추(W) — 다음 블록이 WBlock으로 생성됩니다.";
-      return "다음 블록: 특수 아이템 — " + name;
-    }
-  }
+  
 
   /**
    * 호환성을 위한 drawBoard 메서드

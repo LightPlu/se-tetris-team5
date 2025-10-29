@@ -140,7 +140,14 @@ public class GameEngine {
       if (!removedItems.isEmpty()) {
         for (se.tetris.team5.items.Item it : removedItems) {
           if (it instanceof se.tetris.team5.items.TimeStopItem) {
+            // When a TimeStop item is removed as part of a line clear, mark it as charged
+            // and set it as the player's acquired item if they don't already hold one.
             hasTimeStopCharge = true;
+            if (acquiredItem == null) {
+              acquireItem(it);
+            } else {
+              System.out.println("[타임스톱 충전 완료] 하지만 이미 보유한 아이템이 있어 자동 획득되지 않음");
+            }
             System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
           }
           // 아이템 효과 적용
@@ -149,6 +156,13 @@ public class GameEngine {
           } catch (Exception e) {
             System.err.println("[아이템 적용 오류] " + e.getMessage());
           }
+        }
+        // Notify UI again after processing removed items so any acquiredItem changes
+        // (e.g., TimeStop being granted) are reflected in the UI during the clear animation.
+        try {
+          notifyListenersImmediate();
+        } catch (Exception ex) {
+          // ignore
         }
       }
 
@@ -238,8 +252,13 @@ public class GameEngine {
     // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인 및 아이템 효과 적용
     if (!removedItems.isEmpty()) {
       for (se.tetris.team5.items.Item it : removedItems) {
-        if (it instanceof se.tetris.team5.items.TimeStopItem) {
+          if (it instanceof se.tetris.team5.items.TimeStopItem) {
           hasTimeStopCharge = true;
+          if (acquiredItem == null) {
+            acquireItem(it);
+          } else {
+            System.out.println("[타임스톱 충전 완료] 하지만 이미 보유한 아이템이 있어 자동 획득되지 않음");
+          }
           System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
         }
         try {
@@ -247,6 +266,12 @@ public class GameEngine {
         } catch (Exception e) {
           System.err.println("[아이템 적용 오류] " + e.getMessage());
         }
+      }
+      // After applying effects and potential acquisition, notify UI so held-item state updates
+      try {
+        notifyListenersImmediate();
+      } catch (Exception ex) {
+        // ignore
       }
     }
 
@@ -355,10 +380,16 @@ public class GameEngine {
         for (int i = 0; i < nextBlock.width(); i++) {
           se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
           if (item != null) {
-            acquiredItem = item;
-            // TimeStopItem은 줄 삭제 시에만 충전되므로 여기서 처리하지 않음
+            // Do not auto-acquire TimeStop items here; TimeStop is granted when the
+            // TimeStop tile is removed as part of a line clear. For other items, set
+            // acquiredItem so the player can hold and use them — but only if the
+            // player isn't already holding an item (avoid overwriting TimeStop).
             if (!(item instanceof se.tetris.team5.items.TimeStopItem)) {
-              System.out.println("[아이템 획득 대기] " + item);
+              if (acquiredItem == null) {
+                acquireItem(item);
+              } else {
+                System.out.println("[아이템 획득 대기] 자동획득 스킵(이미 보유): " + item);
+              }
             }
             break;
           }
@@ -380,6 +411,24 @@ public class GameEngine {
     }
   }
 
+  /**
+   * Helper to set the acquired item and notify listeners so the UI updates immediately.
+   */
+  public void acquireItem(se.tetris.team5.items.Item item) {
+    if (item == null) return;
+    acquiredItem = item;
+    try {
+      System.out.println("[아이템 획득] " + item.getName());
+    } catch (Exception ex) {
+      // ignore
+    }
+    try {
+      notifyListenersImmediate();
+    } catch (Exception ex) {
+      // ignore
+    }
+  }
+
   // 획득 대기중인 아이템을 반환 (없으면 null) 새로추가된것
   public se.tetris.team5.items.Item getAcquiredItem() {
     return acquiredItem;
@@ -394,6 +443,10 @@ public class GameEngine {
   public void useTimeStop() {
     if (hasTimeStopCharge) {
       hasTimeStopCharge = false;
+      // If the player was holding a TimeStop as their acquired item, consume it as well.
+      if (acquiredItem instanceof se.tetris.team5.items.TimeStopItem) {
+        acquiredItem = null;
+      }
       System.out.println("[타임스톱 사용] 게임이 5초간 멈춥니다!");
     }
   }
