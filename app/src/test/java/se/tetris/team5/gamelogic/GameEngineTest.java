@@ -330,9 +330,9 @@ public class GameEngineTest {
 
     @Test
     public void testDefaultGameModeIsNormal() {
-        // then: 기본 모드는 NORMAL
-        assertEquals("Default mode should be NORMAL", 
-            GameMode.NORMAL, engine.getGameMode());
+        // then: 기본 모드는 ITEM
+        assertEquals("Default mode should be ITEM", 
+            GameMode.ITEM, engine.getGameMode());
     }
 
     @Test

@@ -61,7 +61,8 @@ public class GameEngineCoverageTest {
 
     @Test
     public void testNormalModeDoesNotGenerateItems() throws Exception {
-        // given: 일반 모드 (기본값)
+        // given: 일반 모드로 설정
+        engine.setGameMode(GameMode.NORMAL);
         assertEquals(GameMode.NORMAL, engine.getGameMode());
         
         // when: 10줄 삭제 시뮬레이션
@@ -594,14 +595,7 @@ public class GameEngineCoverageTest {
 
     @Test
     public void testItemAcquisitionFromNextBlock() throws Exception {
-        // given: nextBlock의 여러 위치에 아이템 배치
-        Field nextBlockField = GameEngine.class.getDeclaredField("nextBlock");
-        nextBlockField.setAccessible(true);
-        
-        Block testBlock = new IBlock();
-        testBlock.setItem(1, 1, new LineClearItem());
-        nextBlockField.set(engine, testBlock);
-        
+        // given: 아이템을 부여하는 mockPolicy 설정
         engine.setGameMode(GameMode.ITEM);
         
         Field itemGrantPolicyField = GameEngine.class.getDeclaredField("itemGrantPolicy");
@@ -609,12 +603,25 @@ public class GameEngineCoverageTest {
         ItemGrantPolicy mockPolicy = new ItemGrantPolicy() {
             @Override
             public Item grantItem(Block block, ItemGrantContext context) {
-                return new LineClearItem();
+                // 실제 정책처럼 블록에 아이템을 설정하고 반환
+                if (block != null && context.totalClearedLines >= 10) {
+                    LineClearItem item = new LineClearItem();
+                    // 블록의 첫 번째 칸에 아이템 설정
+                    for (int y = 0; y < block.height(); y++) {
+                        for (int x = 0; x < block.width(); x++) {
+                            if (block.getShape(x, y) == 1) {
+                                block.setItem(x, y, item);
+                                return item;
+                            }
+                        }
+                    }
+                }
+                return null;
             }
         };
         itemGrantPolicyField.set(engine, mockPolicy);
         
-        // when: 아이템 부여 처리
+        // when: 10줄 삭제로 아이템 부여 트리거
         Method handleItemMethod = GameEngine.class.getDeclaredMethod(
             "handleItemSpawnAndCollect", int.class);
         handleItemMethod.setAccessible(true);
@@ -631,6 +638,7 @@ public class GameEngineCoverageTest {
         Item acquired = (Item) acquiredItemField.get(engine);
         
         assertNotNull("아이템이 획득되어야 함", acquired);
+        assertTrue("LineClearItem이 획득되어야 함", acquired instanceof LineClearItem);
     }
 
     // ==================== 예외 처리 테스트 ====================

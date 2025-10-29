@@ -27,26 +27,25 @@ public class GameModeTest {
 
     @Test
     public void testDefaultGameModeIsNormal() {
-        // then: 기본 게임 모드는 NORMAL이어야 함
-        assertEquals("기본 게임 모드는 NORMAL이어야 함", GameMode.NORMAL, engine.getGameMode());
+        // then: 기본 게임 모드는 ITEM이어야 함
+        assertEquals("기본 게임 모드는 ITEM이어야 함", GameMode.ITEM, engine.getGameMode());
     }
 
     @Test
     public void testSetGameModeToItem() {
-        // given: 초기 모드는 NORMAL
-        assertEquals(GameMode.NORMAL, engine.getGameMode());
+        // given: 초기 모드는 ITEM
+        assertEquals(GameMode.ITEM, engine.getGameMode());
         
-        // when: 아이템 모드로 변경
-        engine.setGameMode(GameMode.ITEM);
+        // when: 일반 모드로 변경
+        engine.setGameMode(GameMode.NORMAL);
         
-        // then: 모드가 ITEM으로 변경됨
-        assertEquals("게임 모드가 ITEM으로 변경되어야 함", GameMode.ITEM, engine.getGameMode());
+        // then: 모드가 NORMAL로 변경됨
+        assertEquals("게임 모드가 NORMAL로 변경되어야 함", GameMode.NORMAL, engine.getGameMode());
     }
 
     @Test
     public void testSetGameModeToNormal() {
-        // given: 아이템 모드로 설정
-        engine.setGameMode(GameMode.ITEM);
+        // given: 아이템 모드 (기본값)
         assertEquals(GameMode.ITEM, engine.getGameMode());
         
         // when: 일반 모드로 변경
@@ -129,20 +128,20 @@ public class GameModeTest {
 
     @Test
     public void testGameModeSwitchDuringGame() {
-        // given: 게임 시작 (NORMAL 모드)
-        assertEquals(GameMode.NORMAL, engine.getGameMode());
+        // given: 게임 시작 (ITEM 모드)
+        assertEquals(GameMode.ITEM, engine.getGameMode());
         
-        // when: 게임 중간에 ITEM 모드로 변경
-        engine.setGameMode(GameMode.ITEM);
-        
-        // then: 모드가 즉시 변경됨
-        assertEquals("게임 중에도 모드 변경이 가능해야 함", GameMode.ITEM, engine.getGameMode());
-        
-        // when: 다시 NORMAL 모드로 변경
+        // when: 게임 중간에 NORMAL 모드로 변경
         engine.setGameMode(GameMode.NORMAL);
         
+        // then: 모드가 즉시 변경됨
+        assertEquals("게임 중에도 모드 변경이 가능해야 함", GameMode.NORMAL, engine.getGameMode());
+        
+        // when: 다시 ITEM 모드로 변경
+        engine.setGameMode(GameMode.ITEM);
+        
         // then: 모드가 다시 변경됨
-        assertEquals("게임 중 모드를 다시 변경할 수 있어야 함", GameMode.NORMAL, engine.getGameMode());
+        assertEquals("게임 중 모드를 다시 변경할 수 있어야 함", GameMode.ITEM, engine.getGameMode());
     }
 
     @Test
