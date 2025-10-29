@@ -7,29 +7,78 @@ import java.util.List;
 import se.tetris.team5.blocks.*;
 
 public class BlockFactory {
-  private Random random;
-  // 7-bag implementation to avoid unfair streaks/repeats
-  private List<Integer> bag;
+  /**
+   * 블럭 생성 난이도 (UI에서 동적으로 변경 가능)
+   */
+  public enum Difficulty {
+    NORMAL, EASY, HARD
+  }
 
+  private Random random;
+  private Difficulty difficulty = Difficulty.NORMAL;
+
+  /**
+   * 기본 생성자 (난이도: NORMAL, seed: 랜덤)
+   */
   public BlockFactory() {
     this.random = new Random();
     this.bag = new ArrayList<>();
     refillBag();
   }
 
-  public Block createRandomBlock() {
-    if (bag.isEmpty()) refillBag();
-    int blockType = bag.remove(0);
-    Block b = createBlock(0);
-    return b;
+  /**
+   * 난이도 지정 생성자 (seed: 랜덤)
+   */
+  public BlockFactory(Difficulty difficulty) {
+    this.random = new Random();
+    this.difficulty = difficulty;
   }
 
-  private void refillBag() {
-    bag.clear();
-    for (int i = 0; i < 7; i++) bag.add(i);
-    Collections.shuffle(bag, random);
-    // small debug
-    // System.out.println("[BlockFactory DEBUG] refillBag order=" + bag);
+  /**
+   * 난이도 설정 (UI에서 호출)
+   */
+  public void setDifficulty(Difficulty difficulty) {
+    this.difficulty = difficulty;
+  }
+
+  /**
+   * 현재 난이도 반환 (UI에서 조회용)
+   */
+  public Difficulty getDifficulty() {
+    return this.difficulty;
+  }
+
+  /**
+   * 랜덤 시드(Seed) 재설정 (UI에서 seed 고정 플레이 등 활용 가능)
+   */
+  public void setRandomSeed(long seed) {
+    this.random = new Random(seed);
+  }
+
+  public Block createRandomBlock() {
+    int[] weights;
+    // 블럭 순서: I, J, L, Z, S, T, O
+    switch (difficulty) {
+      case EASY:
+        weights = new int[] { 12, 10, 10, 10, 10, 10, 10 }; // I만 20% 더 높음
+        break;
+      case HARD:
+        weights = new int[] { 8, 10, 10, 10, 10, 10, 10 }; // I만 20% 낮음
+        break;
+      case NORMAL:
+      default:
+        weights = new int[] { 10, 10, 10, 10, 10, 10, 10 }; // 모두 동일
+    }
+    int total = 0;
+    for (int w : weights)
+      total += w;
+    int r = random.nextInt(total);
+    int idx = 0;
+    while (r >= weights[idx]) {
+      r -= weights[idx];
+      idx++;
+    }
+    return createBlock(idx);
   }
 
   /**
@@ -61,6 +110,9 @@ public class BlockFactory {
     }
   }
 
+  /**
+   * 랜덤 시드를 현재 시간으로 재설정 (UI에서 '새로고침' 등 활용 가능)
+   */
   public void refreshRandomSeed() {
     this.random = new Random(System.currentTimeMillis());
   }

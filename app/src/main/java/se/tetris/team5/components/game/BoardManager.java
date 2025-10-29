@@ -128,7 +128,12 @@ public class BoardManager {
   /**
    * 블록을 보드에 고정합니다 (고정된 블록)
    */
-  public void fixBlock(Block block, int x, int y) {
+  /**
+   * 블록을 보드에 고정합니다 (고정된 블록)
+   * 
+   * @param removedItems 이 리스트에 삭제로 인해 제거된 아이템들을 추가합니다 (null 허용)
+   */
+  public void fixBlock(Block block, int x, int y, java.util.List<se.tetris.team5.items.Item> removedItems) {
     // 무게추 블록 특수 처리: WBlock인 경우, 해당 블록이 차지하는 열들의 고정 블록들을 모두 제거
     // 그리고 블록을 가장 아래에 고정시킨다.
     if (block instanceof se.tetris.team5.blocks.WBlock) {
@@ -170,15 +175,13 @@ public class BoardManager {
         }
       }
 
-
-
       return; // 특수 처리 후 종료
     }
 
     if (block instanceof se.tetris.team5.blocks.DotBlock) {
       // 폭탄 블록(DotBlock) 특수 처리: 블록의 각 칸 위치를 중심으로 3x3 범위 폭발
       System.out.println("[폭탄 블록] DotBlock 고정 - 폭발 시작!");
-      
+
       // 먼저 폭탄 블록 자체를 보드에서 제거 (움직이는 블록 상태 제거)
       for (int i = 0; i < block.width(); i++) {
         for (int j = 0; j < block.height(); j++) {
@@ -195,20 +198,20 @@ public class BoardManager {
           }
         }
       }
-      
+
       // 블록의 각 칸 위치에서 폭발 실행
       for (int i = 0; i < block.width(); i++) {
         for (int j = 0; j < block.height(); j++) {
           if (block.getShape(i, j) == 1) {
             int centerX = x + i;
             int centerY = y + j;
-            
+
             // 각 칸을 중심으로 3x3 범위 폭발
             explodeArea(centerX, centerY);
           }
         }
       }
-      
+
       System.out.println("[폭탄 블록] 폭발 완료! 폭탄 블록은 고정되지 않음");
       return; // 폭탄 블록 자체는 고정하지 않고 종료
     }
@@ -235,6 +238,14 @@ public class BoardManager {
       java.util.List<Integer> sortedRows = new java.util.ArrayList<>(lineClearRows);
       sortedRows.sort(java.util.Collections.reverseOrder());
       for (int row : sortedRows) {
+        // 수집: 삭제되는 줄의 아이템들을 removedItems에 추가
+        if (removedItems != null) {
+          for (int col = 0; col < WIDTH; col++) {
+            se.tetris.team5.items.Item removed = boardItems[row][col];
+            if (removed != null)
+              removedItems.add(removed);
+          }
+        }
         // 줄 삭제: 위의 줄을 한 칸씩 내림
         for (int moveRow = row; moveRow > 0; moveRow--) {
           for (int col = 0; col < WIDTH; col++) {
@@ -252,6 +263,7 @@ public class BoardManager {
       }
     }
   }
+
   /**
    * 각 칸의 아이템 정보를 반환합니다
    */
@@ -295,29 +307,32 @@ public class BoardManager {
     return true;
   }
 
+  // 마지막으로 삭제된 줄에 타임스톱 아이템이 있었는지 여부
+  private boolean timeStopItemCleared = false;
+
+  /**
+   * 마지막 줄 삭제 시 타임스톱 아이템이 있었는지 반환하고 플래그 초기화
+   */
+  public boolean wasTimeStopItemCleared() {
+    boolean result = timeStopItemCleared;
+    timeStopItemCleared = false; // 플래그 초기화
+    return result;
+  }
+
   /**
    * 가득 찬 줄을 제거하고 위의 줄들을 아래로 내립니다
    * 
    * @return 제거된 줄 수
    */
-  public int clearLines() {
-    java.util.List<Integer> rows = clearLinesInternal();
-    return rows.size();
-  }
-
   /**
-   * Clear lines and return the list of cleared row indices (0..HEIGHT-1).
-   * This is a more informative API for UI consumers that want to animate per-row clears.
+   * 가득 찬 줄을 제거하고 위의 줄들을 아래로 내립니다
+   * 
+   * @param removedItems 삭제로 인해 제거된 아이템들을 추가할 리스트 (null 허용)
+   * @return 제거된 줄 수
    */
-  public java.util.List<Integer> clearLinesWithRows() {
-    return clearLinesInternal();
-  }
-
-  /**
-   * Internal implementation that actually clears full rows and returns their indices.
-   */
-  private java.util.List<Integer> clearLinesInternal() {
-    java.util.List<Integer> clearedRows = new java.util.ArrayList<>();
+  public int clearLines(java.util.List<se.tetris.team5.items.Item> removedItems) {
+    int clearedLinesCount = 0;
+    timeStopItemCleared = false; // 매 clearLines 호출 시 초기화
 
     // First pass: collect all full rows on the board (fixed blocks only)
     for (int row = 0; row < HEIGHT; row++) {
@@ -329,23 +344,32 @@ public class BoardManager {
         }
       }
       if (fullLine) {
-        clearedRows.add(row);
-      }
-    }
-
-    if (!clearedRows.isEmpty()) {
-      // Build new compressed boards by copying non-cleared rows from bottom to top.
-      // This avoids index-shift complexities when deleting multiple rows.
-      java.util.Set<Integer> clearedSet = new java.util.HashSet<>(clearedRows);
-
-      int[][] newBoard = new int[HEIGHT][WIDTH];
-      Color[][] newBoardColors = new Color[HEIGHT][WIDTH];
-      se.tetris.team5.items.Item[][] newBoardItems = new se.tetris.team5.items.Item[HEIGHT][WIDTH];
-
-      int writeRow = HEIGHT - 1;
-      for (int readRow = HEIGHT - 1; readRow >= 0; readRow--) {
-        if (clearedSet.contains(readRow)) continue; // skip cleared row
-        // copy this row to writeRow
+        // 줄을 삭제하기 전에 타임스톱 아이템이 있는지 확인
+        for (int col = 0; col < WIDTH; col++) {
+          if (boardItems[row][col] instanceof se.tetris.team5.items.TimeStopItem) {
+            timeStopItemCleared = true;
+            System.out.println("[타임스톱 아이템 발견] 줄 삭제로 타임스톱 충전!");
+          }
+        }
+        
+        clearedLinesCount++;
+        // 수집: 삭제되는 줄의 아이템들을 removedItems에 추가
+        if (removedItems != null) {
+          for (int col = 0; col < WIDTH; col++) {
+            se.tetris.team5.items.Item removed = boardItems[row][col];
+            if (removed != null)
+              removedItems.add(removed);
+          }
+        }
+        // 아래 줄을 한 칸씩 내림
+        for (int moveRow = row; moveRow > 0; moveRow--) {
+          for (int col = 0; col < WIDTH; col++) {
+            board[moveRow][col] = board[moveRow - 1][col];
+            boardColors[moveRow][col] = boardColors[moveRow - 1][col];
+            boardItems[moveRow][col] = boardItems[moveRow - 1][col];
+          }
+        }
+        // 맨 위 줄은 빈 줄로 만듦
         for (int col = 0; col < WIDTH; col++) {
           newBoard[writeRow][col] = board[readRow][col];
           newBoardColors[writeRow][col] = boardColors[readRow][col];
@@ -379,19 +403,20 @@ public class BoardManager {
 
   /**
    * 지정된 위치를 중심으로 3x3 범위의 블록을 폭발시킵니다.
+   * 
    * @param centerX 폭발 중심 X 좌표
    * @param centerY 폭발 중심 Y 좌표
    * @return 제거된 셀의 개수
    */
   public int explodeArea(int centerX, int centerY) {
     int explodedCells = 0;
-    
+
     // 3x3 범위 계산 (중심 기준 -1 ~ +1)
     for (int dy = -1; dy <= 1; dy++) {
       for (int dx = -1; dx <= 1; dx++) {
         int targetX = centerX + dx;
         int targetY = centerY + dy;
-        
+
         // 범위 체크
         if (targetX >= 0 && targetX < WIDTH && targetY >= 0 && targetY < HEIGHT) {
           if (board[targetY][targetX] == 1) { // 고정된 블록만 제거
@@ -403,7 +428,7 @@ public class BoardManager {
         }
       }
     }
-    
+
     System.out.println("[폭발] (" + centerX + "," + centerY + ") 중심 3x3 범위, " + explodedCells + "개 블록 제거");
     return explodedCells;
   }

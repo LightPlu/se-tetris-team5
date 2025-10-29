@@ -595,6 +595,8 @@ public class game extends JPanel implements KeyListener {
           if (item != null) {
             if (item instanceof se.tetris.team5.items.TimeStopItem) {
               sb.append("⏱");
+            } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
+              sb.append("$");
             } else {
               sb.append("★");
             }
@@ -606,6 +608,8 @@ public class game extends JPanel implements KeyListener {
           if (item != null) {
             if (item instanceof se.tetris.team5.items.TimeStopItem) {
               sb.append("⏱");
+            } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
+              sb.append("$");
             } else {
               sb.append("★");
             }
@@ -742,6 +746,8 @@ public class game extends JPanel implements KeyListener {
             if (item != null) {
               if (item instanceof se.tetris.team5.items.TimeStopItem) {
                 sb.append("⏱");
+              } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
+                sb.append("$");
               } else {
                 sb.append("★");
               }
