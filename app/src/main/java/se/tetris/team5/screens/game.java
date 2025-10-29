@@ -296,7 +296,10 @@ public class game extends JPanel implements KeyListener {
       g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
       int w = getWidth();
       int h = getHeight();
-      int cellSize = Math.min(w / 6, h / 6);
+      // Use most of the available area for the 4x4 preview so individual tiles appear larger.
+      // Subtract a small padding so rounded corners and borders have breathing room.
+      int padding = 12;
+      int cellSize = Math.max(8, Math.min((w - padding) / 4, (h - padding) / 4));
       int gridSize = cellSize * 4;
       int startX = (w - gridSize) / 2;
       int startY = (h - gridSize) / 2;
@@ -324,7 +327,8 @@ public class game extends JPanel implements KeyListener {
       g2.dispose();
     }
   };
-  nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
+  // make the preview a bit taller so the scaled tiles have room
+  nextVisualPanel.setPreferredSize(new java.awt.Dimension(260, 180));
   JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
   nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
@@ -340,7 +344,8 @@ public class game extends JPanel implements KeyListener {
   itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
   JPanel itemDescWrapper = createTitledPanel("보유 아이템", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
   itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
+  // reduce the held-item box height so it doesn't dominate the right column
+  itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 80));
   rightPanel.add(itemDescWrapper);
   rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
@@ -389,19 +394,39 @@ public class game extends JPanel implements KeyListener {
   controlsPane.setOpaque(false);
   controlsPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
   controlsPane.setForeground(Color.WHITE);
-  StringBuilder ctrl = new StringBuilder();
-  ctrl.append("조작키 안내\n\n");
-  ctrl.append("↑ : 회전\n");
-  ctrl.append("↓ : 소프트 드롭\n");
-  ctrl.append("← → : 이동\n");
-  ctrl.append("Space : 하드 드롭\n");
-  ctrl.append("ESC : 나가기\n");
-  controlsPane.setText(ctrl.toString());
+  // Compact single-line controls help to save vertical space
+  String ctrl = "조작키 안내 ↑: 회전    ↓: 소프트 드롭    ←→: 이동    Space: 하드 드롭    ESC: 나가기";
+  controlsPane.setText(ctrl);
   controlsBox.add(controlsPane, BorderLayout.CENTER);
   JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
   controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
+  // Reduce height so the controls box is more compact
+  controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 90));
   rightPanel.add(controlsWrapper);
+
+  // Small vertical gap then an item description panel (short descriptions per item)
+  rightPanel.add(javax.swing.Box.createVerticalStrut(8));
+  JTextPane itemHelpPane = new JTextPane();
+  itemHelpPane.setEditable(false);
+  itemHelpPane.setOpaque(false);
+  itemHelpPane.setFont(new Font("Segoe UI", Font.PLAIN, 9));
+  itemHelpPane.setForeground(new Color(220, 220, 220));
+  StringBuilder help = new StringBuilder();
+  help.append("타임스톱 (⏱): 블록 낙하를 5초간 멈춤. Shift로 사용.\n");
+  help.append("점수 2배 (x2): 20초 동안 얻는 점수가 2배.\n");
+  help.append("줄삭제 (L): 놓인 위치에서 한 줄을 즉시 제거.\n");
+  help.append("무게추 (W): 아래 놓인 블록을 모두 파괴하고 가장 바닥에 안착.\n");
+  help.append("폭탄 (💣): 놓인 위치 주변을 폭발하여 블록을 제거.");
+  itemHelpPane.setText(help.toString());
+  SimpleAttributeSet helpSas = new SimpleAttributeSet();
+  StyleConstants.setFontSize(helpSas, 9);
+  StyleConstants.setFontFamily(helpSas, "Segoe UI");
+  itemHelpPane.getStyledDocument().setCharacterAttributes(0, itemHelpPane.getDocument().getLength(), helpSas, false);
+  JPanel helpWrapper = createTitledPanel("아이템 설명", itemHelpPane, new Color(255, 140, 0), new Color(255, 140, 0));
+  helpWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  // slightly increase the item-help box so descriptions have a bit more vertical room
+  helpWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
+  rightPanel.add(helpWrapper);
 
   // Controls panel (titled box) — re-use scoreBoard's text pane styling by creating a simple info pane
   // We remove the controls text from the 게임 정보 panel as requested.
