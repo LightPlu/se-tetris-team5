@@ -10,6 +10,10 @@ import se.tetris.team5.gamelogic.scoring.GameScoring;
 import se.tetris.team5.items.ItemGrantPolicy;
 
 public class GameEngine {
+  // 게임 모드 (NORMAL: 아이템 없음, ITEM: 10줄마다 아이템)
+  // 기본 모드를 일반 모드로 변경했습니다 (아이템이 나오지 않음)
+  private GameMode gameMode = GameMode.ITEM; // 기본값은 일반 모드
+  
   // 점수 2배 아이템 관련
   private boolean doubleScoreActive = false;
   private long doubleScoreEndTime = 0L;
@@ -253,7 +257,12 @@ public class GameEngine {
       return;
     totalClearedLines += clearedLines;
 
-    // 정책을 통해 아이템 부여 (10줄 체크는 정책 내부에서 처리)
+    // 일반 모드에서는 아이템을 생성하지 않음
+    if (gameMode == GameMode.NORMAL) {
+      return;
+    }
+
+    // 아이템 모드: 정책을 통해 아이템 부여 (10줄 체크는 정책 내부에서 처리)
     se.tetris.team5.items.Item grantedItem = grantItemToNextBlock();
 
     if (grantedItem != null) {
@@ -445,5 +454,21 @@ public class GameEngine {
     if (movementManager.canMoveToPosition(currentBlock, x - 1, y)) {
       x--;
     }
+  }
+
+  /**
+   * 게임 모드를 설정합니다
+   * @param mode NORMAL (일반 모드, 아이템 없음) 또는 ITEM (아이템 모드, 10줄마다 아이템)
+   */
+  public void setGameMode(GameMode mode) {
+    this.gameMode = mode;
+    System.out.println("[게임 모드 변경] " + mode + " 모드로 설정되었습니다.");
+  }
+
+  /**
+   * 현재 게임 모드를 반환합니다
+   */
+  public GameMode getGameMode() {
+    return gameMode;
   }
 }
