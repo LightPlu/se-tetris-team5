@@ -1216,20 +1216,27 @@ public class game extends JPanel implements KeyListener {
         modeDisplayName, currentScore, level, linesCleared
     );
 
-    // Note: this call is already on the EDT because Timer is a Swing Timer,
-    // so it's safe to show a modal dialog here.
-    String inputName = JOptionPane.showInputDialog(this,
-        message,
-        "게임 종료",
-        JOptionPane.PLAIN_MESSAGE);
+    // 테스트 모드일 때는 다이얼로그 표시하지 않음
+    String inputName;
+    if ("true".equals(System.getProperty("tetris.test.mode"))) {
+      // 테스트 모드에서는 기본 플레이어 이름 사용
+      inputName = "TestPlayer";
+    } else {
+      // Note: this call is already on the EDT because Timer is a Swing Timer,
+      // so it's safe to show a modal dialog here.
+      inputName = JOptionPane.showInputDialog(this,
+          message,
+          "게임 종료",
+          JOptionPane.PLAIN_MESSAGE);
 
-    if (inputName == null) {
-      // User cancelled -> go back to home without saving
-      screenController.showScreen("home");
-      return;
+      if (inputName == null) {
+        // User cancelled -> go back to home without saving
+        screenController.showScreen("home");
+        return;
+      }
+      inputName = inputName.trim();
+      if (inputName.isEmpty()) inputName = "Player";
     }
-    inputName = inputName.trim();
-    if (inputName.isEmpty()) inputName = "Player";
 
     // Save the score with mode information and navigate to the scoreboard
     scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime, modeString);
