@@ -21,6 +21,7 @@ public class score {
     
     // 모드 필터링
     private String currentGameModeFilter = "ITEM"; // "ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"
+    private JButton[] modeTabButtons; // 모드 탭 버튼들을 저장
 
     // Pagination
     private static final int PAGE_SIZE = 10;
@@ -28,6 +29,12 @@ public class score {
     // Reduced to make the overall panel more compact while keeping readability
     private static final int ROW_HEIGHT = 40;
     private int currentPage = 0;
+    
+    // 점수 강조 관련
+    private Timer highlightTimer; // 깜빡임 타이머
+    private boolean highlightVisible = true; // 깜빡임 상태
+    private ScoreManager.ScoreEntry highlightedEntry = null; // 강조할 점수 항목
+    private boolean shouldHighlight = false; // 강조 표시 여부
 
     public score(ScreenController screenController) {
         this.screenController = screenController;
@@ -66,6 +73,9 @@ public class score {
             textPane.removeKeyListener(kl);
         }
         textPane.addKeyListener(new ScoreKeyListener());
+
+        // 게임 종료 후 강조 표시 확인
+        checkForHighlightRequest();
 
         // Build UI
         buildUI();
@@ -224,21 +234,19 @@ public class score {
         String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
         String[] modeNames = {"아이템", "쉬움", "보통", "어려움"};
         
+        // 버튼 배열 초기화
+        modeTabButtons = new JButton[modes.length];
+        
         for (int i = 0; i < modes.length; i++) {
             String mode = modes[i];
             String modeName = modeNames[i];
             
             JButton tabButton = new JButton(modeName);
             tabButton.setFocusable(false);
+            tabButton.setOpaque(true); // 배경색을 제대로 보이게 하기 위해 필요
             
             // 현재 선택된 모드에 따른 스타일
-            if (mode.equals(currentGameModeFilter)) {
-                tabButton.setBackground(new Color(0, 230, 160));
-                tabButton.setForeground(Color.BLACK);
-            } else {
-                tabButton.setBackground(new Color(60, 60, 70));
-                tabButton.setForeground(Color.WHITE);
-            }
+            updateButtonStyle(tabButton, mode.equals(currentGameModeFilter));
             
             tabButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
             tabButton.setFont(createKoreanFont(Font.BOLD, 12));
@@ -246,14 +254,41 @@ public class score {
             tabButton.addActionListener(e -> {
                 currentGameModeFilter = mode;
                 currentPage = 0; // 모드 변경 시 첫 페이지로 이동
-                buildUI(); // UI 재구성
+                updateModeTabButtons(); // 버튼 색상 업데이트만
                 renderScores(); // 점수 다시 로드
             });
             
+            // 버튼 저장
+            modeTabButtons[i] = tabButton;
             tabPanel.add(tabButton);
         }
         
         return tabPanel;
+    }
+
+    /**
+     * 버튼 스타일 업데이트
+     */
+    private void updateButtonStyle(JButton button, boolean isSelected) {
+        if (isSelected) {
+            button.setBackground(new Color(0, 230, 160));
+            button.setForeground(Color.BLACK);
+        } else {
+            button.setBackground(new Color(60, 60, 70));
+            button.setForeground(Color.WHITE);
+        }
+    }
+
+    /**
+     * 모든 모드 탭 버튼들의 색상 업데이트
+     */
+    private void updateModeTabButtons() {
+        if (modeTabButtons != null) {
+            String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+            for (int i = 0; i < modeTabButtons.length && i < modes.length; i++) {
+                updateButtonStyle(modeTabButtons[i], modes[i].equals(currentGameModeFilter));
+            }
+        }
     }
 
     private JPanel buildPodiumPanel() {
@@ -722,8 +757,20 @@ public class score {
 
             if (i < pageScores.size()) {
                 ScoreManager.ScoreEntry entry = pageScores.get(i);
+                
+                // 강조 표시 여부 확인
+                boolean isHighlighted = shouldHighlight && 
+                                       highlightedEntry != null && 
+                                       highlightedEntry.equals(entry) && 
+                                       highlightVisible;
+                
+                // 강조 표시 시 배경색 변경
+                if (isHighlighted) {
+                    row.setBackground(new Color(255, 215, 0, 100)); // 반투명 골드
+                }
+                
                 JLabel colRank = new JLabel(String.valueOf(rank));
-                colRank.setForeground(gameSettings.getUIColor("text"));
+                colRank.setForeground(isHighlighted ? Color.BLACK : gameSettings.getUIColor("text"));
                 colRank.setFont(createKoreanFont(Font.BOLD, 14));
                 Dimension d0 = new Dimension(colPixels[0], ROW_HEIGHT);
                 colRank.setPreferredSize(d0);
@@ -732,7 +779,7 @@ public class score {
                 colRank.setHorizontalAlignment(SwingConstants.CENTER);
 
                 JLabel colName = new JLabel(entry.getPlayerName(), SwingConstants.LEFT);
-                colName.setForeground(gameSettings.getUIColor("text"));
+                colName.setForeground(isHighlighted ? Color.BLACK : gameSettings.getUIColor("text"));
                 colName.setFont(createKoreanFont(Font.BOLD, 14));
                 Dimension d1 = new Dimension(colPixels[1], ROW_HEIGHT);
                 colName.setPreferredSize(d1);
@@ -743,7 +790,7 @@ public class score {
                 colName.setToolTipText(entry.getPlayerName());
 
                 JLabel colScore = new JLabel(String.format("%,d", entry.getScore()));
-                colScore.setForeground(new Color(220, 220, 220));
+                colScore.setForeground(isHighlighted ? Color.BLACK : new Color(220, 220, 220));
                 colScore.setFont(createKoreanFont(Font.PLAIN, 13));
                 Dimension d2 = new Dimension(colPixels[2], ROW_HEIGHT);
                 colScore.setPreferredSize(d2);
@@ -753,7 +800,7 @@ public class score {
 
                 // 줄 수 열
                 JLabel colLines = new JLabel(String.valueOf(entry.getLines()));
-                colLines.setForeground(new Color(200, 200, 200));
+                colLines.setForeground(isHighlighted ? Color.BLACK : new Color(200, 200, 200));
                 colLines.setFont(createKoreanFont(Font.PLAIN, 13));
                 Dimension d3 = new Dimension(colPixels[3], ROW_HEIGHT);
                 colLines.setPreferredSize(d3);
@@ -763,7 +810,7 @@ public class score {
 
                 // 플레이 타임 열
                 JLabel colPlay = new JLabel(entry.getFormattedPlayTime());
-                colPlay.setForeground(new Color(200, 200, 200));
+                colPlay.setForeground(isHighlighted ? Color.BLACK : new Color(200, 200, 200));
                 colPlay.setFont(createKoreanFont(Font.PLAIN, 13));
                 Dimension d4 = new Dimension(colPixels[4], ROW_HEIGHT);
                 colPlay.setPreferredSize(d4);
@@ -773,7 +820,7 @@ public class score {
 
                 // 날짜 열
                 JLabel colDate = new JLabel(entry.getFormattedDate());
-                colDate.setForeground(new Color(170, 170, 170));
+                colDate.setForeground(isHighlighted ? Color.BLACK : new Color(170, 170, 170));
                 colDate.setFont(createKoreanFont(Font.PLAIN, 12));
                 Dimension d5 = new Dimension(colPixels[5], ROW_HEIGHT);
                 colDate.setPreferredSize(d5);
@@ -898,6 +945,153 @@ public class score {
         return null;
     }
 
+    /**
+     * 게임 종료 후 강조 표시 요청 확인
+     */
+    private void checkForHighlightRequest() {
+        String playerName = System.getProperty("tetris.highlight.playerName");
+        String scoreStr = System.getProperty("tetris.highlight.score");
+        String mode = System.getProperty("tetris.highlight.mode");
+        String playTimeStr = System.getProperty("tetris.highlight.playTime");
+        
+        if (playerName != null && scoreStr != null && mode != null && playTimeStr != null) {
+            try {
+                int score = Integer.parseInt(scoreStr);
+                long playTime = Long.parseLong(playTimeStr);
+                
+                // 해당 모드로 필터 변경
+                currentGameModeFilter = mode;
+                updateModeTabButtons();
+                
+                // 강조할 점수 항목 찾기
+                List<ScoreManager.ScoreEntry> allScores = scoreManager.getScoresByMode(currentGameModeFilter);
+                for (ScoreManager.ScoreEntry entry : allScores) {
+                    if (entry.getPlayerName().equals(playerName) && 
+                        entry.getScore() == score && 
+                        Math.abs(entry.getPlayTime() - playTime) < 1000) { // 1초 오차 허용
+                        
+                        highlightedEntry = entry;
+                        shouldHighlight = true;
+                        
+                        // 해당 점수가 있는 페이지로 이동
+                        int entryIndex = allScores.indexOf(entry);
+                        currentPage = entryIndex / PAGE_SIZE;
+                        
+                        // 깜빡임 효과 시작 (5초간)
+                        startHighlightEffect();
+                        break;
+                    }
+                }
+                
+                // 시스템 프로퍼티 정리
+                System.clearProperty("tetris.highlight.playerName");
+                System.clearProperty("tetris.highlight.score");
+                System.clearProperty("tetris.highlight.mode");
+                System.clearProperty("tetris.highlight.playTime");
+                
+            } catch (NumberFormatException e) {
+                // 파싱 오류 시 무시
+                System.clearProperty("tetris.highlight.playerName");
+                System.clearProperty("tetris.highlight.score");
+                System.clearProperty("tetris.highlight.mode");
+                System.clearProperty("tetris.highlight.playTime");
+            }
+        }
+    }
+    
+    /**
+     * 깜빡임 효과 시작
+     */
+    private void startHighlightEffect() {
+        if (highlightTimer != null) {
+            highlightTimer.stop();
+        }
+        
+        highlightVisible = true;
+        highlightTimer = new Timer(500, e -> { // 0.5초마다 깜빡임
+            highlightVisible = !highlightVisible;
+            renderScores(); // 화면 다시 그리기
+        });
+        highlightTimer.setRepeats(true);
+        highlightTimer.start();
+        
+        // 5초 후 강조 효과 중지
+        Timer stopTimer = new Timer(5000, e -> {
+            stopHighlightEffect();
+        });
+        stopTimer.setRepeats(false);
+        stopTimer.start();
+    }
+    
+    /**
+     * 깜빡임 효과 중지
+     */
+    private void stopHighlightEffect() {
+        shouldHighlight = false;
+        highlightedEntry = null;
+        highlightVisible = true;
+        
+        if (highlightTimer != null) {
+            highlightTimer.stop();
+            highlightTimer = null;
+        }
+        
+        renderScores(); // 마지막으로 화면 다시 그리기
+    }
+
+    /**
+     * 특정 게임 모드로 전환
+     */
+    private void switchToMode(String mode) {
+        if (!mode.equals(currentGameModeFilter)) {
+            currentGameModeFilter = mode;
+            currentPage = 0; // 모드 변경 시 첫 페이지로 이동
+            updateModeTabButtons(); // 버튼 색상 업데이트만
+            renderScores(); // 점수 다시 로드
+        }
+        
+        // 모드 변경 시 강조 효과 중지
+        stopHighlightEffect();
+    }
+
+    /**
+     * 이전 게임 모드로 전환 (위 화살표)
+     */
+    private void switchToPreviousMode() {
+        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+        int currentIndex = -1;
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i].equals(currentGameModeFilter)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex > 0) {
+            switchToMode(modes[currentIndex - 1]);
+        } else if (currentIndex == 0) {
+            switchToMode(modes[modes.length - 1]); // 순환: 첫 번째에서 마지막으로
+        }
+    }
+
+    /**
+     * 다음 게임 모드로 전환 (아래 화살표)
+     */
+    private void switchToNextMode() {
+        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+        int currentIndex = -1;
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i].equals(currentGameModeFilter)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex >= 0 && currentIndex < modes.length - 1) {
+            switchToMode(modes[currentIndex + 1]);
+        } else if (currentIndex == modes.length - 1) {
+            switchToMode(modes[0]); // 순환: 마지막에서 첫 번째로
+        }
+    }
+
     private class ScoreKeyListener implements KeyListener {
         @Override
         public void keyTyped(KeyEvent e) {
@@ -921,6 +1115,7 @@ public class score {
                 case KeyEvent.VK_LEFT:
                     if (currentPage > 0) {
                         currentPage--;
+                        stopHighlightEffect(); // 페이지 이동 시 강조 효과 중지
                         renderScores();
                     }
                     break;
@@ -935,8 +1130,27 @@ public class score {
                     }
                     if (currentPage < totalPages - 1) {
                         currentPage++;
+                        stopHighlightEffect(); // 페이지 이동 시 강조 효과 중지
                         renderScores();
                     }
+                    break;
+                case KeyEvent.VK_1:
+                    switchToMode("ITEM");
+                    break;
+                case KeyEvent.VK_2:
+                    switchToMode("NORMAL_EASY");
+                    break;
+                case KeyEvent.VK_3:
+                    switchToMode("NORMAL_NORMAL");
+                    break;
+                case KeyEvent.VK_4:
+                    switchToMode("NORMAL_HARD");
+                    break;
+                case KeyEvent.VK_UP:
+                    switchToPreviousMode();
+                    break;
+                case KeyEvent.VK_DOWN:
+                    switchToNextMode();
                     break;
             }
             e.consume();
