@@ -17,7 +17,7 @@ public class Every10LinesItemGrantPolicy implements ItemGrantPolicy {
 
     // 10줄마다 아이템 부여
     if (context.totalClearedLines > 0 &&
-        context.totalClearedLines >= lastGrantLine + 1) {
+        context.totalClearedLines >= lastGrantLine + 10) {
 
       int w = block.width();
       int h = block.height();
