@@ -10,6 +10,9 @@ import se.tetris.team5.gamelogic.scoring.GameScoring;
 import se.tetris.team5.items.ItemGrantPolicy;
 
 public class GameEngine {
+  // 점수 2배 아이템 관련
+  private boolean doubleScoreActive = false;
+  private long doubleScoreEndTime = 0L;
   private static final int START_X = 3;
   private static final int START_Y = 0;
   // 아이템 관련: 총 삭제 줄 수 추적
@@ -53,7 +56,7 @@ public class GameEngine {
     gameOver = false;
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
-    
+
     // 정책 리셋 (10줄 카운터 초기화)
     if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
@@ -75,21 +78,32 @@ public class GameEngine {
 
     if (movementManager.moveDown(currentBlock, x, y)) {
       y++;
-      gameScoring.addPoints(1); // 소프트 드롭 점수
+      gameScoring.addPoints(applyDoubleScore(1)); // 소프트 드롭 점수
       boardManager.placeBlock(currentBlock, x, y);
       return true;
     } else {
       boardManager.placeBlock(currentBlock, x, y);
-      boardManager.fixBlock(currentBlock, x, y);
-      int clearedLines = boardManager.clearLines();
+      java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
+      boardManager.fixBlock(currentBlock, x, y, removedItems);
+      int clearedLines = boardManager.clearLines(removedItems);
       
       // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인
-      if (boardManager.wasTimeStopItemCleared()) {
-        hasTimeStopCharge = true;
-        System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+      if (!removedItems.isEmpty()) {
+        for (se.tetris.team5.items.Item it : removedItems) {
+          if (it instanceof se.tetris.team5.items.TimeStopItem) {
+            hasTimeStopCharge = true;
+            System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+          }
+          // 아이템 효과 적용
+          try {
+            it.applyEffect(this);
+          } catch (Exception e) {
+            System.err.println("[아이템 적용 오류] " + e.getMessage());
+          }
+        }
       }
       
-      gameScoring.addLinesCleared(clearedLines);
+      gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
       handleItemSpawnAndCollect(clearedLines);
       spawnNextBlock();
       return false;
@@ -131,9 +145,9 @@ public class GameEngine {
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
-    se.tetris.team5.gamelogic.block.BlockRotationManager.WallKickResult result = 
-        rotationManager.rotateBlockWithWallKick(currentBlock, x, y, boardManager.getBoard());
-    
+    se.tetris.team5.gamelogic.block.BlockRotationManager.WallKickResult result = rotationManager
+        .rotateBlockWithWallKick(currentBlock, x, y, boardManager.getBoard());
+
     if (result.success) {
       // Wall Kick 성공: 오프셋 적용
       x += result.offsetX;
@@ -154,22 +168,81 @@ public class GameEngine {
     boardManager.eraseBlock(currentBlock, x, y);
     int dropDistance = movementManager.hardDrop(currentBlock, x, y);
     y = movementManager.getDropPosition(currentBlock, x, y);
-    gameScoring.addHardDropPoints(dropDistance);
+    gameScoring.addHardDropPoints(applyDoubleScore(dropDistance));
 
     boardManager.placeBlock(currentBlock, x, y);
-    boardManager.fixBlock(currentBlock, x, y);
-    int clearedLines = boardManager.clearLines();
+    java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
+    boardManager.fixBlock(currentBlock, x, y, removedItems);
+    int clearedLines = boardManager.clearLines(removedItems);
     
-    // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인
-    if (boardManager.wasTimeStopItemCleared()) {
-      hasTimeStopCharge = true;
-      System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+    // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인 및 아이템 효과 적용
+    if (!removedItems.isEmpty()) {
+      for (se.tetris.team5.items.Item it : removedItems) {
+        if (it instanceof se.tetris.team5.items.TimeStopItem) {
+          hasTimeStopCharge = true;
+          System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+        }
+        try {
+          it.applyEffect(this);
+        } catch (Exception e) {
+          System.err.println("[아이템 적용 오류] " + e.getMessage());
+        }
+      }
     }
     
-    gameScoring.addLinesCleared(clearedLines);
+    gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
     handleItemSpawnAndCollect(clearedLines);
     spawnNextBlock();
     return true;
+  }
+
+  /**
+   * 점수 2배 효과 활성화 (durationMillis 동안)
+   */
+  public void activateDoubleScore(int durationMillis) {
+    doubleScoreActive = true;
+    doubleScoreEndTime = System.currentTimeMillis() + durationMillis;
+    System.out.println("[아이템 효과] 20초간 점수 2배 시작! (" + new java.util.Date(doubleScoreEndTime) + "까지)");
+    doubleScoreEndLogged = false;
+  }
+
+  /**
+   * 현재 점수 2배 효과가 활성화되어 있는지 확인
+   */
+  // 2배 효과 종료 로그가 이미 출력됐는지 추적
+  private boolean doubleScoreEndLogged = false;
+
+  public boolean isDoubleScoreActive() {
+    if (doubleScoreActive && System.currentTimeMillis() > doubleScoreEndTime) {
+      doubleScoreActive = false;
+      if (!doubleScoreEndLogged) {
+        System.out.println("[아이템 효과 종료] 점수 2배 효과가 종료되었습니다. (" + new java.util.Date() + ")");
+        doubleScoreEndLogged = true;
+      }
+    }
+    return doubleScoreActive;
+  }
+
+  /**
+   * 점수 2배 효과 적용 (일반 점수)
+   */
+  private int applyDoubleScore(int baseScore) {
+    if (isDoubleScoreActive()) {
+      return baseScore * 2;
+    } else {
+      return baseScore;
+    }
+  }
+
+  /**
+   * 점수 2배 효과 적용 (라인 삭제 점수)
+   */
+  private int applyDoubleScoreToLines(int lines) {
+    if (isDoubleScoreActive()) {
+      return lines * 2;
+    } else {
+      return lines;
+    }
   }
 
   /**
@@ -182,7 +255,7 @@ public class GameEngine {
 
     // 정책을 통해 아이템 부여 (10줄 체크는 정책 내부에서 처리)
     se.tetris.team5.items.Item grantedItem = grantItemToNextBlock();
-    
+
     if (grantedItem != null) {
       // 아이템이 부여된 경우
       if (grantedItem instanceof se.tetris.team5.items.WeightBlockItem) {
@@ -248,27 +321,27 @@ public class GameEngine {
 
   /**
    * 다음 블록에 아이템 부여 (정책을 통해)
+   * 
    * @return 부여된 아이템 (부여되지 않았으면 null)
    */
   private se.tetris.team5.items.Item grantItemToNextBlock() {
     if (nextBlock == null)
       return null;
-    
+
     // 정책 객체를 통해 아이템 부여 위임 (10줄 체크는 정책 내부에서)
     se.tetris.team5.items.Item grantedItem = itemGrantPolicy.grantItem(
-        nextBlock, 
-        new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory)
-    );
-    
+        nextBlock,
+        new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory));
+
     return grantedItem;
   }
 
   private void spawnNextBlock() {
     currentBlock = nextBlock;
-    
+
     // 일반 블록 생성 (특수 블록은 handleItemSpawnAndCollect에서 처리)
     nextBlock = blockFactory.createRandomBlock();
-    
+
     x = START_X;
     y = START_Y;
 
@@ -322,7 +395,7 @@ public class GameEngine {
     gameScoring = new GameScoring();
     blockFactory = new BlockFactory();
     rotationManager = new BlockRotationManager();
-    
+
     // 정책 리셋 (10줄 카운터 초기화)
     if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
