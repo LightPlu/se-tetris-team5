@@ -52,6 +52,9 @@ public class GameEngine {
   // 타임스톱 관련
   private boolean hasTimeStopCharge = false; // 타임스톱 사용 가능 여부
 
+  // 펜딩 아이템: 다음 블록이 아닌 그 다음 블록에 적용될 아이템
+  private se.tetris.team5.items.Item pendingItem = null;
+
   public GameEngine(int height, int width) {
     boardManager = new BoardManager();
     movementManager = new MovementManager(boardManager);
@@ -71,6 +74,7 @@ public class GameEngine {
     gameOver = false;
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
+    pendingItem = null; // 펜딩 아이템 초기화
 
     // BlockFactory 난이도 반영
     blockFactory.setDifficulty(difficulty);
@@ -329,43 +333,17 @@ public class GameEngine {
       return;
     }
 
-    // 아이템 모드: 정책을 통해 아이템 부여 (10줄 체크는 정책 내부에서 처리)
-    se.tetris.team5.items.Item grantedItem = grantItemToNextBlock();
+    // 아이템 모드: 정책을 통해 아이템 부여 조건 확인 (10줄 체크는 정책 내부에서 처리)
+    // 임시 블록을 만들어서 아이템 부여 조건을 확인
+    Block tempBlock = blockFactory.createRandomBlock();
+    se.tetris.team5.items.Item grantedItem = itemGrantPolicy.grantItem(
+        tempBlock,
+        new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory));
 
     if (grantedItem != null) {
-      // 아이템이 부여된 경우
-      if (grantedItem instanceof se.tetris.team5.items.WeightBlockItem) {
-        // WeightBlockItem인 경우: 다음 블록을 무게추 블록으로 교체
-        nextBlock = blockFactory.createWeightBlock();
-        System.out.println("[특수 블록] 무게추 블록(WBlock) 생성!");
-      } else if (grantedItem instanceof se.tetris.team5.items.LineClearItem) {
-        // LineClearItem인 경우: 일반 블록 + 아이템 유지
-        System.out.println("[특수 블록] 줄삭제 아이템 블록 생성!");
-      } else if (grantedItem instanceof se.tetris.team5.items.BombItem) {
-        // DotBlockItem인 경우: 다음 블록을 DotBlock으로 교체
-        nextBlock = new se.tetris.team5.blocks.DotBlock();
-        System.out.println("[특수 블록] 도트 블록(DotBlock) 생성!");
-      } else if (grantedItem instanceof se.tetris.team5.items.TimeStopItem) {
-        // TimeStopItem인 경우: 일반 블록 + 아이템 유지
-        System.out.println("[특수 블록] 타임스톱 아이템 블록 생성!");
-      }
-    }
-
-    // 아이템 획득 처리 (타임스톱 제외 - 타임스톱은 줄 삭제 시 충전)
-    if (nextBlock != null) {
-      for (int j = 0; j < nextBlock.height(); j++) {
-        for (int i = 0; i < nextBlock.width(); i++) {
-          se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
-          if (item != null) {
-            acquiredItem = item;
-            // TimeStopItem은 줄 삭제 시에만 충전되므로 여기서 처리하지 않음
-            if (!(item instanceof se.tetris.team5.items.TimeStopItem)) {
-              System.out.println("[아이템 획득 대기] " + item);
-            }
-            break;
-          }
-        }
-      }
+      // 아이템이 부여되었다면, 다음다음 블록에 적용하기 위해 pendingItem에 저장
+      pendingItem = grantedItem;
+      System.out.println("[아이템 예약] " + grantedItem.getName() + " - 다음 블록 이후에 나타납니다!");
     }
   }
 
@@ -382,7 +360,7 @@ public class GameEngine {
     }
   }
 
-  // 획득 대기중인 아이템을 반환 (없으면 null) 새로추가된것
+  // 획득 대기중인 아이템을 반환 (없으면 null)
   public se.tetris.team5.items.Item getAcquiredItem() {
     return acquiredItem;
   }
@@ -400,28 +378,55 @@ public class GameEngine {
     }
   }
 
-  /**
-   * 다음 블록에 아이템 부여 (정책을 통해)
-   * 
-   * @return 부여된 아이템 (부여되지 않았으면 null)
-   */
-  private se.tetris.team5.items.Item grantItemToNextBlock() {
-    if (nextBlock == null)
-      return null;
-
-    // 정책 객체를 통해 아이템 부여 위임 (10줄 체크는 정책 내부에서)
-    se.tetris.team5.items.Item grantedItem = itemGrantPolicy.grantItem(
-        nextBlock,
-        new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory));
-
-    return grantedItem;
-  }
-
   private void spawnNextBlock() {
     currentBlock = nextBlock;
 
-    // 일반 블록 생성 (특수 블록은 handleItemSpawnAndCollect에서 처리)
-    nextBlock = blockFactory.createRandomBlock();
+    // 펜딩 아이템이 있으면 다음 블록에 적용
+    if (pendingItem != null) {
+      if (pendingItem instanceof se.tetris.team5.items.WeightBlockItem) {
+        // WeightBlockItem인 경우: 무게추 블록으로 교체
+        nextBlock = blockFactory.createWeightBlock();
+        System.out.println("[특수 블록] 무게추 블록(WBlock) 생성!");
+      } else if (pendingItem instanceof se.tetris.team5.items.BombItem) {
+        // BombItem인 경우: DotBlock으로 교체
+        nextBlock = new se.tetris.team5.blocks.DotBlock();
+        System.out.println("[특수 블록] 도트 블록(DotBlock) 생성!");
+      } else {
+        // 일반 블록 + 아이템 (LineClearItem, TimeStopItem 등)
+        nextBlock = blockFactory.createRandomBlock();
+        
+        // 블록의 첫 번째 칸에 아이템 설정
+        for (int j = 0; j < nextBlock.height(); j++) {
+          for (int i = 0; i < nextBlock.width(); i++) {
+            if (nextBlock.getShape(i, j) == 1) {
+              nextBlock.setItem(i, j, pendingItem);
+              System.out.println("[특수 블록] " + pendingItem.getName() + " 아이템 블록 생성!");
+              break;
+            }
+          }
+        }
+      }
+      
+      // 아이템 획득 처리 (타임스톱 제외 - 타임스톱은 줄 삭제 시 충전)
+      for (int j = 0; j < nextBlock.height(); j++) {
+        for (int i = 0; i < nextBlock.width(); i++) {
+          se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
+          if (item != null) {
+            acquiredItem = item;
+            // TimeStopItem은 줄 삭제 시에만 충전되므로 여기서 처리하지 않음
+            if (!(item instanceof se.tetris.team5.items.TimeStopItem)) {
+              System.out.println("[아이템 획득 대기] " + item);
+            }
+            break;
+          }
+        }
+      }
+      
+      pendingItem = null; // 펜딩 아이템 소비
+    } else {
+      // 펜딩 아이템이 없으면 일반 블록 생성
+      nextBlock = blockFactory.createRandomBlock();
+    }
 
     x = START_X;
     y = START_Y;
@@ -504,6 +509,7 @@ public class GameEngine {
     gameStartTime = System.currentTimeMillis();
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
+    pendingItem = null; // 펜딩 아이템 초기화
   }
 
   /**
