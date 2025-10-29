@@ -12,8 +12,8 @@ import se.tetris.team5.items.ItemGrantPolicy;
 public class GameEngine {
   // 게임 모드 (NORMAL: 아이템 없음, ITEM: 10줄마다 아이템)
   // 기본 모드를 일반 모드로 변경했습니다 (아이템이 나오지 않음)
-  private GameMode gameMode = GameMode.ITEM; // 기본값은 일반 모드
-  
+  private GameMode gameMode = GameMode.NORMAL; // 기본값은 일반 모드
+
   // 점수 2배 아이템 관련
   private boolean doubleScoreActive = false;
   private long doubleScoreEndTime = 0L;
@@ -25,6 +25,7 @@ public class GameEngine {
   private MovementManager movementManager;
   private BlockRotationManager rotationManager;
   private BlockFactory blockFactory;
+  private BlockFactory.Difficulty difficulty = BlockFactory.Difficulty.NORMAL;
   private GameScoring gameScoring;
 
   private Block currentBlock;
@@ -46,7 +47,7 @@ public class GameEngine {
     boardManager = new BoardManager();
     movementManager = new MovementManager(boardManager);
     rotationManager = new BlockRotationManager();
-    blockFactory = new BlockFactory();
+    blockFactory = new BlockFactory(difficulty);
     gameScoring = new GameScoring();
     itemFactory = new se.tetris.team5.items.ItemFactory();
     itemGrantPolicy = new se.tetris.team5.items.Every10LinesItemGrantPolicy();
@@ -57,9 +58,13 @@ public class GameEngine {
   public void startNewGame() {
     boardManager.reset();
     gameScoring.reset();
+    gameScoring.setDifficulty(difficulty);
     gameOver = false;
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
+
+    // BlockFactory 난이도 반영
+    blockFactory.setDifficulty(difficulty);
 
     // 정책 리셋 (10줄 카운터 초기화)
     if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
@@ -72,6 +77,23 @@ public class GameEngine {
     y = START_Y;
 
     boardManager.placeBlock(currentBlock, x, y);
+  }
+
+  /**
+   * 블럭 생성 난이도 설정 (NORMAL, EASY, HARD)
+   */
+  public void setDifficulty(BlockFactory.Difficulty difficulty) {
+    this.difficulty = difficulty;
+    if (blockFactory != null) {
+      blockFactory.setDifficulty(difficulty);
+    }
+    if (gameScoring != null) {
+      gameScoring.setDifficulty(difficulty);
+    }
+  }
+
+  public BlockFactory.Difficulty getDifficulty() {
+    return difficulty;
   }
 
   public boolean moveBlockDown() {
@@ -90,7 +112,7 @@ public class GameEngine {
       java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
       boardManager.fixBlock(currentBlock, x, y, removedItems);
       int clearedLines = boardManager.clearLines(removedItems);
-      
+
       // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인
       if (!removedItems.isEmpty()) {
         for (se.tetris.team5.items.Item it : removedItems) {
@@ -106,7 +128,7 @@ public class GameEngine {
           }
         }
       }
-      
+
       gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
       handleItemSpawnAndCollect(clearedLines);
       spawnNextBlock();
@@ -178,7 +200,7 @@ public class GameEngine {
     java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
     boardManager.fixBlock(currentBlock, x, y, removedItems);
     int clearedLines = boardManager.clearLines(removedItems);
-    
+
     // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인 및 아이템 효과 적용
     if (!removedItems.isEmpty()) {
       for (se.tetris.team5.items.Item it : removedItems) {
@@ -193,7 +215,7 @@ public class GameEngine {
         }
       }
     }
-    
+
     gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
     handleItemSpawnAndCollect(clearedLines);
     spawnNextBlock();
@@ -402,7 +424,8 @@ public class GameEngine {
     boardManager = new BoardManager(); // 기본 크기
     movementManager = new MovementManager(boardManager);
     gameScoring = new GameScoring();
-    blockFactory = new BlockFactory();
+    gameScoring.setDifficulty(difficulty);
+    blockFactory = new BlockFactory(difficulty);
     rotationManager = new BlockRotationManager();
 
     // 정책 리셋 (10줄 카운터 초기화)
@@ -458,6 +481,7 @@ public class GameEngine {
 
   /**
    * 게임 모드를 설정합니다
+   * 
    * @param mode NORMAL (일반 모드, 아이템 없음) 또는 ITEM (아이템 모드, 10줄마다 아이템)
    */
   public void setGameMode(GameMode mode) {
