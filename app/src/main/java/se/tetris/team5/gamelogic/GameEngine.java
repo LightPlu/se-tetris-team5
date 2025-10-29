@@ -2,6 +2,8 @@
 package se.tetris.team5.gamelogic;
 
 import se.tetris.team5.blocks.Block;
+import java.util.ArrayList;
+import java.util.List;
 import se.tetris.team5.gamelogic.block.BlockFactory;
 import se.tetris.team5.gamelogic.block.BlockRotationManager;
 import se.tetris.team5.components.game.BoardManager;
@@ -26,6 +28,9 @@ public class GameEngine {
   private boolean gameOver;
   private boolean gameRunning;
   private long gameStartTime;
+
+  // listeners to notify UI or other observers about state changes (e.g., next block spawned)
+  private List<Runnable> listeners = new ArrayList<>();
 
   // 플레이어가 획득한 아이템 (1개만 보유, 큐로 확장 가능)
   private se.tetris.team5.items.Item acquiredItem = null;
@@ -59,8 +64,11 @@ public class GameEngine {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
     }
 
-    currentBlock = blockFactory.createRandomBlock();
-    nextBlock = blockFactory.createRandomBlock();
+  currentBlock = blockFactory.createRandomBlock();
+  nextBlock = blockFactory.createRandomBlock();
+  // debug: log initial blocks
+  System.out.println("[GameEngine DEBUG] startNewGame current=" + currentBlock.getClass().getSimpleName()
+    + " next=" + nextBlock.getClass().getSimpleName());
     x = START_X;
     y = START_Y;
 
@@ -221,6 +229,11 @@ public class GameEngine {
     }
   }
 
+  // 획득 대기중인 아이템을 반환 (없으면 null) 새로추가된것
+  public se.tetris.team5.items.Item getAcquiredItem() {
+    return acquiredItem;
+  }
+
   // 타임스톱 충전 여부 반환
   public boolean hasTimeStopCharge() {
     return hasTimeStopCharge;
@@ -253,9 +266,25 @@ public class GameEngine {
 
   private void spawnNextBlock() {
     currentBlock = nextBlock;
-    
+    // debug: log spawn transition
+  System.out.println("[GameEngine DEBUG] spawnNextBlock: current becomes " + (currentBlock != null ? currentBlock.getClass().getSimpleName() : "null")
+    + " hash=" + (currentBlock != null ? System.identityHashCode(currentBlock) : 0));
     // 일반 블록 생성 (특수 블록은 handleItemSpawnAndCollect에서 처리)
     nextBlock = blockFactory.createRandomBlock();
+  System.out.println("[GameEngine DEBUG] spawnNextBlock: new next=" + (nextBlock != null ? nextBlock.getClass().getSimpleName() : "null")
+    + " hash=" + (nextBlock != null ? System.identityHashCode(nextBlock) : 0));
+
+    // notify listeners that engine state changed (spawn happened)
+    if (listeners != null && !listeners.isEmpty()) {
+      for (Runnable r : listeners) {
+        try {
+          // schedule on EDT to be safe for UI updates
+          javax.swing.SwingUtilities.invokeLater(r);
+        } catch (Exception ex) {
+          // ignore listener exceptions
+        }
+      }
+    }
     
     x = START_X;
     y = START_Y;
@@ -325,6 +354,15 @@ public class GameEngine {
     gameStartTime = System.currentTimeMillis();
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
+  }
+
+  /**
+   * Register a listener to be notified when engine state changes (e.g., next block spawned).
+   * Listener will be invoked on the EDT.
+   */
+  public void addStateChangeListener(Runnable r) {
+    if (r == null) return;
+    listeners.add(r);
   }
 
   /**
