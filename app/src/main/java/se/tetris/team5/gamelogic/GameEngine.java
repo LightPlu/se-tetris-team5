@@ -55,6 +55,11 @@ public class GameEngine {
   // 펜딩 아이템: 다음 블록이 아닌 그 다음 블록에 적용될 아이템
   private se.tetris.team5.items.Item pendingItem = null;
 
+  // 패널티 관련: 10줄 초과 시 -200점
+  private static final int PENALTY_HEIGHT = 10; // 10줄 초과 시 패널티
+  private static final int PENALTY_SCORE = 200; // 패널티 점수
+  private boolean penaltyApplied = false; // 패널티가 적용되었는지 여부
+
   public GameEngine(int height, int width) {
     boardManager = new BoardManager();
     movementManager = new MovementManager(boardManager);
@@ -75,6 +80,7 @@ public class GameEngine {
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
     pendingItem = null; // 펜딩 아이템 초기화
+    penaltyApplied = false; // 패널티 플래그 초기화
 
     // BlockFactory 난이도 반영
     blockFactory.setDifficulty(difficulty);
@@ -159,6 +165,10 @@ public class GameEngine {
       gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
       
       handleItemSpawnAndCollect(clearedLines);
+      
+      // 블록 높이 패널티 체크
+      checkHeightPenalty();
+      
       spawnNextBlock();
       return false;
     }
@@ -258,6 +268,10 @@ public class GameEngine {
     gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
     
     handleItemSpawnAndCollect(clearedLines);
+    
+    // 블록 높이 패널티 체크
+    checkHeightPenalty();
+    
     spawnNextBlock();
     return true;
   }
@@ -365,6 +379,36 @@ public class GameEngine {
     return acquiredItem;
   }
 
+  /**
+   * 블록 높이 패널티 체크
+   * 10줄을 초과하면 -200점, 10줄 이하로 내려가면 패널티 플래그 리셋
+   */
+  private void checkHeightPenalty() {
+    int highestRow = boardManager.getHighestBlockRow();
+    
+    if (highestRow > PENALTY_HEIGHT) {
+      // 10줄 초과 && 아직 패널티가 적용되지 않았다면
+      if (!penaltyApplied) {
+        int currentScore = gameScoring.getCurrentScore();
+        if (currentScore >= PENALTY_SCORE) {
+          gameScoring.addPoints(-PENALTY_SCORE);
+          System.out.println("[패널티] 블록이 10줄을 초과했습니다! -200점 (현재 높이: " + highestRow + "줄)");
+        } else {
+          // 점수가 200점 미만이면 0점으로 만듦
+          gameScoring.addPoints(-currentScore);
+          System.out.println("[패널티] 블록이 10줄을 초과했습니다! 점수가 0점이 되었습니다 (현재 높이: " + highestRow + "줄)");
+        }
+        penaltyApplied = true;
+      }
+    } else {
+      // 10줄 이하로 내려가면 패널티 플래그 리셋
+      if (penaltyApplied) {
+        penaltyApplied = false;
+        System.out.println("[패널티 해제] 블록 높이가 10줄 이하로 내려갔습니다 (현재 높이: " + highestRow + "줄)");
+      }
+    }
+  }
+
   // 타임스톱 충전 여부 반환
   public boolean hasTimeStopCharge() {
     return hasTimeStopCharge;
@@ -395,15 +439,22 @@ public class GameEngine {
         // 일반 블록 + 아이템 (LineClearItem, TimeStopItem 등)
         nextBlock = blockFactory.createRandomBlock();
         
-        // 블록의 첫 번째 칸에 아이템 설정
+        // 블록의 모든 유효한 칸을 수집한 후 랜덤하게 선택
+        java.util.List<int[]> validPositions = new java.util.ArrayList<>();
         for (int j = 0; j < nextBlock.height(); j++) {
           for (int i = 0; i < nextBlock.width(); i++) {
             if (nextBlock.getShape(i, j) == 1) {
-              nextBlock.setItem(i, j, pendingItem);
-              System.out.println("[특수 블록] " + pendingItem.getName() + " 아이템 블록 생성!");
-              break;
+              validPositions.add(new int[]{i, j});
             }
           }
+        }
+        
+        // 유효한 위치가 있으면 랜덤하게 선택하여 아이템 설정
+        if (!validPositions.isEmpty()) {
+          java.util.Random rand = new java.util.Random();
+          int[] chosen = validPositions.get(rand.nextInt(validPositions.size()));
+          nextBlock.setItem(chosen[0], chosen[1], pendingItem);
+          System.out.println("[특수 블록] " + pendingItem.getName() + " 아이템 블록 생성! (위치: " + chosen[0] + ", " + chosen[1] + ")");
         }
       }
       
@@ -510,6 +561,7 @@ public class GameEngine {
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
     pendingItem = null; // 펜딩 아이템 초기화
+    penaltyApplied = false; // 패널티 플래그 초기화
   }
 
   /**

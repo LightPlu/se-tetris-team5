@@ -456,4 +456,23 @@ public class BoardManager {
   public int getWidth() {
     return WIDTH;
   }
+
+  /**
+   * 보드에서 가장 높은 블록의 위치를 반환합니다 (아래에서부터 센 줄 수)
+   * 블록이 없으면 0을 반환합니다
+   * 
+   * @return 가장 높은 블록이 있는 줄 수 (1-based, 바닥부터 센 높이)
+   */
+  public int getHighestBlockRow() {
+    for (int y = 0; y < HEIGHT; y++) {
+      for (int x = 0; x < WIDTH; x++) {
+        if (board[y][x] == 1) {
+          // y=0이 맨 위, y=19가 맨 아래
+          // 바닥부터 센 높이는 (HEIGHT - y)
+          return HEIGHT - y;
+        }
+      }
+    }
+    return 0; // 블록이 없으면 0
+  }
 }
