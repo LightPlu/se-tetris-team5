@@ -69,3 +69,15 @@ Thumbs.db
 
 # Ignore compiled output in src directories (just in case)
 src/**/*.class
+
+# Game settings and data files
+tetris_settings.properties
+app/tetris_settings.properties
+tetris_scores.dat
+*.properties.backup
+*.dat.backup
+
+# User-specific game data
+highscores.dat
+user_settings.properties
+game_save.dat
