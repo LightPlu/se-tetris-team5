@@ -52,6 +52,7 @@ public class game extends JPanel implements KeyListener {
   private JLabel scoreValueLabel;
   private JLabel levelLabel;
   private JLabel linesLabel;
+  private JLabel gameModeLabel;
   private DoubleScoreBadge doubleScoreBadge;
   private javax.swing.JTextPane itemDescPane;
 
@@ -374,7 +375,16 @@ public class game extends JPanel implements KeyListener {
   smallRow.add(javax.swing.Box.createHorizontalGlue());
   smallRow.add(linesLabel);
   scoreInfo.add(smallRow);
-  scoreInfo.setPreferredSize(new java.awt.Dimension(280, 200));
+  scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
+  
+  // 게임 모드 라벨 추가
+  gameModeLabel = new JLabel("모드: 아이템 모드", javax.swing.SwingConstants.CENTER);
+  gameModeLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+  gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
+  gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(gameModeLabel);
+  
+  scoreInfo.setPreferredSize(new java.awt.Dimension(280, 220));
 
   JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
   infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
@@ -718,6 +728,35 @@ public class game extends JPanel implements KeyListener {
     scoreValueLabel.setText(String.format("%,d", currentScore));
     levelLabel.setText("레벨: " + level);
     linesLabel.setText("줄: " + linesCleared);
+    
+    // 게임 모드 라벨 업데이트
+    String gameMode = System.getProperty("tetris.game.mode", "ITEM");
+    String gameDiff = System.getProperty("tetris.game.difficulty", "NORMAL");
+    if ("ITEM".equals(gameMode)) {
+        gameModeLabel.setText("모드: 아이템 모드");
+        gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
+    } else {
+        String modeText = "모드: 일반 모드";
+        switch (gameDiff) {
+            case "EASY": 
+                modeText += " (이지)";
+                gameModeLabel.setForeground(new Color(144, 238, 144)); // 라이트 그린
+                break;
+            case "NORMAL": 
+                modeText += " (노말)";
+                gameModeLabel.setForeground(new Color(173, 216, 230)); // 라이트 블루
+                break;
+            case "HARD": 
+                modeText += " (하드)";
+                gameModeLabel.setForeground(new Color(255, 99, 99)); // 라이트 레드
+                break;
+            default: 
+                modeText += " (노말)";
+                gameModeLabel.setForeground(new Color(173, 216, 230)); // 라이트 블루
+                break;
+        }
+        gameModeLabel.setText(modeText);
+    }
 
     // Keep the text pane (compat/backwards) updated but don't show it over graphics
     gameBoard.setShowTextOverlay(false);
@@ -725,6 +764,23 @@ public class game extends JPanel implements KeyListener {
     sb.append("점수: ").append(String.format("%,d", currentScore)).append("\n");
     sb.append("레벨: ").append(level).append("\n");
     sb.append("줄: ").append(linesCleared).append("\n");
+    sb.append("\n");
+    
+    // 게임 모드 표시
+    String mode = System.getProperty("tetris.game.mode", "ITEM");
+    String diff = System.getProperty("tetris.game.difficulty", "NORMAL");
+    if ("ITEM".equals(mode)) {
+        sb.append("모드: 아이템 모드\n");
+    } else {
+        sb.append("모드: 일반 모드");
+        switch (diff) {
+            case "EASY": sb.append(" (이지)"); break;
+            case "NORMAL": sb.append(" (노말)"); break;
+            case "HARD": sb.append(" (하드)"); break;
+            default: sb.append(" (노말)"); break;
+        }
+        sb.append("\n");
+    }
     sb.append("\n");
 
     if (gameEngine.hasTimeStopCharge()) {
