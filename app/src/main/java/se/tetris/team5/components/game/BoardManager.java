@@ -309,6 +309,8 @@ public class BoardManager {
 
   // 마지막으로 삭제된 줄에 타임스톱 아이템이 있었는지 여부
   private boolean timeStopItemCleared = false;
+  // last cleared rows from the most recent clear operation (0..HEIGHT-1)
+  private java.util.List<Integer> lastClearedRows = new java.util.ArrayList<>();
 
   /**
    * 마지막 줄 삭제 시 타임스톱 아이템이 있었는지 반환하고 플래그 초기화
@@ -331,75 +333,83 @@ public class BoardManager {
    * @return 제거된 줄 수
    */
   public int clearLines(java.util.List<se.tetris.team5.items.Item> removedItems) {
-    int clearedLinesCount = 0;
-    timeStopItemCleared = false; // 매 clearLines 호출 시 초기화
+    // reset state
+    timeStopItemCleared = false;
+    lastClearedRows.clear();
 
-    // First pass: collect all full rows on the board (fixed blocks only)
+    // collect full rows (fixed blocks only)
     for (int row = 0; row < HEIGHT; row++) {
       boolean fullLine = true;
       for (int col = 0; col < WIDTH; col++) {
-        if (board[row][col] != 1) { // consider only fixed blocks
-          fullLine = false;
-          break;
-        }
+        if (board[row][col] != 1) { fullLine = false; break; }
       }
       if (fullLine) {
-        // 줄을 삭제하기 전에 타임스톱 아이템이 있는지 확인
+        lastClearedRows.add(row);
+        // collect removed items on that row
+        if (removedItems != null) {
+          for (int col = 0; col < WIDTH; col++) {
+            se.tetris.team5.items.Item removed = boardItems[row][col];
+            if (removed != null) removedItems.add(removed);
+          }
+        }
+        // detect time-stop
         for (int col = 0; col < WIDTH; col++) {
           if (boardItems[row][col] instanceof se.tetris.team5.items.TimeStopItem) {
             timeStopItemCleared = true;
             System.out.println("[타임스톱 아이템 발견] 줄 삭제로 타임스톱 충전!");
           }
         }
-        
-        clearedLinesCount++;
-        // 수집: 삭제되는 줄의 아이템들을 removedItems에 추가
-        if (removedItems != null) {
-          for (int col = 0; col < WIDTH; col++) {
-            se.tetris.team5.items.Item removed = boardItems[row][col];
-            if (removed != null)
-              removedItems.add(removed);
-          }
-        }
-        // 아래 줄을 한 칸씩 내림
-        for (int moveRow = row; moveRow > 0; moveRow--) {
-          for (int col = 0; col < WIDTH; col++) {
-            board[moveRow][col] = board[moveRow - 1][col];
-            boardColors[moveRow][col] = boardColors[moveRow - 1][col];
-            boardItems[moveRow][col] = boardItems[moveRow - 1][col];
-          }
-        }
-        // 맨 위 줄은 빈 줄로 만듦
-        for (int col = 0; col < WIDTH; col++) {
-          newBoard[writeRow][col] = board[readRow][col];
-          newBoardColors[writeRow][col] = boardColors[readRow][col];
-          newBoardItems[writeRow][col] = boardItems[readRow][col];
-        }
-        writeRow--;
       }
-
-      // fill remaining top rows with empty
-      for (int r = writeRow; r >= 0; r--) {
-        for (int c = 0; c < WIDTH; c++) {
-          newBoard[r][c] = 0;
-          newBoardColors[r][c] = null;
-          newBoardItems[r][c] = null;
-        }
-      }
-
-      // replace original boards
-      this.board = newBoard;
-      this.boardColors = newBoardColors;
-      this.boardItems = newBoardItems;
-
-      // Return rows in ascending order (top->bottom) for UI convenience
-      java.util.Collections.sort(clearedRows);
-      // Debug: log cleared rows for troubleshooting animation issues
-      System.out.println("[BoardManager DEBUG] clearedRows=" + clearedRows);
     }
 
-    return clearedRows;
+    if (lastClearedRows.isEmpty()) return 0;
+
+    // remove cleared rows by compressing into new arrays (bottom-up)
+    java.util.Set<Integer> clearedSet = new java.util.HashSet<>(lastClearedRows);
+    int[][] newBoard = new int[HEIGHT][WIDTH];
+    Color[][] newBoardColors = new Color[HEIGHT][WIDTH];
+    se.tetris.team5.items.Item[][] newBoardItems = new se.tetris.team5.items.Item[HEIGHT][WIDTH];
+
+    int writeRow = HEIGHT - 1;
+    for (int readRow = HEIGHT - 1; readRow >= 0; readRow--) {
+      if (clearedSet.contains(readRow)) continue;
+      for (int col = 0; col < WIDTH; col++) {
+        newBoard[writeRow][col] = board[readRow][col];
+        newBoardColors[writeRow][col] = boardColors[readRow][col];
+        newBoardItems[writeRow][col] = boardItems[readRow][col];
+      }
+      writeRow--;
+    }
+
+    // fill remaining top rows with empty
+    for (int r = writeRow; r >= 0; r--) {
+      for (int c = 0; c < WIDTH; c++) {
+        newBoard[r][c] = 0;
+        newBoardColors[r][c] = null;
+        newBoardItems[r][c] = null;
+      }
+    }
+
+    // replace original boards
+    this.board = newBoard;
+    this.boardColors = newBoardColors;
+    this.boardItems = newBoardItems;
+
+    // Sort and log cleared rows for UI
+    java.util.Collections.sort(lastClearedRows);
+    System.out.println("[BoardManager DEBUG] clearedRows=" + lastClearedRows);
+
+    return lastClearedRows.size();
   }
+
+  /**
+   * Return the last cleared rows (0..HEIGHT-1) from the most recent clearLines call.
+   * The returned list is a copy to avoid external mutation.
+   */
+  public java.util.List<Integer> getLastClearedRows() {
+    return new java.util.ArrayList<>(lastClearedRows);
+  }
+
 
   /**
    * 지정된 위치를 중심으로 3x3 범위의 블록을 폭발시킵니다.

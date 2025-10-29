@@ -13,8 +13,9 @@ import se.tetris.team5.items.ItemGrantPolicy;
 
 public class GameEngine {
   // 게임 모드 (NORMAL: 아이템 없음, ITEM: 10줄마다 아이템)
-  // 기본 모드를 일반 모드로 변경했습니다 (아이템이 나오지 않음)
-  private GameMode gameMode = GameMode.NORMAL; // 기본값은 일반 모드
+  // Default to ITEM mode to preserve legacy behavior where items are available.
+  // If you want no items, call setGameMode(GameMode.NORMAL) or add a user setting.
+  private GameMode gameMode = GameMode.ITEM; // 기본값: 아이템 모드
 
   // 점수 2배 아이템 관련
   private boolean doubleScoreActive = false;
@@ -123,6 +124,14 @@ public class GameEngine {
       java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
       boardManager.fixBlock(currentBlock, x, y, removedItems);
       int clearedLines = boardManager.clearLines(removedItems);
+      // capture cleared rows for UI animation and notify listeners before we continue
+      try {
+        lastClearedRows = boardManager.getLastClearedRows();
+        // notify UI immediately so it can start animations before we spawn the next block
+        notifyListenersImmediate();
+      } catch (Exception ex) {
+        // swallow - non-fatal
+      }
 
       // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인
       if (!removedItems.isEmpty()) {
@@ -211,6 +220,13 @@ public class GameEngine {
     java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
     boardManager.fixBlock(currentBlock, x, y, removedItems);
     int clearedLines = boardManager.clearLines(removedItems);
+    // capture cleared rows for UI animation and notify listeners before we continue
+    try {
+      lastClearedRows = boardManager.getLastClearedRows();
+      notifyListenersImmediate();
+    } catch (Exception ex) {
+      // ignore
+    }
 
     // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인 및 아이템 효과 적용
     if (!removedItems.isEmpty()) {
@@ -258,6 +274,15 @@ public class GameEngine {
       }
     }
     return doubleScoreActive;
+  }
+
+  /**
+   * Returns remaining milliseconds for double-score effect, or 0 if not active.
+   */
+  public long getDoubleScoreRemainingMillis() {
+    if (!doubleScoreActive) return 0L;
+    long rem = doubleScoreEndTime - System.currentTimeMillis();
+    return rem > 0 ? rem : 0L;
   }
 
   /**
@@ -488,9 +513,10 @@ public class GameEngine {
    */
   private void notifyListenersImmediate() {
     if (listeners == null || listeners.isEmpty()) return;
+    // Ensure listeners run on the Swing EDT so UI updates are safe and consistent.
     for (Runnable r : listeners) {
       try {
-        r.run();
+        javax.swing.SwingUtilities.invokeLater(r);
       } catch (Exception ex) {
         // ignore listener exceptions to avoid breaking engine flow
       }

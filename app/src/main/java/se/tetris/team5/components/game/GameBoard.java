@@ -466,13 +466,38 @@ public class GameBoard extends JTextPane {
                 g2.setFont(prev);
             }
         } else if (it instanceof se.tetris.team5.items.LineClearItem) {
-            // line-clear: bright yellow horizontal bar
+            // line-clear: bright yellow badge with centered 'L' for clarity
             g2.setColor(new Color(255, 200, 70));
-            int hh = Math.max(4, r/3);
-            g2.fillRoundRect(cx - r, cy - hh/2, r*2, hh, hh, hh);
-            g2.setColor(new Color(255,255,255,180));
-            g2.setStroke(new java.awt.BasicStroke(Math.max(1f, hh/3)));
-            g2.drawLine(cx - r + 4, cy, cx + r - 4, cy);
+            int badgeSize = Math.max(r, 12);
+            int arc = Math.max(6, badgeSize / 3);
+            g2.fillRoundRect(cx - badgeSize, cy - badgeSize, badgeSize * 2, badgeSize * 2, arc, arc);
+            // draw a clear 'L' glyph centered
+            g2.setColor(new Color(255,255,255,220));
+            java.awt.Font prev = g2.getFont();
+            java.awt.Font glyphFont = prev.deriveFont((float) Math.max(12, badgeSize));
+            g2.setFont(glyphFont);
+            java.awt.FontMetrics fm = g2.getFontMetrics();
+            String glyph = "L";
+            int sx = cx - fm.stringWidth(glyph) / 2;
+            int sy = cy + fm.getAscent() / 2 - 2;
+            g2.drawString(glyph, sx, sy);
+            g2.setFont(prev);
+        } else if (it instanceof se.tetris.team5.items.DoubleScoreItem) {
+            // double-score: small badge with 'x2'
+            g2.setColor(new Color(120, 180, 255)); // pale blue
+            int badgeW = Math.max(r * 2, 14);
+            int badgeH = Math.max(r, 10);
+            g2.fillRoundRect(cx - badgeW/2, cy - badgeH/2, badgeW, badgeH, badgeH/2, badgeH/2);
+            g2.setColor(Color.WHITE);
+            java.awt.Font prev = g2.getFont();
+            java.awt.Font glyphFont = prev.deriveFont((float) Math.max(10, badgeH));
+            g2.setFont(glyphFont);
+            String glyph = "x2";
+            java.awt.FontMetrics fm = g2.getFontMetrics();
+            int sx = cx - fm.stringWidth(glyph) / 2;
+            int sy = cy + fm.getAscent() / 2 - 2;
+            g2.drawString(glyph, sx, sy);
+            g2.setFont(prev);
         } else if (it instanceof se.tetris.team5.items.ScoreItem) {
             // score: small green circle with + symbol
             g2.setColor(new Color(100, 220, 140));

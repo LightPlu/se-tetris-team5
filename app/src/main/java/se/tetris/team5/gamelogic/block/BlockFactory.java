@@ -16,6 +16,8 @@ public class BlockFactory {
 
   private Random random;
   private Difficulty difficulty = Difficulty.NORMAL;
+  // bag-of-7 support (shuffle bag) - kept for compatibility with older logic
+  private List<Integer> bag;
 
   /**
    * 기본 생성자 (난이도: NORMAL, seed: 랜덤)
@@ -78,7 +80,7 @@ public class BlockFactory {
       r -= weights[idx];
       idx++;
     }
-    return createBlock(idx);
+    return createBlock(0);
   }
 
   /**
@@ -115,5 +117,15 @@ public class BlockFactory {
    */
   public void refreshRandomSeed() {
     this.random = new Random(System.currentTimeMillis());
+  }
+
+  // Fill and shuffle the 7-bag. Kept for compatibility; current creation
+  // methods may not use the bag but tests or other modules may expect it.
+  private void refillBag() {
+    bag.clear();
+    for (int i = 0; i < 7; i++) {
+      bag.add(i);
+    }
+    Collections.shuffle(bag, random);
   }
 }

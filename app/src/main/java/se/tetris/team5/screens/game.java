@@ -27,6 +27,7 @@ import se.tetris.team5.ScreenController;
 import se.tetris.team5.blocks.Block;
 import se.tetris.team5.gamelogic.GameEngine;
 import se.tetris.team5.components.game.GameBoard;
+import se.tetris.team5.components.game.DoubleScoreBadge;
 import se.tetris.team5.components.game.NextBlockBoard;
 import se.tetris.team5.components.game.ScoreBoard;
 import se.tetris.team5.utils.score.ScoreManager;
@@ -51,6 +52,7 @@ public class game extends JPanel implements KeyListener {
   private JLabel scoreValueLabel;
   private JLabel levelLabel;
   private JLabel linesLabel;
+  private DoubleScoreBadge doubleScoreBadge;
   private javax.swing.JTextPane itemDescPane;
 
   // 게임 엔진 (순수 게임 로직)
@@ -281,6 +283,7 @@ public class game extends JPanel implements KeyListener {
   rightPanel.setBackground(new Color(18, 18, 24));
   rightPanel.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
   // Limit the overall right column width (the dark panel) so it stays visibly narrower than the game area
+  // restore right panel width to original comfortable size
   rightPanel.setPreferredSize(new java.awt.Dimension(260, 0));
   rightPanel.setMinimumSize(new java.awt.Dimension(220, 0));
 
@@ -352,6 +355,10 @@ public class game extends JPanel implements KeyListener {
   scoreValueLabel.setForeground(new Color(255, 220, 100));
   scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   scoreInfo.add(scoreValueLabel);
+  doubleScoreBadge = new DoubleScoreBadge();
+  doubleScoreBadge.setVisible(false);
+  doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(doubleScoreBadge);
   scoreInfo.add(javax.swing.Box.createVerticalStrut(8));
   JPanel smallRow = new JPanel(); smallRow.setOpaque(false);
   smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
@@ -596,7 +603,9 @@ public class game extends JPanel implements KeyListener {
             if (item instanceof se.tetris.team5.items.TimeStopItem) {
               sb.append("⏱");
             } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-              sb.append("$");
+              sb.append("x2");
+            } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+              sb.append("L");
             } else {
               sb.append("★");
             }
@@ -609,7 +618,9 @@ public class game extends JPanel implements KeyListener {
             if (item instanceof se.tetris.team5.items.TimeStopItem) {
               sb.append("⏱");
             } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-              sb.append("$");
+              sb.append("x2");
+            } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+              sb.append("L");
             } else {
               sb.append("★");
             }
@@ -726,6 +737,24 @@ public class game extends JPanel implements KeyListener {
     scoreBoard.getTextPane().getStyledDocument().setCharacterAttributes(
         0, scoreBoard.getTextPane().getDocument().getLength(),
         scoreBoard.getStyleSet(), false);
+
+    // Double-score visual indicator
+    try {
+      long rem = gameEngine.getDoubleScoreRemainingMillis();
+      if (rem > 0) {
+        doubleScoreBadge.setTotalMillis(20_000);
+        doubleScoreBadge.setRemainingMillis(rem);
+        doubleScoreBadge.setVisible(true);
+        // highlight score label
+        scoreValueLabel.setForeground(new Color(255, 220, 100));
+      } else {
+        doubleScoreBadge.setRemainingMillis(0);
+        doubleScoreBadge.setVisible(false);
+        scoreValueLabel.setForeground(new Color(255, 220, 100));
+      }
+    } catch (Exception ex) {
+      // ignore UI update errors
+    }
   }
 
   /**
@@ -747,7 +776,9 @@ public class game extends JPanel implements KeyListener {
               if (item instanceof se.tetris.team5.items.TimeStopItem) {
                 sb.append("⏱");
               } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-                sb.append("$");
+                sb.append("x2");
+              } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+                sb.append("L");
               } else {
                 sb.append("★");
               }
