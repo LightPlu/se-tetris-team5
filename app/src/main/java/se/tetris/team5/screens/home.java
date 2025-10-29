@@ -671,6 +671,14 @@ public class home extends JPanel implements KeyListener {
     
     // JTextPane 호환성을 위한 display 메서드
     public void display(JTextPane textPane) {
+        // 홈 화면 표시 시 항상 메인 메뉴로 초기화 (난이도 선택 화면 상태 해제)
+        if (inDifficultySelection) {
+            inDifficultySelection = false;
+            selectedMenu = 0;
+            // 메뉴를 다시 구성
+            rebuildMenu();
+        }
+        
         // GUI 버전에서는 JTextPane 대신 JPanel을 사용
         // textPane의 부모 컨테이너에 이 GUI 패널을 추가
         if (textPane != null && textPane.getParent() != null) {
