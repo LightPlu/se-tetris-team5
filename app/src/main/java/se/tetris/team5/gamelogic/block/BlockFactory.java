@@ -80,7 +80,7 @@ public class BlockFactory {
       r -= weights[idx];
       idx++;
     }
-    return createBlock(0);
+    return createBlock(idx);
   }
 
   /**
