@@ -11,6 +11,7 @@ import javax.swing.text.StyledDocument;
 
 import se.tetris.team5.utils.setting.GameSettings;
 import se.tetris.team5.ScreenController;
+import se.tetris.team5.components.home.BGMManager;
 
 public class setting {
     
@@ -62,12 +63,11 @@ public class setting {
     
     public void display(JTextPane textPane) {
         this.currentTextPane = textPane;
-    // Clear any child components left in the shared textPane and reset background
-    textPane.removeAll();
-    // Use the configured background color from GameSettings instead of a hardcoded black
-    // Ensure the textPane is opaque so the background color is actually painted
-    textPane.setOpaque(true);
-    textPane.setBackground(gameSettings.getUIColor("background"));
+        // Clear any child components left in the shared textPane and reset background
+        textPane.removeAll();
+        // 배경색을 명확히 검정색으로 설정
+        textPane.setOpaque(true);
+        textPane.setBackground(Color.BLACK);
         // Remove previous key listeners and add our own to avoid duplicates
         for (KeyListener kl : textPane.getKeyListeners()) {
             textPane.removeKeyListener(kl);
@@ -232,6 +232,8 @@ public class setting {
                 break;
             case 4: // 음향 효과
                 gameSettings.setSoundEnabled(!gameSettings.isSoundEnabled());
+                // BGM 제어
+                controlBGM();
                 drawSettingScreen();
                 break;
             case 5: // 스코어 초기화
@@ -361,9 +363,25 @@ public class setting {
             StyleConstants.setForeground(styleSet, settings.getUIColor("text"));
         }
         
-        // 배경색 업데이트
+        // 배경색은 항상 검정색으로 고정
         if (currentTextPane != null) {
-            currentTextPane.setBackground(settings.getUIColor("background"));
+            currentTextPane.setBackground(Color.BLACK);
+        }
+    }
+    
+    /**
+     * 음향 효과 설정에 따라 BGM을 제어합니다
+     */
+    private void controlBGM() {
+        BGMManager bgmManager = BGMManager.getInstance();
+        
+        // BGMManager에 설정 변경 알림
+        bgmManager.onSoundSettingChanged();
+        
+        if (gameSettings.isSoundEnabled()) {
+            // 사운드가 켜져있으면 현재 화면(설정)에 맞는 메인 BGM 재생
+            bgmManager.playMainBGM();
+            System.out.println("BGM enabled - Playing main BGM in settings");
         }
     }
     

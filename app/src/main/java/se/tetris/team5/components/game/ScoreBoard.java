@@ -23,8 +23,13 @@ public class ScoreBoard extends JPanel {
     private JTextPane scorePane;
     private SimpleAttributeSet styleSet;
     
+    // 게임 모드 정보
+    private String gameMode = "아이템 모드";
+    private String difficulty = "";
+    
     public ScoreBoard() {
         initComponents();
+        updateGameMode();
     }
     
     private void initComponents() {
@@ -62,13 +67,44 @@ public class ScoreBoard extends JPanel {
     }
     
     /**
+     * 시스템 속성에서 게임 모드를 읽어서 업데이트합니다
+     */
+    private void updateGameMode() {
+        try {
+            String mode = System.getProperty("tetris.game.mode", "ITEM");
+            String diff = System.getProperty("tetris.game.difficulty", "NORMAL");
+            
+            if ("ITEM".equals(mode)) {
+                gameMode = "아이템 모드";
+                difficulty = "";
+            } else {
+                gameMode = "일반 모드";
+                switch (diff) {
+                    case "EASY": difficulty = " (이지)"; break;
+                    case "NORMAL": difficulty = " (노말)"; break;
+                    case "HARD": difficulty = " (하드)"; break;
+                    default: difficulty = " (노말)"; break;
+                }
+            }
+        } catch (Exception e) {
+            gameMode = "아이템 모드";
+            difficulty = "";
+        }
+    }
+    
+    /**
      * 빈 점수 영역을 표시합니다
      */
     public void showEmptyScore() {
+        // 게임 모드 업데이트
+        updateGameMode();
+        
         StringBuilder sb = new StringBuilder();
         sb.append("점수: 0\n");
         sb.append("레벨: 1\n");
         sb.append("줄: 0\n");
+        sb.append("\n");
+        sb.append("모드: ").append(gameMode).append(difficulty).append("\n");
         sb.append("\n");
         sb.append("조작법:\n");
         sb.append("↑: 회전\n");

@@ -5,7 +5,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -21,6 +20,9 @@ public class home extends JPanel implements KeyListener {
     private ScreenController screenController;
     private int selectedMenu = 0; // 0: 게임시작, 1: 스코어보기, 2: 설정, 3: 종료
     
+    // 메뉴 상태 관리
+    private boolean inDifficultySelection = false; // 난이도 선택 화면인지 여부
+    
     // 창 크기 정보
     private int windowWidth;
     private int windowHeight;
@@ -30,16 +32,48 @@ public class home extends JPanel implements KeyListener {
     private JLabel titleLabel;
     private JButton[] menuButtons;
     private JLabel descriptionLabel;
-    private JLabel controlsLabel;
     private JLabel gameInfoLabel;
     
 
     
-    private String[] menuOptions = {
-        "게임 시작",
+    // 메인 메뉴
+    private String[] mainMenuOptions = {
+        "일반 모드",
+        "아이템 모드",
         "스코어 보기", 
         "설정",
         "종료"
+    };
+    
+    private String[] mainMenuIcons = {
+        "⚙️", "💎", "🏆", "⚙️", "❌"
+    };
+    
+    private String[] mainMenuDescriptions = {
+        "난이도를 선택하여 일반 테트리스를 플레이합니다",
+        "아이템이 포함된 테트리스를 플레이합니다", 
+        "역대 최고 기록들을 확인합니다",
+        "게임 설정을 변경합니다",
+        "게임을 종료합니다"
+    };
+    
+    // 난이도 선택 메뉴
+    private String[] difficultyMenuOptions = {
+        "이지",
+        "노말",
+        "하드",
+        "뒤로 가기"
+    };
+    
+    private String[] difficultyMenuIcons = {
+        "🟢", "🟡", "🔴", "↩️"
+    };
+    
+    private String[] difficultyMenuDescriptions = {
+        "🟢 이지: 쉬운 블록들로 구성된 난이도",
+        "🟡 노말: 일반적인 블록 구성의 기본 난이도",
+        "🔴 하드: 어려운 블록들로 구성된 고난이도",
+        "메인 메뉴로 돌아갑니다"
     };
     
     // 배경 관련
@@ -48,17 +82,6 @@ public class home extends JPanel implements KeyListener {
     private List<Particle> particles;
     private Timer animationTimer;
     private Random random;
-    
-    private String[] menuIcons = {
-        "🎯", "🏆", "⚙️", "❌"
-    };
-    
-    private String[] menuDescriptions = {
-        "새로운 테트리스 게임을 시작합니다",
-        "역대 최고 기록들을 확인합니다",
-        "게임 설정을 변경합니다",
-        "게임을 종료합니다"
-    };
     
     public home(ScreenController screenController) {
         this.screenController = screenController;
@@ -71,6 +94,27 @@ public class home extends JPanel implements KeyListener {
         setupKeyListener();
         initializeBackground();
         updateMenuSelection();
+    }
+    
+    /**
+     * 현재 상태에 맞는 메뉴 옵션들을 반환합니다
+     */
+    private String[] getCurrentMenuOptions() {
+        return inDifficultySelection ? difficultyMenuOptions : mainMenuOptions;
+    }
+    
+    /**
+     * 현재 상태에 맞는 메뉴 아이콘들을 반환합니다
+     */
+    private String[] getCurrentMenuIcons() {
+        return inDifficultySelection ? difficultyMenuIcons : mainMenuIcons;
+    }
+    
+    /**
+     * 현재 상태에 맞는 메뉴 설명들을 반환합니다
+     */
+    private String[] getCurrentMenuDescriptions() {
+        return inDifficultySelection ? difficultyMenuDescriptions : mainMenuDescriptions;
     }
     
     /**
@@ -97,8 +141,6 @@ public class home extends JPanel implements KeyListener {
      * GUI 컴포넌트들을 초기화합니다
      */
     private void initializeComponents() {
-        GameSettings settings = GameSettings.getInstance();
-        
         // 배경을 투명하게 설정하여 배경 이미지가 보이도록 함
         setOpaque(false);
         
@@ -110,8 +152,9 @@ public class home extends JPanel implements KeyListener {
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
         // 메뉴 버튼들
-        menuButtons = new JButton[menuOptions.length];
-        for(int i = 0; i < menuOptions.length; i++) {
+        String[] currentOptions = getCurrentMenuOptions();
+        menuButtons = new JButton[currentOptions.length];
+        for(int i = 0; i < currentOptions.length; i++) {
             menuButtons[i] = createMenuButton(i);
         }
         
@@ -121,15 +164,9 @@ public class home extends JPanel implements KeyListener {
         descriptionLabel.setForeground(Color.WHITE); // 흰색 텍스트
         descriptionLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
-        // 조작법 라벨
-        controlsLabel = new JLabel("<html><center>🎮 조작법:<br/>↑↓ : 메뉴 선택    Enter : 확인<br/>ESC : 게임 종료</center></html>");
-        controlsLabel.setFont(getFontForSize(getFontSize() - 4));
-        controlsLabel.setForeground(Color.CYAN); // 밝은 청록색으로 변경
-        controlsLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
         // 게임 정보 라벨
         String highScore = getHighestScore();
-        gameInfoLabel = new JLabel("<html><center>📋 게임 정보:<br/>버전: 1.0.0 | 개발팀: 5조<br/>🏆 최고 기록: " + highScore + "점</center></html>");
+        gameInfoLabel = new JLabel("<html><center>📋 게임 정보:<br/>CHAINSAW TETRIS v1.0<br/>🏆 최고 기록: " + highScore + "점</center></html>");
         gameInfoLabel.setFont(getFontForSize(getFontSize() - 4));
         gameInfoLabel.setForeground(Color.WHITE); // 흰색 텍스트
         gameInfoLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -139,7 +176,9 @@ public class home extends JPanel implements KeyListener {
      * 메뉴 버튼을 생성합니다
      */
     private JButton createMenuButton(int index) {
-        String buttonText = menuIcons[index] + " " + menuOptions[index];
+        String[] currentIcons = getCurrentMenuIcons();
+        String[] currentOptions = getCurrentMenuOptions();
+        String buttonText = currentIcons[index] + " " + currentOptions[index];
         JButton button = new JButton(buttonText);
         
         // 버튼 스타일 설정
@@ -199,7 +238,6 @@ public class home extends JPanel implements KeyListener {
         // 모든 컴포넌트를 중앙 정렬로 설정
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         descriptionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        controlsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         gameInfoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         // 제목 추가
@@ -236,10 +274,6 @@ public class home extends JPanel implements KeyListener {
         contentPanel.add(descriptionLabel);
         contentPanel.add(Box.createVerticalStrut(30));
         
-        // 조작법 추가
-        contentPanel.add(controlsLabel);
-        contentPanel.add(Box.createVerticalStrut(20));
-        
         // 게임 정보 추가
         contentPanel.add(gameInfoLabel);
         contentPanel.add(Box.createVerticalGlue());
@@ -261,7 +295,7 @@ public class home extends JPanel implements KeyListener {
      * 메뉴 선택 상태를 업데이트합니다
      */
     private void updateMenuSelection() {
-        GameSettings settings = GameSettings.getInstance();
+        String[] currentDescriptions = getCurrentMenuDescriptions();
         
         for(int i = 0; i < menuButtons.length; i++) {
             if(i == selectedMenu) {
@@ -271,7 +305,7 @@ public class home extends JPanel implements KeyListener {
                 menuButtons[i].setBorder(BorderFactory.createLoweredBevelBorder());
                 
                 // 설명 업데이트
-                descriptionLabel.setText("💬 " + menuDescriptions[i]);
+                descriptionLabel.setText("💬 " + currentDescriptions[i]);
             } else {
                 // 기본 버튼 스타일
                 menuButtons[i].setBackground(new Color(60, 60, 60)); // 더 밝은 회색
@@ -313,7 +347,6 @@ public class home extends JPanel implements KeyListener {
         
         // 라벨들 폰트 업데이트
         descriptionLabel.setFont(getFontForSize(getFontSize() - 2));
-        controlsLabel.setFont(getFontForSize(getFontSize() - 4));
         gameInfoLabel.setFont(getFontForSize(getFontSize() - 4));
         
         revalidate();
@@ -386,20 +419,114 @@ public class home extends JPanel implements KeyListener {
      * 현재 선택된 메뉴를 실행합니다
      */
     private void selectCurrentMenu() {
-        switch (selectedMenu) {
-            case 0: // 게임 시작
-                screenController.showScreen("game");
-                break;
-            case 1: // 스코어 보기
-                screenController.showScreen("score");
-                break;
-            case 2: // 설정
-                screenController.showScreen("setting");
-                break;
-            case 3: // 종료
-                showExitConfirmation();
-                break;
+        if (inDifficultySelection) {
+            // 난이도 선택 화면
+            switch (selectedMenu) {
+                case 0: // 이지
+                    startNormalMode("EASY");
+                    break;
+                case 1: // 노말
+                    startNormalMode("NORMAL");
+                    break;
+                case 2: // 하드
+                    startNormalMode("HARD");
+                    break;
+                case 3: // 뒤로 가기
+                    backToMainMenu();
+                    break;
+            }
+        } else {
+            // 메인 메뉴
+            switch (selectedMenu) {
+                case 0: // 일반 모드 (난이도 선택으로 이동)
+                    showDifficultySelection();
+                    break;
+                case 1: // 아이템 모드 (바로 시작)
+                    startItemMode();
+                    break;
+                case 2: // 스코어 보기
+                    screenController.showScreen("score");
+                    break;
+                case 3: // 설정
+                    screenController.showScreen("setting");
+                    break;
+                case 4: // 종료
+                    showExitConfirmation();
+                    break;
+            }
         }
+    }
+    
+    /**
+     * 메인 메뉴로 돌아갑니다
+     */
+    private void backToMainMenu() {
+        inDifficultySelection = false;
+        selectedMenu = 0;
+        rebuildMenu();
+    }
+    
+    /**
+     * 난이도 선택 화면으로 전환합니다
+     */
+    private void showDifficultySelection() {
+        inDifficultySelection = true;
+        selectedMenu = 1; // 기본값: 노말 선택
+        rebuildMenu();
+    }
+    
+    /**
+     * 메뉴를 다시 구성합니다
+     */
+    private void rebuildMenu() {
+        // 기존 버튼들 제거
+        Component[] components = getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel) {
+                ((JPanel) comp).removeAll();
+            }
+        }
+        removeAll();
+        
+        // 새로운 메뉴로 다시 초기화
+        initializeComponents();
+        setupLayout();
+        
+        // 화면 갱신
+        revalidate();
+        repaint();
+        
+        // 포커스 재설정
+        requestFocusInWindow();
+        
+        // 메뉴 선택 상태 업데이트
+        updateMenuSelection();
+    }
+    
+    /**
+     * 일반 모드로 게임을 시작합니다
+     */
+    private void startNormalMode(String difficulty) {
+        System.out.println("[게임 시작] 일반 모드 - 난이도: " + difficulty);
+        
+        // 전역 변수로 게임 모드와 난이도 저장 (game 화면에서 참조)
+        System.setProperty("tetris.game.mode", "NORMAL");
+        System.setProperty("tetris.game.difficulty", difficulty);
+        
+        screenController.showScreen("game");
+    }
+    
+    /**
+     * 아이템 모드로 게임을 시작합니다
+     */
+    private void startItemMode() {
+        System.out.println("[게임 시작] 아이템 모드");
+        
+        // 전역 변수로 게임 모드 저장 (game 화면에서 참조) 
+        System.setProperty("tetris.game.mode", "ITEM");
+        System.setProperty("tetris.game.difficulty", "NORMAL");
+        
+        screenController.showScreen("game");
     }
     
     /**
@@ -460,22 +587,28 @@ public class home extends JPanel implements KeyListener {
         
 
         
+        String[] currentOptions = getCurrentMenuOptions();
+        
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
-                selectedMenu = (selectedMenu - 1 + menuOptions.length) % menuOptions.length;
+                selectedMenu = (selectedMenu - 1 + currentOptions.length) % currentOptions.length;
                 updateMenuSelection();
                 break;
             case KeyEvent.VK_DOWN:
-                selectedMenu = (selectedMenu + 1) % menuOptions.length;
+                selectedMenu = (selectedMenu + 1) % currentOptions.length;
                 updateMenuSelection();
                 break;
             case KeyEvent.VK_ENTER:
-
                 selectCurrentMenu();
                 break;
             case KeyEvent.VK_ESCAPE:
-
-                showExitConfirmation();
+                if (inDifficultySelection) {
+                    // 난이도 선택 화면에서 ESC: 메인 메뉴로 돌아가기
+                    backToMainMenu();
+                } else {
+                    // 메인 메뉴에서 ESC: 종료 확인
+                    showExitConfirmation();
+                }
                 break;
         }
     }
@@ -526,9 +659,9 @@ public class home extends JPanel implements KeyListener {
         try {
             // 먼저 resources 폴더에서 찾기 (classpath 사용)
             String[] resourceNames = {
-                "/background.gif",
-                "/background.jpg", 
-                "/background.png"
+                "/mainbackground.gif",
+                "/mainbackground.jpg", 
+                "/mainbackground.png"
             };
             
             for (String resourceName : resourceNames) {
@@ -550,15 +683,15 @@ public class home extends JPanel implements KeyListener {
             
             // resources에서 찾지 못하면 파일 시스템에서 찾기
             String[] filePaths = {
-                "app/src/main/resources/background.gif",
-                "app/src/main/resources/background.jpg",
-                "app/src/main/resources/background.png",
-                "src/main/resources/background.gif",
-                "src/main/resources/background.jpg",
-                "src/main/resources/background.png",
-                "background.gif",
-                "background.jpg",
-                "background.png"
+                "app/src/main/resources/mainbackground.gif",
+                "app/src/main/resources/mainbackground.jpg",
+                "app/src/main/resources/mainbackground.png",
+                "src/main/resources/mainbackground.gif",
+                "src/main/resources/mainbackground.jpg",
+                "src/main/resources/mainbackground.png",
+                "mainbackground.gif",
+                "mainbackground.jpg",
+                "mainbackground.png"
             };
             
             for (String path : filePaths) {

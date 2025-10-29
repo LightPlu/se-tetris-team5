@@ -281,6 +281,8 @@ public class GameBoard extends JTextPane {
             g4.dispose();
         }
 
+
+
         // If requested, draw the JTextPane text on top of the graphics (used for pause/menu messages)
         if (showTextOverlay) {
             super.paintComponent(g);

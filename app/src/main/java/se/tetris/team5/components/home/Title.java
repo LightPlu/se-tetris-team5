@@ -25,15 +25,15 @@ public class Title {
     public String getGUITitle() {
         switch (currentWindowSize) {
             case SMALL:
-                return "<html><center><h3>🎮 TETRIS 🎮</h3><h5>Team 5 - SMALL</h5></center></html>";
+                return "<html><center><div style='margin: 30px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 2px 2px 4px #000000; font-size: 24px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
             case MEDIUM:
-                return "<html><center><h2>🎮 TETRIS GAME 🎮</h2><h4>Team 5 - MEDIUM</h4></center></html>";
+                return "<html><center><div style='margin: 35px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 3px 3px 5px #000000; font-size: 30px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
             case LARGE:
-                return "<html><center><h1>🎮 TETRIS GAME 🎮</h1><h3>Team 5 - LARGE</h3><p>클래식 퍼즐 게임</p></center></html>";
+                return "<html><center><div style='margin: 40px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 4px 4px 7px #000000; font-size: 36px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
             case XLARGE:
-                return "<html><center><h1>🎮 TETRIS GAME 🎮</h1><h2>Team 5 - XLARGE</h2><p>클래식 퍼즐 게임</p><small>블록을 맞춰 라인을 완성하세요!</small></center></html>";
+                return "<html><center><div style='margin: 45px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 5px 5px 10px #000000; font-size: 44px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
             default:
-                return "<html><center><h1>🎮 TETRIS GAME 🎮</h1><h2>Team 5 - DEFAULT</h2></center></html>";
+                return "<html><center><div style='margin: 45px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 4px 4px 7px #000000; font-size: 36px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
         }
     }
     
@@ -42,11 +42,11 @@ public class Title {
      */
     public int getTitleFontSize() {
         switch (currentWindowSize) {
-            case SMALL: return 16;
-            case MEDIUM: return 20;
-            case LARGE: return 24;
-            case XLARGE: return 28;
-            default: return 20;
+            case SMALL: return 24;
+            case MEDIUM: return 30;
+            case LARGE: return 36;
+            case XLARGE: return 44;
+            default: return 36;
         }
     }
 

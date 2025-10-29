@@ -6,6 +6,9 @@ public class App {
     System.out.println("file.encoding = " + System.getProperty("file.encoding"));
 
     // ===== 프로그램 시작 =====
-    new ScreenController(); // ScreenController 시작
+    System.out.println("Starting TETRIS Game...");
+    
+    // ScreenController가 로딩 화면부터 시작
+    new ScreenController();
   }
 }
