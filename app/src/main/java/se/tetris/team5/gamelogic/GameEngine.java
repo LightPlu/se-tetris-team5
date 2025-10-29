@@ -2,6 +2,8 @@
 package se.tetris.team5.gamelogic;
 
 import se.tetris.team5.blocks.Block;
+import java.util.ArrayList;
+import java.util.List;
 import se.tetris.team5.gamelogic.block.BlockFactory;
 import se.tetris.team5.gamelogic.block.BlockRotationManager;
 import se.tetris.team5.components.game.BoardManager;
@@ -34,6 +36,12 @@ public class GameEngine {
   private boolean gameOver;
   private boolean gameRunning;
   private long gameStartTime;
+
+  // listeners to notify UI or other observers about state changes (e.g., next block spawned)
+  private List<Runnable> listeners = new ArrayList<>();
+
+  // Last cleared rows (for UI to consume and animate). Cleared row indices are 0..HEIGHT-1
+  private java.util.List<Integer> lastClearedRows = new java.util.ArrayList<>();
 
   // 플레이어가 획득한 아이템 (1개만 보유, 큐로 확장 가능)
   private se.tetris.team5.items.Item acquiredItem = null;
@@ -71,8 +79,11 @@ public class GameEngine {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
     }
 
-    currentBlock = blockFactory.createRandomBlock();
-    nextBlock = blockFactory.createRandomBlock();
+  currentBlock = blockFactory.createRandomBlock();
+  nextBlock = blockFactory.createRandomBlock();
+  // debug: log initial blocks
+  System.out.println("[GameEngine DEBUG] startNewGame current=" + currentBlock.getClass().getSimpleName()
+    + " next=" + nextBlock.getClass().getSimpleName());
     x = START_X;
     y = START_Y;
 
@@ -337,6 +348,11 @@ public class GameEngine {
     }
   }
 
+  // 획득 대기중인 아이템을 반환 (없으면 null) 새로추가된것
+  public se.tetris.team5.items.Item getAcquiredItem() {
+    return acquiredItem;
+  }
+
   // 타임스톱 충전 여부 반환
   public boolean hasTimeStopCharge() {
     return hasTimeStopCharge;
@@ -418,6 +434,18 @@ public class GameEngine {
   }
 
   /**
+   * Consume and return the last cleared rows recorded by the engine.
+   * Returns an empty list if none. This method clears the stored list so subsequent
+   * calls won't return the same event again.
+   */
+  public java.util.List<Integer> consumeLastClearedRows() {
+    if (lastClearedRows == null || lastClearedRows.isEmpty()) return new java.util.ArrayList<>();
+    java.util.List<Integer> out = new java.util.ArrayList<>(lastClearedRows);
+    lastClearedRows.clear();
+    return out;
+  }
+
+  /**
    * 게임을 초기 상태로 리셋합니다
    */
   public void resetGame() {
@@ -442,6 +470,31 @@ public class GameEngine {
     gameStartTime = System.currentTimeMillis();
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
+  }
+
+  /**
+   * Register a listener to be notified when engine state changes (e.g., next block spawned).
+   * Listener will be invoked on the EDT.
+   */
+  public void addStateChangeListener(Runnable r) {
+    if (r == null) return;
+    listeners.add(r);
+  }
+
+  /**
+   * Invoke registered listeners immediately on the current thread.
+   * Used to notify UI to update right after important state changes (like line clears)
+   * so the UI can render the cleared rows before the engine continues mutating the board.
+   */
+  private void notifyListenersImmediate() {
+    if (listeners == null || listeners.isEmpty()) return;
+    for (Runnable r : listeners) {
+      try {
+        r.run();
+      } catch (Exception ex) {
+        // ignore listener exceptions to avoid breaking engine flow
+      }
+    }
   }
 
   /**

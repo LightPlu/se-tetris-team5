@@ -1,6 +1,9 @@
 package se.tetris.team5.gamelogic.block;
 
 import java.util.Random;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import se.tetris.team5.blocks.*;
 
 public class BlockFactory {
@@ -19,6 +22,8 @@ public class BlockFactory {
    */
   public BlockFactory() {
     this.random = new Random();
+    this.bag = new ArrayList<>();
+    refillBag();
   }
 
   /**

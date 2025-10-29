@@ -334,12 +334,13 @@ public class BoardManager {
     int clearedLinesCount = 0;
     timeStopItemCleared = false; // 매 clearLines 호출 시 초기화
 
-    for (int row = HEIGHT - 1; row >= 0; row--) {
-      // 현재 줄이 가득 찼는지 확인 (고정된 블록만 고려)
+    // First pass: collect all full rows on the board (fixed blocks only)
+    for (int row = 0; row < HEIGHT; row++) {
       boolean fullLine = true;
       for (int col = 0; col < WIDTH; col++) {
-        if (board[row][col] != 1) { // 고정된 블록(값 1)만 고려
+        if (board[row][col] != 1) { // consider only fixed blocks
           fullLine = false;
+          break;
         }
       }
       if (fullLine) {
@@ -370,16 +371,34 @@ public class BoardManager {
         }
         // 맨 위 줄은 빈 줄로 만듦
         for (int col = 0; col < WIDTH; col++) {
-          board[0][col] = 0;
-          boardColors[0][col] = null;
-          boardItems[0][col] = null;
+          newBoard[writeRow][col] = board[readRow][col];
+          newBoardColors[writeRow][col] = boardColors[readRow][col];
+          newBoardItems[writeRow][col] = boardItems[readRow][col];
         }
-        // 같은 줄을 다시 검사해야 하므로 row를 증가시킴
-        row++;
+        writeRow--;
       }
+
+      // fill remaining top rows with empty
+      for (int r = writeRow; r >= 0; r--) {
+        for (int c = 0; c < WIDTH; c++) {
+          newBoard[r][c] = 0;
+          newBoardColors[r][c] = null;
+          newBoardItems[r][c] = null;
+        }
+      }
+
+      // replace original boards
+      this.board = newBoard;
+      this.boardColors = newBoardColors;
+      this.boardItems = newBoardItems;
+
+      // Return rows in ascending order (top->bottom) for UI convenience
+      java.util.Collections.sort(clearedRows);
+      // Debug: log cleared rows for troubleshooting animation issues
+      System.out.println("[BoardManager DEBUG] clearedRows=" + clearedRows);
     }
 
-    return clearedLinesCount;
+    return clearedRows;
   }
 
   /**
