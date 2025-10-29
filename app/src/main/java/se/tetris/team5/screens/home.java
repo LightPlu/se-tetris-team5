@@ -5,7 +5,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -30,7 +29,6 @@ public class home extends JPanel implements KeyListener {
     private JLabel titleLabel;
     private JButton[] menuButtons;
     private JLabel descriptionLabel;
-    private JLabel controlsLabel;
     private JLabel gameInfoLabel;
     
 
@@ -97,8 +95,6 @@ public class home extends JPanel implements KeyListener {
      * GUI 컴포넌트들을 초기화합니다
      */
     private void initializeComponents() {
-        GameSettings settings = GameSettings.getInstance();
-        
         // 배경을 투명하게 설정하여 배경 이미지가 보이도록 함
         setOpaque(false);
         
@@ -121,15 +117,9 @@ public class home extends JPanel implements KeyListener {
         descriptionLabel.setForeground(Color.WHITE); // 흰색 텍스트
         descriptionLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
-        // 조작법 라벨
-        controlsLabel = new JLabel("<html><center>🎮 조작법:<br/>↑↓ : 메뉴 선택    Enter : 확인<br/>ESC : 게임 종료</center></html>");
-        controlsLabel.setFont(getFontForSize(getFontSize() - 4));
-        controlsLabel.setForeground(Color.CYAN); // 밝은 청록색으로 변경
-        controlsLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
         // 게임 정보 라벨
         String highScore = getHighestScore();
-        gameInfoLabel = new JLabel("<html><center>📋 게임 정보:<br/>버전: 1.0.0 | 개발팀: 5조<br/>🏆 최고 기록: " + highScore + "점</center></html>");
+        gameInfoLabel = new JLabel("<html><center>📋 게임 정보:<br/>CHAINSAW TETRIS v1.0<br/>🏆 최고 기록: " + highScore + "점</center></html>");
         gameInfoLabel.setFont(getFontForSize(getFontSize() - 4));
         gameInfoLabel.setForeground(Color.WHITE); // 흰색 텍스트
         gameInfoLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -199,7 +189,6 @@ public class home extends JPanel implements KeyListener {
         // 모든 컴포넌트를 중앙 정렬로 설정
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         descriptionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        controlsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         gameInfoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         // 제목 추가
@@ -236,10 +225,6 @@ public class home extends JPanel implements KeyListener {
         contentPanel.add(descriptionLabel);
         contentPanel.add(Box.createVerticalStrut(30));
         
-        // 조작법 추가
-        contentPanel.add(controlsLabel);
-        contentPanel.add(Box.createVerticalStrut(20));
-        
         // 게임 정보 추가
         contentPanel.add(gameInfoLabel);
         contentPanel.add(Box.createVerticalGlue());
@@ -261,8 +246,6 @@ public class home extends JPanel implements KeyListener {
      * 메뉴 선택 상태를 업데이트합니다
      */
     private void updateMenuSelection() {
-        GameSettings settings = GameSettings.getInstance();
-        
         for(int i = 0; i < menuButtons.length; i++) {
             if(i == selectedMenu) {
                 // 선택된 버튼 스타일 - 밝은 청록색
@@ -313,7 +296,6 @@ public class home extends JPanel implements KeyListener {
         
         // 라벨들 폰트 업데이트
         descriptionLabel.setFont(getFontForSize(getFontSize() - 2));
-        controlsLabel.setFont(getFontForSize(getFontSize() - 4));
         gameInfoLabel.setFont(getFontForSize(getFontSize() - 4));
         
         revalidate();
@@ -526,9 +508,9 @@ public class home extends JPanel implements KeyListener {
         try {
             // 먼저 resources 폴더에서 찾기 (classpath 사용)
             String[] resourceNames = {
-                "/background.gif",
-                "/background.jpg", 
-                "/background.png"
+                "/mainbackground.gif",
+                "/mainbackground.jpg", 
+                "/mainbackground.png"
             };
             
             for (String resourceName : resourceNames) {
@@ -550,15 +532,15 @@ public class home extends JPanel implements KeyListener {
             
             // resources에서 찾지 못하면 파일 시스템에서 찾기
             String[] filePaths = {
-                "app/src/main/resources/background.gif",
-                "app/src/main/resources/background.jpg",
-                "app/src/main/resources/background.png",
-                "src/main/resources/background.gif",
-                "src/main/resources/background.jpg",
-                "src/main/resources/background.png",
-                "background.gif",
-                "background.jpg",
-                "background.png"
+                "app/src/main/resources/mainbackground.gif",
+                "app/src/main/resources/mainbackground.jpg",
+                "app/src/main/resources/mainbackground.png",
+                "src/main/resources/mainbackground.gif",
+                "src/main/resources/mainbackground.jpg",
+                "src/main/resources/mainbackground.png",
+                "mainbackground.gif",
+                "mainbackground.jpg",
+                "mainbackground.png"
             };
             
             for (String path : filePaths) {

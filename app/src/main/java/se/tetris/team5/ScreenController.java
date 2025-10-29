@@ -1,20 +1,20 @@
 package se.tetris.team5;
 
-import javax.swing.JFrame;
-import javax.swing.JTextPane;
-import javax.swing.WindowConstants;
-import java.awt.Color;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.KeyListener;
+import java.net.URL;
 
 import se.tetris.team5.screens.home;
 import se.tetris.team5.screens.score;
 import se.tetris.team5.screens.setting;
 import se.tetris.team5.screens.game;
 import se.tetris.team5.utils.setting.GameSettings;
+import se.tetris.team5.components.home.BGMManager;
 
 public class ScreenController extends JFrame {
     private JTextPane textPane;
-    private String currentScreen = "home";
+    private String currentScreen = "loading"; // 로딩 화면부터 시작
     
     // Screen instances
     private home homeScreen;
@@ -22,10 +22,21 @@ public class ScreenController extends JFrame {
     private setting settingScreen;
     private game gameScreen;
     
+    // Loading screen components
+    private JLabel loadingBackgroundLabel;
+    private Timer loadingTimer;
+    private JPanel fadeOverlay;
+    private Timer fadeTimer;
+    private float fadeAlpha = 0.0f;
+    
+    // BGM manager
+    private BGMManager bgmManager;
+    
     public ScreenController() {
         initializeFrame();
         initializeScreens();
-        showScreen("home");
+        bgmManager = BGMManager.getInstance();
+        showLoadingScreen(); // 로딩 화면부터 시작
     }
     
     private void initializeFrame() {
@@ -105,6 +116,13 @@ public class ScreenController extends JFrame {
     public void showScreen(String screenName) {
         currentScreen = screenName;
         
+        // 페이드 효과 관련 정리
+        if (fadeTimer != null && fadeTimer.isRunning()) {
+            fadeTimer.stop();
+        }
+        fadeAlpha = 0.0f;
+        fadeOverlay = null;
+        
         // 기존 컨텐트 제거
         getContentPane().removeAll();
         
@@ -114,7 +132,13 @@ public class ScreenController extends JFrame {
         }
         
         switch(screenName) {
+            case "loading":
+                showLoadingScreen();
+                return; // 로딩 화면은 별도 처리이므로 return
             case "home":
+                // 메인 BGM 재생
+                bgmManager.playMainBGM();
+                
                 // Ensure textPane is cleared of any child components left from previous screens
                 textPane.removeAll();
                 getContentPane().add(textPane);
@@ -124,6 +148,9 @@ public class ScreenController extends JFrame {
                 });
                 break;
             case "game":
+                // 게임 화면에서는 BGM 정지 (게임 자체 BGM 사용)
+                bgmManager.stopBGM();
+                
                 getContentPane().add(gameScreen);
                 gameScreen.reset();
                 // macOS 대응: 여러 번 포커스 요청 (딜레이 포함)
@@ -171,19 +198,7 @@ public class ScreenController extends JFrame {
         revalidate();
         repaint();
     }
-    
-    private void showPlaceholder(JTextPane textPane, String screenName) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n\n\n");
-        sb.append("════════════════════════════════════════\n");
-        sb.append("         ").append(screenName).append("         \n");
-        sb.append("════════════════════════════════════════\n\n");
-        sb.append("곧 구현될 예정입니다!\n\n");
-        sb.append("ESC: 홈으로 돌아가기\n\n");
-        sb.append("════════════════════════════════════════\n");
-        
-        textPane.setText(sb.toString());
-    }
+
     
     public String getCurrentScreen() {
         return currentScreen;
@@ -197,5 +212,129 @@ public class ScreenController extends JFrame {
         GameSettings settings = GameSettings.getInstance();
         setSize(settings.getWindowWidth(), settings.getWindowHeight());
         setLocationRelativeTo(null);
+    }
+    
+    /**
+     * 로딩 화면을 표시합니다
+     */
+    private void showLoadingScreen() {
+        currentScreen = "loading";
+        
+        // 기존 컨텐트 제거
+        getContentPane().removeAll();
+        
+        // 로딩 BGM 재생
+        bgmManager.playLoadingBGM();
+        
+        // 로딩 배경 설정
+        setupLoadingBackground();
+        
+        // 5초 후 페이드아웃 시작 (4초 GIF + 1초 페이드아웃)
+        loadingTimer = new Timer(4000, e -> {
+            ((Timer) e.getSource()).stop();
+            startFadeOut();
+        });
+        loadingTimer.setRepeats(false);
+        loadingTimer.start();
+        
+        revalidate();
+        repaint();
+    }
+    
+    /**
+     * 로딩 배경을 설정합니다
+     */
+    private void setupLoadingBackground() {
+        try {
+            // background1.gif 로드
+            URL gifUrl = getClass().getClassLoader().getResource("background1.gif");
+            if (gifUrl != null) {
+                ImageIcon backgroundGif = new ImageIcon(gifUrl);
+                
+                // 창 크기에 맞게 GIF 크기 조정
+                Image scaledImage = backgroundGif.getImage().getScaledInstance(
+                    getWidth(), getHeight(), Image.SCALE_DEFAULT);
+                ImageIcon scaledGif = new ImageIcon(scaledImage);
+                
+                loadingBackgroundLabel = new JLabel(scaledGif);
+                loadingBackgroundLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                loadingBackgroundLabel.setVerticalAlignment(SwingConstants.CENTER);
+                
+                getContentPane().add(loadingBackgroundLabel, BorderLayout.CENTER);
+                System.out.println("Loading screen background (background1.gif) loaded successfully");
+            } else {
+                // 기본 배경 설정
+                JPanel gradientPanel = new JPanel() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        Graphics2D g2d = (Graphics2D) g;
+                        GradientPaint gradient = new GradientPaint(
+                            0, 0, new Color(20, 20, 40),
+                            0, getHeight(), new Color(40, 20, 60)
+                        );
+                        g2d.setPaint(gradient);
+                        g2d.fillRect(0, 0, getWidth(), getHeight());
+                    }
+                };
+                getContentPane().add(gradientPanel, BorderLayout.CENTER);
+                System.out.println("background1.gif not found, using default gradient background");
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading background1.gif: " + e.getMessage());
+            // 기본 검정 배경
+            JPanel blackPanel = new JPanel();
+            blackPanel.setBackground(Color.BLACK);
+            getContentPane().add(blackPanel, BorderLayout.CENTER);
+        }
+    }
+    
+    /**
+     * 페이드아웃 효과를 시작합니다
+     */
+    private void startFadeOut() {
+        // 페이드 오버레이 패널 생성
+        fadeOverlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, fadeAlpha));
+                g2d.setColor(Color.BLACK);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        fadeOverlay.setOpaque(false);
+        fadeOverlay.setBounds(0, 0, getWidth(), getHeight());
+        
+        // 기존 로딩 화면 위에 페이드 오버레이 추가
+        if (loadingBackgroundLabel != null) {
+            loadingBackgroundLabel.add(fadeOverlay);
+            loadingBackgroundLabel.setComponentZOrder(fadeOverlay, 0);
+        } else {
+            getContentPane().add(fadeOverlay, BorderLayout.CENTER);
+        }
+        
+        // 페이드 애니메이션 타이머 (1초간 페이드아웃)
+        fadeTimer = new Timer(60, e -> {
+            fadeAlpha += 0.05f; // 30ms마다 0.05씩 증가 (약 600ms에 완료)
+            
+            if (fadeAlpha >= 1.0f) {
+                fadeAlpha = 1.0f;
+                ((Timer) e.getSource()).stop();
+                
+                // 페이드아웃 완료 후 홈 화면으로 전환
+                SwingUtilities.invokeLater(() -> {
+                    showScreen("home");
+                });
+            }
+            
+            // 페이드 오버레이 다시 그리기
+            if (fadeOverlay != null) {
+                fadeOverlay.repaint();
+            }
+        });
+        fadeTimer.start();
     }
 }
