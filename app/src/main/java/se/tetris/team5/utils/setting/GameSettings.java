@@ -204,7 +204,7 @@ public class GameSettings {
     
     public void resetScores() {
         // ScoreManager를 통해 스코어 초기화
-        se.tetris.team5.utils.score.ScoreManager.getInstance().clearAllScores();
+    se.tetris.team5.utils.score.ScoreManager.getInstance().clearAllScores();
     }
     
     // 색맹 모드용 색상 팔레트

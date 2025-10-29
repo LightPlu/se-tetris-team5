@@ -115,6 +115,8 @@ public class ScreenController extends JFrame {
         
         switch(screenName) {
             case "home":
+                // Ensure textPane is cleared of any child components left from previous screens
+                textPane.removeAll();
                 getContentPane().add(textPane);
                 homeScreen.display(textPane);
                 javax.swing.SwingUtilities.invokeLater(() -> {
@@ -140,6 +142,8 @@ public class ScreenController extends JFrame {
                 });
                 break;
             case "score":
+                // Clear any child components so score can rebuild its UI cleanly
+                textPane.removeAll();
                 getContentPane().add(textPane);
                 scoreScreen.display(textPane);
                 javax.swing.SwingUtilities.invokeLater(() -> {
@@ -147,6 +151,8 @@ public class ScreenController extends JFrame {
                 });
                 break;
             case "setting":
+                // Clear previous components to avoid visual artifacts (e.g., leftover scoreboard panel)
+                textPane.removeAll();
                 getContentPane().add(textPane);
                 settingScreen.display(textPane);
                 javax.swing.SwingUtilities.invokeLater(() -> {

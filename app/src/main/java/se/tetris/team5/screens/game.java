@@ -2,14 +2,23 @@ package se.tetris.team5.screens;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextPane;
 import javax.swing.Timer;
+import javax.swing.KeyStroke;
+import javax.swing.AbstractAction;
+import javax.swing.border.EmptyBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -18,6 +27,7 @@ import se.tetris.team5.ScreenController;
 import se.tetris.team5.blocks.Block;
 import se.tetris.team5.gamelogic.GameEngine;
 import se.tetris.team5.components.game.GameBoard;
+import se.tetris.team5.components.game.DoubleScoreBadge;
 import se.tetris.team5.components.game.NextBlockBoard;
 import se.tetris.team5.components.game.ScoreBoard;
 import se.tetris.team5.utils.score.ScoreManager;
@@ -37,9 +47,25 @@ public class game extends JPanel implements KeyListener {
   private GameBoard gameBoard;
   private NextBlockBoard nextBlockBoard;
   private ScoreBoard scoreBoard;
+  // Modern UI fields
+  private JPanel nextVisualPanel;
+  private JLabel scoreValueLabel;
+  private JLabel levelLabel;
+  private JLabel linesLabel;
+  private DoubleScoreBadge doubleScoreBadge;
+  private javax.swing.JTextPane itemDescPane;
 
   // 게임 엔진 (순수 게임 로직)
   private GameEngine gameEngine;
+
+  // Overlay components for TimeStop (graphical, semi-transparent)
+  private javax.swing.JLayeredPane boardLayeredPane;
+  private javax.swing.JPanel timeStopOverlay;
+  // center panel inside overlay to avoid HTML baseline clipping issues
+  private javax.swing.JPanel timeStopCenterPanel;
+  private javax.swing.JLabel timeStopIconLabel;
+  private javax.swing.JLabel timeStopNumberLabel;
+  private javax.swing.JLabel timeStopSubLabel;
 
   private SimpleAttributeSet styleSet; // 텍스트 스타일 설정
   private Timer timer; // 블록 자동 낙하 타이머
@@ -52,7 +78,10 @@ public class game extends JPanel implements KeyListener {
 
   // 타임스톱 관련 변수
   private boolean isTimeStopped = false; // 타임스톱 활성화 상태
-  private Timer timeStopTimer; // 타임스톱 종료용 타이머
+  // Timer used to tick the visible countdown every second while time-stop is active
+  private Timer timeStopCountdownTimer;
+  // remaining seconds to show in the UI countdown
+  private int timeStopRemaining = 0;
 
   // 게임 속도 설정에 따른 초기 간격 계산 메소드
   private int getInitialInterval() {
@@ -93,6 +122,21 @@ public class game extends JPanel implements KeyListener {
   setFocusable(true);
   setFocusTraversalKeysEnabled(false); // Tab 등도 이벤트로 받기
   addKeyListener(this);
+  // Robust focus handling: request focus when showing and on mouse enter
+  addHierarchyListener(new java.awt.event.HierarchyListener() {
+    @Override
+    public void hierarchyChanged(java.awt.event.HierarchyEvent e) {
+      if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+        requestFocusInWindow();
+      }
+    }
+  });
+  addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override
+    public void mouseEntered(java.awt.event.MouseEvent e) {
+      requestFocusInWindow();
+    }
+  });
   // macOS 대응: 생성 시점에 포커스 강제 요청
   requestFocusInWindow();
     // 화면에 추가될 때마다 포커스 강제 요청 (윈도우/패널 전환 시)
@@ -120,21 +164,251 @@ public class game extends JPanel implements KeyListener {
 
     // 게임 보드 (왼쪽)
     gameBoard = new GameBoard();
-    add(gameBoard, BorderLayout.CENTER);
+
+    // Create a layered pane so we can draw a semi-transparent overlay above the game board
+    boardLayeredPane = new javax.swing.JLayeredPane();
+    boardLayeredPane.setLayout(null); // we'll manage child bounds on resize
+    // add the gameBoard at the default layer
+    boardLayeredPane.add(gameBoard, Integer.valueOf(0));
+
+    // overlay panel (initially hidden) - semi-transparent dark background with large centered label
+    timeStopOverlay = new javax.swing.JPanel(null) {
+      @Override
+      protected void paintComponent(java.awt.Graphics g) {
+        // semi-transparent fill
+        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+        g2.setColor(new java.awt.Color(0, 0, 0, 140));
+        g2.fillRect(0, 0, getWidth(), getHeight());
+        g2.dispose();
+        super.paintComponent(g);
+      }
+    };
+    timeStopOverlay.setOpaque(false);
+    timeStopOverlay.setVisible(false);
+
+    // center panel holds three labels (icon, big number, subtext) to avoid HTML renderer clipping
+    timeStopCenterPanel = new javax.swing.JPanel();
+    timeStopCenterPanel.setOpaque(false);
+    timeStopCenterPanel.setLayout(new java.awt.GridBagLayout());
+
+    timeStopIconLabel = new javax.swing.JLabel("⏱", javax.swing.SwingConstants.CENTER);
+    timeStopIconLabel.setForeground(new java.awt.Color(191, 255, 230));
+    timeStopIconLabel.setOpaque(false);
+
+    timeStopNumberLabel = new javax.swing.JLabel("", javax.swing.SwingConstants.CENTER);
+    timeStopNumberLabel.setForeground(new java.awt.Color(191, 255, 230));
+    timeStopNumberLabel.setOpaque(false);
+
+    timeStopSubLabel = new javax.swing.JLabel("초 남음", javax.swing.SwingConstants.CENTER);
+    timeStopSubLabel.setForeground(new java.awt.Color(200, 230, 220));
+    timeStopSubLabel.setOpaque(false);
+
+  java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+  gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = java.awt.GridBagConstraints.CENTER;
+  gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+  gbc.weightx = 1.0;
+  gbc.weighty = 0.0;
+  timeStopCenterPanel.add(timeStopIconLabel, gbc);
+  gbc.gridy = 1; gbc.insets = new java.awt.Insets(6,0,6,0);
+  gbc.weighty = 1.0; // let the number take the vertical space so it's centered
+  timeStopCenterPanel.add(timeStopNumberLabel, gbc);
+  gbc.gridy = 2; gbc.insets = new java.awt.Insets(0,0,0,0);
+  gbc.weighty = 0.0;
+  timeStopCenterPanel.add(timeStopSubLabel, gbc);
+
+    timeStopOverlay.add(timeStopCenterPanel);
+
+    boardLayeredPane.add(timeStopOverlay, Integer.valueOf(100));
+
+    // keep child bounds synced when parent resizes
+    boardLayeredPane.addComponentListener(new java.awt.event.ComponentAdapter() {
+      @Override
+      public void componentResized(java.awt.event.ComponentEvent e) {
+        java.awt.Dimension s = boardLayeredPane.getSize();
+        gameBoard.setBounds(0, 0, s.width, s.height);
+        timeStopOverlay.setBounds(0, 0, s.width, s.height);
+  // position center panel roughly centered and large, add vertical padding so glyph tops aren't clipped
+  int lblW = Math.max(200, s.width / 2);
+  int lblH = Math.max(120, s.height / 4);
+  int padTop = Math.max(12, lblH / 8);
+  // give extra vertical room to avoid the top of the number being clipped; center the whole block
+  int totalH = lblH + padTop;
+  timeStopCenterPanel.setBounds((s.width - lblW) / 2, (s.height - totalH) / 2, lblW, totalH);
+  // choose font sizes proportional to available height
+  int numberFontSize = Math.max(40, (lblH - padTop) * 3 / 4);
+  int iconFontSize = Math.max(24, (lblH - padTop) / 6);
+  int subFontSize = Math.max(12, (lblH - padTop) / 8);
+  timeStopNumberLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, numberFontSize));
+  timeStopIconLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, iconFontSize));
+  timeStopSubLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, subFontSize));
+      }
+    });
+
+    add(boardLayeredPane, BorderLayout.CENTER);
+
+    // Ensure Shift works even when strict focus is lost: register a WHEN_IN_FOCUSED_WINDOW binding
+    this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_SHIFT, 0, false), "useTimeStop");
+    this.getActionMap().put("useTimeStop", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        if (gameEngine != null && gameEngine.hasTimeStopCharge() && !isTimeStopped) {
+          activateTimeStop();
+        }
+      }
+    });
+
+    // DEBUG: Force multi-row clear animation test (press 'A') — triggers explosion on bottom rows so
+    // you can visually confirm multi-row animations regardless of actual game clears.
+    this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke('A'), "forceClearAnim");
+    this.getActionMap().put("forceClearAnim", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        try {
+          // choose a few bottom rows to demonstrate multiple simultaneous animations
+          java.util.List<Integer> demo = new java.util.ArrayList<>();
+          int h = gameBoard.getBoardHeight();
+          // last 4 rows (if available)
+          for (int r = Math.max(0, h - 4); r < h; r++) demo.add(r);
+          System.out.println("[DEBUG] force clear anim rows=" + demo);
+          gameBoard.triggerClearAnimation(demo);
+        } catch (Exception ex) {
+          // ignore
+        }
+      }
+    });
 
     // 오른쪽 패널 (다음 블록 + 점수)
-    JPanel rightPanel = new JPanel(new BorderLayout());
-    rightPanel.setBackground(Color.BLACK);
+  JPanel rightPanel = new JPanel();
+  rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+  rightPanel.setBackground(new Color(18, 18, 24));
+  rightPanel.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
+  // Limit the overall right column width (the dark panel) so it stays visibly narrower than the game area
+  // restore right panel width to original comfortable size
+  rightPanel.setPreferredSize(new java.awt.Dimension(260, 0));
+  rightPanel.setMinimumSize(new java.awt.Dimension(220, 0));
 
-    // 다음 블록 보드 (오른쪽 위)
-    nextBlockBoard = new NextBlockBoard();
-    rightPanel.add(nextBlockBoard, BorderLayout.NORTH);
+    // Next block panel (titled box) - use a graphic preview for modern look
+  nextBlockBoard = new NextBlockBoard();
+  nextVisualPanel = new JPanel() {
+    @Override
+    protected void paintComponent(java.awt.Graphics g) {
+      super.paintComponent(g);
+      java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+      g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+      int w = getWidth();
+      int h = getHeight();
+      int cellSize = Math.min(w / 6, h / 6);
+      int gridSize = cellSize * 4;
+      int startX = (w - gridSize) / 2;
+      int startY = (h - gridSize) / 2;
+      Block next = null;
+      if (gameEngine != null) next = gameEngine.getNextBlock();
+  if (next != null) System.out.println("[UI DEBUG] nextVisualPanel.paintComponent next=" + next.getClass().getSimpleName());
+      g2.setColor(new Color(18, 18, 24));
+      g2.fillRoundRect(0, 0, w, h, 10, 10);
+      for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+          int x = startX + c * cellSize;
+          int y = startY + r * cellSize;
+          g2.setColor(new Color(40, 40, 48));
+          g2.fillRoundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 6, 6);
+          if (next != null && r < next.height() && c < next.width() && next.getShape(c, r) == 1) {
+            Color col = next.getColor();
+            if (col == null) col = Color.CYAN;
+            g2.setColor(col);
+            g2.fillRoundRect(x + 4, y + 4, cellSize - 8, cellSize - 8, 6, 6);
+            g2.setColor(new Color(255,255,255,40));
+            g2.fillRoundRect(x + 4, y + 4, (cellSize - 8)/2, (cellSize - 8)/2, 4, 4);
+          }
+        }
+      }
+      g2.dispose();
+    }
+  };
+  nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
+  JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
+  nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
+  rightPanel.add(nextWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(8));
 
-    // 점수 보드 (오른쪽 아래)
-    scoreBoard = new ScoreBoard();
-    rightPanel.add(scoreBoard, BorderLayout.CENTER);
+  // Item description panel (shows description when next block contains an item)
+  itemDescPane = new javax.swing.JTextPane();
+  itemDescPane.setEditable(false);
+  itemDescPane.setOpaque(false);
+  itemDescPane.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+  itemDescPane.setForeground(new Color(220, 220, 220));
+  itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
+  JPanel itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
+  itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
+  rightPanel.add(itemDescWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-    add(rightPanel, BorderLayout.EAST);
+  // Score / Info panel (titled box) - modern cards for score, level, lines
+  scoreBoard = new ScoreBoard();
+  JPanel scoreInfo = new JPanel();
+  scoreInfo.setOpaque(false);
+  scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
+  scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
+  scoreValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+  scoreValueLabel.setForeground(new Color(255, 220, 100));
+  scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(scoreValueLabel);
+  doubleScoreBadge = new DoubleScoreBadge();
+  doubleScoreBadge.setVisible(false);
+  doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(doubleScoreBadge);
+  scoreInfo.add(javax.swing.Box.createVerticalStrut(8));
+  JPanel smallRow = new JPanel(); smallRow.setOpaque(false);
+  smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
+  levelLabel = new JLabel("레벨: 1");
+  levelLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+  levelLabel.setForeground(new Color(200, 200, 200));
+  levelLabel.setBorder(new EmptyBorder(0,8,0,8));
+  linesLabel = new JLabel("줄: 0");
+  linesLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+  linesLabel.setForeground(new Color(200, 200, 200));
+  linesLabel.setBorder(new EmptyBorder(0,8,0,8));
+  smallRow.add(levelLabel);
+  smallRow.add(javax.swing.Box.createHorizontalGlue());
+  smallRow.add(linesLabel);
+  scoreInfo.add(smallRow);
+  scoreInfo.setPreferredSize(new java.awt.Dimension(280, 200));
+
+  JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
+  infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  infoWrapper.setMaximumSize(new java.awt.Dimension(240, 200));
+  rightPanel.add(infoWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
+
+  // Controls panel (titled box) — re-add at the bottom per user request
+  JPanel controlsBox = new JPanel(new BorderLayout());
+  controlsBox.setOpaque(false);
+  JTextPane controlsPane = new JTextPane();
+  controlsPane.setEditable(false);
+  controlsPane.setOpaque(false);
+  controlsPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+  controlsPane.setForeground(Color.WHITE);
+  StringBuilder ctrl = new StringBuilder();
+  ctrl.append("조작키 안내\n\n");
+  ctrl.append("↑ : 회전\n");
+  ctrl.append("↓ : 소프트 드롭\n");
+  ctrl.append("← → : 이동\n");
+  ctrl.append("Space : 하드 드롭\n");
+  ctrl.append("ESC : 나가기\n");
+  controlsPane.setText(ctrl.toString());
+  controlsBox.add(controlsPane, BorderLayout.CENTER);
+  JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
+  controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
+  rightPanel.add(controlsWrapper);
+
+  // Controls panel (titled box) — re-use scoreBoard's text pane styling by creating a simple info pane
+  // We remove the controls text from the 게임 정보 panel as requested.
+  // If a separate controls panel is desired later, we can add a compact icon-based hint.
+
+  add(rightPanel, BorderLayout.EAST);
 
     // Document default style.
     styleSet = new SimpleAttributeSet();
@@ -146,6 +420,17 @@ public class game extends JPanel implements KeyListener {
 
     // Initialize GameEngine
     gameEngine = new GameEngine(HEIGHT, WIDTH);
+    // ensure UI updates immediately when engine spawns next block
+    gameEngine.addStateChangeListener(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          updateAllBoards();
+        } catch (Exception ex) {
+          // ignore failures from listener
+        }
+      }
+    });
 
     // BoardManager, BlockFactory 등은 GameEngine 내부에서만 관리
 
@@ -167,6 +452,54 @@ public class game extends JPanel implements KeyListener {
     timer.setDelay(userInterval);
     timer.setInitialDelay(userInterval); // 초기 지연을 설정하여 바로 실행 방지
     timer.start();
+  }
+
+  /**
+   * Helper to create a titled boxed panel with a colored border and title label.
+   * Keeps UI styling separate from game logic.
+   */
+  private JPanel createTitledPanel(String title, JComponent content, Color titleColor, Color borderColor) {
+    // Modern boxed panel: subtle background, colored title and thin border
+    JPanel wrapper = new JPanel(new BorderLayout());
+    wrapper.setOpaque(false);
+
+    // Title
+    JLabel titleLabel = new JLabel(title, javax.swing.SwingConstants.LEFT);
+    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+    titleLabel.setForeground(titleColor);
+    titleLabel.setBorder(new EmptyBorder(0, 6, 8, 6));
+
+    // Inner panel with rounded border and dark background
+    JPanel inner = new JPanel(new BorderLayout()) {
+      @Override
+      protected void paintComponent(java.awt.Graphics g) {
+        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(new Color(24, 24, 32));
+        int arc = 12;
+        g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
+        // colored border
+        g2.setColor(borderColor);
+        g2.setStroke(new java.awt.BasicStroke(2f));
+        g2.drawRoundRect(1, 1, Math.max(0, getWidth()-2), Math.max(0, getHeight()-2), arc, arc);
+        g2.dispose();
+        super.paintComponent(g);
+      }
+    };
+    inner.setOpaque(false);
+    inner.setBorder(new EmptyBorder(10, 10, 10, 10));
+    // ensure content uses inner background when appropriate
+    if (content != null) {
+      content.setOpaque(false);
+      inner.add(content, BorderLayout.CENTER);
+    }
+
+    wrapper.add(titleLabel, BorderLayout.NORTH);
+    wrapper.add(inner, BorderLayout.CENTER);
+
+    // Preferred sizing
+    wrapper.setPreferredSize(new java.awt.Dimension(320, Math.max(120, content != null ? content.getPreferredSize().height + 48 : 140)));
+    return wrapper;
   }
 
   protected void moveDown() {
@@ -231,6 +564,8 @@ public class game extends JPanel implements KeyListener {
    * 게임 보드를 업데이트합니다
    */
   private void updateGameBoard() {
+    // Prefer graphical rendering by default
+    gameBoard.setShowTextOverlay(false);
     StringBuffer sb = new StringBuffer();
 
     // 게임 보드 테두리
@@ -268,7 +603,9 @@ public class game extends JPanel implements KeyListener {
             if (item instanceof se.tetris.team5.items.TimeStopItem) {
               sb.append("⏱");
             } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-              sb.append("$");
+              sb.append("x2");
+            } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+              sb.append("L");
             } else {
               sb.append("★");
             }
@@ -281,7 +618,9 @@ public class game extends JPanel implements KeyListener {
             if (item instanceof se.tetris.team5.items.TimeStopItem) {
               sb.append("⏱");
             } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-              sb.append("$");
+              sb.append("x2");
+            } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+              sb.append("L");
             } else {
               sb.append("★");
             }
@@ -300,7 +639,7 @@ public class game extends JPanel implements KeyListener {
       sb.append(BORDER_CHAR);
     }
 
-    gameBoard.setText(sb.toString());
+  gameBoard.setText(sb.toString());
     StyledDocument doc = gameBoard.getStyledDocument();
 
     // 기본 스타일 적용 (테두리 색상을 하얀색으로 고정)
@@ -345,36 +684,77 @@ public class game extends JPanel implements KeyListener {
       }
       textOffset += WIDTH + 3;
     }
+
+    // In addition to updating the text (for compatibility), push the raw board data and
+    // any items on cells to the graphical renderer so the visual blocks and items are painted.
+    se.tetris.team5.items.Item[][] items = new se.tetris.team5.items.Item[board.length][board[0].length];
+    for (int i = 0; i < board.length; i++) {
+      for (int j = 0; j < board[i].length; j++) {
+        items[i][j] = gameEngine.getBoardManager().getBoardItem(j, i);
+      }
+    }
+    gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY);
+    // If the engine recorded cleared rows during the last move, consume them and trigger animations.
+    try {
+      java.util.List<Integer> clearedRows = gameEngine.consumeLastClearedRows();
+      if (clearedRows != null && !clearedRows.isEmpty()) {
+        System.out.println("[game screen] consuming cleared rows for animation: " + clearedRows);
+        gameBoard.triggerClearAnimation(clearedRows);
+      }
+    } catch (Exception ex) {
+      // safe-guard: don't let UI update fail due to animation triggering
+    }
   }
 
   /**
    * 점수 보드를 업데이트합니다
    */
   private void updateScoreBoard() {
+    // Update numeric labels for immediate visibility
+    int currentScore = gameEngine.getGameScoring().getCurrentScore();
+    int level = gameEngine.getGameScoring().getLevel();
+    int linesCleared = gameEngine.getGameScoring().getLinesCleared();
+
+    scoreValueLabel.setText(String.format("%,d", currentScore));
+    levelLabel.setText("레벨: " + level);
+    linesLabel.setText("줄: " + linesCleared);
+
+    // Keep the text pane (compat/backwards) updated but don't show it over graphics
+    gameBoard.setShowTextOverlay(false);
     StringBuilder sb = new StringBuilder();
-  sb.append("점수: ").append(String.format("%,d", gameEngine.getGameScoring().getCurrentScore())).append("\n");
-  sb.append("레벨: ").append(gameEngine.getGameScoring().getLevel()).append("\n");
-  sb.append("줄: ").append(gameEngine.getGameScoring().getLinesCleared()).append("\n");
+    sb.append("점수: ").append(String.format("%,d", currentScore)).append("\n");
+    sb.append("레벨: ").append(level).append("\n");
+    sb.append("줄: ").append(linesCleared).append("\n");
     sb.append("\n");
-    
-    // 타임스톱 충전 상태 표시
+
     if (gameEngine.hasTimeStopCharge()) {
-      sb.append("⏱️ 타임스톱: 사용가능\n");
+      sb.append("⏱️ 타임스톱: 사용 가능\n");
       sb.append("(Shift로 5초 정지)\n");
       sb.append("\n");
     }
-    
-    sb.append("조작법:\n");
-    sb.append("↑: 회전\n");
-    sb.append("↓: 소프트 드롭\n");
-    sb.append("←→: 이동\n");
-    sb.append("Space: 하드 드롭\n");
-    sb.append("ESC: 나가기\n");
 
     scoreBoard.getTextPane().setText(sb.toString());
     scoreBoard.getTextPane().getStyledDocument().setCharacterAttributes(
         0, scoreBoard.getTextPane().getDocument().getLength(),
         scoreBoard.getStyleSet(), false);
+
+    // Double-score visual indicator
+    try {
+      long rem = gameEngine.getDoubleScoreRemainingMillis();
+      if (rem > 0) {
+        doubleScoreBadge.setTotalMillis(20_000);
+        doubleScoreBadge.setRemainingMillis(rem);
+        doubleScoreBadge.setVisible(true);
+        // highlight score label
+        scoreValueLabel.setForeground(new Color(255, 220, 100));
+      } else {
+        doubleScoreBadge.setRemainingMillis(0);
+        doubleScoreBadge.setVisible(false);
+        scoreValueLabel.setForeground(new Color(255, 220, 100));
+      }
+    } catch (Exception ex) {
+      // ignore UI update errors
+    }
   }
 
   /**
@@ -384,6 +764,7 @@ public class game extends JPanel implements KeyListener {
     StringBuilder sb = new StringBuilder();
 
     Block nextBlock = gameEngine.getNextBlock();
+    if (nextBlock != null) System.out.println("[UI DEBUG] updateNextBlockBoard next=" + nextBlock.getClass().getSimpleName());
     if (nextBlock != null) {
       // 4x4 크기의 블록 표시 영역
       for (int row = 0; row < 4; row++) {
@@ -395,7 +776,9 @@ public class game extends JPanel implements KeyListener {
               if (item instanceof se.tetris.team5.items.TimeStopItem) {
                 sb.append("⏱");
               } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-                sb.append("$");
+                sb.append("x2");
+              } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+                sb.append("L");
               } else {
                 sb.append("★");
               }
@@ -440,6 +823,84 @@ public class game extends JPanel implements KeyListener {
         textOffset += 5; // 4개 문자 + 줄바꿈 1개
       }
     }
+
+    // Prefer showing an already-acquired item (the one the player is holding) if present.
+    String itemDesc = "다음 블록에 포함된 아이템이 없거나, 대기 중입니다.";
+    se.tetris.team5.items.Item held = gameEngine.getAcquiredItem();
+    if (held != null) {
+      itemDesc = describeItem(held, true);
+    } else {
+      // otherwise check the next block's internal item
+      if (nextBlock != null) {
+        se.tetris.team5.items.Item found = null;
+        outer: for (int r = 0; r < nextBlock.height(); r++) {
+          for (int c = 0; c < nextBlock.width(); c++) {
+            se.tetris.team5.items.Item it = nextBlock.getItem(c, r);
+            if (it != null) {
+              found = it;
+              break outer;
+            }
+          }
+        }
+        if (found != null) {
+          itemDesc = describeItem(found, false);
+        }
+      }
+    }
+
+    if (itemDescPane != null) {
+      itemDescPane.setText(itemDesc);
+      try {
+        itemDescPane.getStyledDocument().setCharacterAttributes(0, itemDescPane.getDocument().getLength(), new SimpleAttributeSet(), false);
+      } catch (Exception ex) {
+        // ignore styling errors
+      }
+    }
+    // Ensure the graphical preview repaints immediately so the UI stays in sync with engine state
+    if (nextVisualPanel != null) {
+      nextVisualPanel.repaint();
+    }
+    if (nextBlockBoard != null) {
+      nextBlockBoard.repaint();
+    }
+  }
+
+  /**
+   * Return a user-facing description for an item. If held==true, wording will reflect possession.
+   */
+  private String describeItem(se.tetris.team5.items.Item it, boolean held) {
+    if (it == null) return "다음 블록에 포함된 아이템이 없거나, 대기 중입니다.";
+    // Prefer using instanceof checks but fall back to item.getName() to handle any classloader/mapping issues.
+    String name = it.getName();
+    if (held) {
+      if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
+        return "(보유) 타임스톱(⏱): Shift 키로 게임을 5초간 멈출 수 있는 충전입니다.";
+      if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
+        return "(보유) 폭탄(B): 사용 시 주변 블록을 제거합니다.";
+      if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
+        return "(보유) 줄삭제(L): 사용 시 특정 줄을 즉시 삭제합니다.";
+      if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
+        se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
+        return "(보유) 점수 아이템(+): 즉시 " + si.getScoreAmount() + " 점을 획득합니다.";
+      }
+      if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
+        return "(보유) 무게추(W): 사용 시 무게추 블록을 소환합니다.";
+      return "(보유) 아이템: " + name;
+    } else {
+      if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
+        return "다음 블록: 타임스톱(⏱) — 줄 삭제 시 획득하면 Shift로 5초 정지 충전.";
+      if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
+        return "다음 블록: 폭탄(B) — 블록 고정 시 폭발로 블록 제거.";
+      if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
+        return "다음 블록: 줄삭제(L) — 블록 고정 시 해당 줄 즉시 삭제.";
+      if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
+        se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
+        return "다음 블록: 점수 아이템(+" + si.getScoreAmount() + ") — 고정 시 점수 획득.";
+      }
+      if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
+        return "다음 블록: 무게추(W) — 다음 블록이 WBlock으로 생성됩니다.";
+      return "다음 블록: 특수 아이템 — " + name;
+    }
   }
 
   /**
@@ -456,6 +917,42 @@ public class game extends JPanel implements KeyListener {
     isPaused = true;
     timer.stop();
     drawPauseMenu();
+  }
+
+  /**
+   * ESC로 호출되는 일시정지 + 선택 모달. 타이머를 정지시키고 모달로 재개/나가기 선택을 받음.
+   */
+  private void showPauseConfirmDialog() {
+    // Stop timer and mark paused
+    isPaused = true;
+    if (timer != null) timer.stop();
+
+    String[] options = { "계속", "메뉴로 나가기" };
+    int choice = javax.swing.JOptionPane.showOptionDialog(this,
+        "게임을 일시중단했습니다. 계속하시겠습니까?\n메뉴로 나가면 현재 게임은 취소됩니다.",
+        "일시정지",
+        javax.swing.JOptionPane.DEFAULT_OPTION,
+        javax.swing.JOptionPane.QUESTION_MESSAGE,
+        null,
+        options,
+        options[0]);
+
+    if (choice == 1) {
+      // 메뉴로 나가기 선택: 현재 블록을 보드에서 제거 및 홈으로 이동
+      Block currBlock = gameEngine.getCurrentBlock();
+      int x = gameEngine.getX();
+      int y = gameEngine.getY();
+      if (currBlock != null) {
+        gameEngine.getBoardManager().eraseBlock(currBlock, x, y);
+      }
+      isPaused = false;
+      if (timer != null) timer.stop();
+      screenController.showScreen("home");
+      return;
+    }
+
+    // 기본: 계속하기
+    resumeGame();
   }
 
   /**
@@ -494,7 +991,9 @@ public class game extends JPanel implements KeyListener {
     sb.append("     ↑↓: 선택    Enter: 확인    ESC: 계속\n");
 
     // 게임 보드에 일시정지 메뉴 표시
-    gameBoard.setText(sb.toString());
+  // Enable text overlay so the pause menu (text) is visible over the graphical board
+  gameBoard.setShowTextOverlay(true);
+  gameBoard.setText(sb.toString());
     StyledDocument doc = gameBoard.getStyledDocument();
 
     // 기본 스타일 적용
@@ -526,9 +1025,16 @@ public class game extends JPanel implements KeyListener {
     }
     
     // 타임스톱 타이머 정지 및 초기화
-    if (timeStopTimer != null) {
-      timeStopTimer.stop();
-      timeStopTimer = null;
+    if (timeStopCountdownTimer != null) {
+      timeStopCountdownTimer.stop();
+      timeStopCountdownTimer = null;
+    }
+    // hide graphical overlay if present
+    if (timeStopOverlay != null) {
+      timeStopOverlay.setVisible(false);
+    }
+    if (gameBoard != null) {
+      gameBoard.setShowTextOverlay(false);
     }
     isTimeStopped = false;
 
@@ -561,16 +1067,33 @@ public class game extends JPanel implements KeyListener {
     // 플레이 시간 계산
     long playTime = System.currentTimeMillis() - gameStartTime;
 
-    // 점수를 ScoreManager에 저장
+    // Prompt the user for their name using a modal dialog.
+    // If the user cancels the dialog, return to the home screen without saving.
+    // If they submit (even an empty string), save the score (empty -> "Player") and
+    // navigate to the scoreboard screen.
     ScoreManager scoreManager = ScoreManager.getInstance();
-    String playerName = "Player"; // 기본 플레이어 이름 (추후 입력 받도록 개선 가능)
     int currentScore = gameEngine.getGameScoring().getCurrentScore();
     int level = gameEngine.getGameScoring().getLevel();
     int linesCleared = gameEngine.getGameScoring().getLinesCleared();
-    scoreManager.addScore(playerName, currentScore, level, linesCleared, playTime);
 
-    // ScreenController를 통해 홈 화면으로 돌아가기
-    screenController.showScreen("home");
+    // Note: this call is already on the EDT because Timer is a Swing Timer,
+    // so it's safe to show a modal dialog here.
+    String inputName = JOptionPane.showInputDialog(this,
+        "게임이 끝났습니다. 이름을 입력하세요:",
+        "게임 종료",
+        JOptionPane.PLAIN_MESSAGE);
+
+    if (inputName == null) {
+      // User cancelled -> go back to home without saving
+      screenController.showScreen("home");
+      return;
+    }
+    inputName = inputName.trim();
+    if (inputName.isEmpty()) inputName = "Player";
+
+    // Save the score and navigate to the scoreboard
+    scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime);
+    screenController.showScreen("score");
   }
 
   @Override
@@ -633,7 +1156,8 @@ public class game extends JPanel implements KeyListener {
     int keyCode = e.getKeyCode();
 
     if (keyCode == KeyEvent.VK_ESCAPE) {
-      pauseGame();
+      // Show a modal pause dialog that asks whether to resume or exit.
+      showPauseConfirmDialog();
     } else if (keyCode == downKey) {
       moveDown();
       drawBoard();
@@ -670,18 +1194,35 @@ public class game extends JPanel implements KeyListener {
     // 화면 업데이트 (타임스톱 상태 표시 제거)
     updateAllBoards();
     
-    // 타임스톱 메시지 표시
-    showTimeStopMessage();
-    
-    // 5초 후 타임스톱 해제
-    timeStopTimer = new Timer(5000, new ActionListener() {
+    // Start a 5-second visible countdown (tick every 1s) and show overlay
+    timeStopRemaining = 5;
+    showTimeStopMessage(timeStopRemaining);
+
+    // Stop any existing countdown timer first
+    if (timeStopCountdownTimer != null) {
+      timeStopCountdownTimer.stop();
+      timeStopCountdownTimer = null;
+    }
+
+    timeStopCountdownTimer = new Timer(1000, new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        deactivateTimeStop();
+        timeStopRemaining -= 1;
+        if (timeStopRemaining > 0) {
+          // update overlay with remaining seconds
+          showTimeStopMessage(timeStopRemaining);
+        } else {
+          // countdown finished
+          if (timeStopCountdownTimer != null) {
+            timeStopCountdownTimer.stop();
+            timeStopCountdownTimer = null;
+          }
+          deactivateTimeStop();
+        }
       }
     });
-    timeStopTimer.setRepeats(false); // 한 번만 실행
-    timeStopTimer.start();
+    timeStopCountdownTimer.setRepeats(true);
+    timeStopCountdownTimer.start();
   }
 
   /**
@@ -691,9 +1232,23 @@ public class game extends JPanel implements KeyListener {
     isTimeStopped = false;
     
     // 타임스톱 타이머 정리
-    if (timeStopTimer != null) {
-      timeStopTimer.stop();
-      timeStopTimer = null;
+    if (timeStopCountdownTimer != null) {
+      timeStopCountdownTimer.stop();
+      timeStopCountdownTimer = null;
+    }
+
+    // hide graphical overlay immediately
+    if (timeStopOverlay != null) {
+      timeStopOverlay.setVisible(false);
+    }
+    if (timeStopNumberLabel != null) {
+      timeStopNumberLabel.setText("");
+    }
+    if (timeStopIconLabel != null) {
+      timeStopIconLabel.setText("");
+    }
+    if (timeStopSubLabel != null) {
+      timeStopSubLabel.setText("");
     }
     
     // 게임 타이머 재시작
@@ -708,29 +1263,44 @@ public class game extends JPanel implements KeyListener {
   /**
    * 타임스톱 메시지를 표시합니다
    */
-  private void showTimeStopMessage() {
+  /**
+   * Show a time-stop overlay message with remaining seconds visible.
+   * @param seconds remaining seconds to display (e.g. 5..1)
+   */
+  private void showTimeStopMessage(int seconds) {
     StringBuilder sb = new StringBuilder();
 
-    // 타임스톱 메시지 화면
-    sb.append("\n\n\n\n\n");
-    sb.append("          ⏱️  타임스톱 활성화  ⏱️\n\n");
-    sb.append("          게임이 5초간 멈춥니다!\n\n");
-    sb.append("          잠시 숨을 고르세요...\n");
+    // center the message with a prominent countdown
+    // We now use a graphical semi-transparent overlay with a large countdown label.
+    if (timeStopOverlay != null && timeStopNumberLabel != null) {
+      // Update the three labels instead of HTML to avoid clipping and give precise control
+      timeStopIconLabel.setText("⏱");
+      timeStopNumberLabel.setText(String.valueOf(seconds));
+      timeStopSubLabel.setText("초 남음");
+      timeStopOverlay.setVisible(true);
+      // Also keep the text overlay off so we don't have duplicate messages
+      gameBoard.setShowTextOverlay(false);
+    } else {
+      // fallback to the old text overlay if graphical overlay isn't available
+      sb.append("\n\n\n\n\n");
+      sb.append(String.format("          ⏱️  타임스톱: %d초 남음  ⏱️\n\n", seconds));
+      sb.append("          게임이 일시정지되었습니다.\n\n");
+      sb.append("          잠시 숨을 고르세요...\n");
+      gameBoard.setShowTextOverlay(true);
+      gameBoard.setText(sb.toString());
+      StyledDocument doc = gameBoard.getStyledDocument();
 
-    // 게임 보드에 메시지 표시
-    gameBoard.setText(sb.toString());
-    StyledDocument doc = gameBoard.getStyledDocument();
+      // 스타일: cyan for message and a slightly larger countdown
+      SimpleAttributeSet messageStyle = new SimpleAttributeSet();
+      StyleConstants.setForeground(messageStyle, Color.CYAN);
+      StyleConstants.setFontSize(messageStyle, 18);
+      StyleConstants.setFontFamily(messageStyle, "Courier New");
+      StyleConstants.setBold(messageStyle, true);
+      StyleConstants.setAlignment(messageStyle, StyleConstants.ALIGN_CENTER);
 
-    // 스타일 적용
-    SimpleAttributeSet messageStyle = new SimpleAttributeSet();
-    StyleConstants.setForeground(messageStyle, Color.CYAN);
-    StyleConstants.setFontSize(messageStyle, 18);
-    StyleConstants.setFontFamily(messageStyle, "Courier New");
-    StyleConstants.setBold(messageStyle, true);
-    StyleConstants.setAlignment(messageStyle, StyleConstants.ALIGN_CENTER);
-
-    doc.setCharacterAttributes(0, doc.getLength(), messageStyle, false);
-    doc.setParagraphAttributes(0, doc.getLength(), messageStyle, false);
+      doc.setCharacterAttributes(0, doc.getLength(), messageStyle, false);
+      doc.setParagraphAttributes(0, doc.getLength(), messageStyle, false);
+    }
   }
 
   @Override
