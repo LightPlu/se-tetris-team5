@@ -7,10 +7,10 @@ public class ItemFactory {
 
   /**
    * 랜덤으로 아이템을 생성합니다.
-   * LineClearItem, WeightBlockItem, BombItem을 동일한 확률(33.33%)로 생성합니다.
+   * LineClearItem, WeightBlockItem, BombItem, TimeStopItem을 동일한 확률(25%)로 생성합니다.
    */
   public Item createRandomItem() {
-    int itemType = random.nextInt(3); // 0, 1, 2 중 하나
+    int itemType = random.nextInt(4); // 0, 1, 2, 3 중 하나
     
     switch (itemType) {
       case 0:
@@ -19,6 +19,8 @@ public class ItemFactory {
         return new WeightBlockItem();
       case 2:
         return new BombItem();
+      case 3:
+        return new TimeStopItem();
       default:
         return new LineClearItem(); // 기본값
     }
