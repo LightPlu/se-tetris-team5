@@ -53,10 +53,11 @@ public class GameScoring {
   }
 
   /**
-   * 점수를 추가합니다
+   * 점수를 추가합니다 (소프트 드롭용)
+   * 레벨에 따라 점수가 증가합니다
    */
   public void addPoints(int points) {
-    currentScore += points;
+    currentScore += points * level;
   }
 
   /**
@@ -87,7 +88,7 @@ public class GameScoring {
     currentScore += points;
 
     // 레벨 업 체크 (10줄마다 레벨 증가)
-    int newLevel = (linesCleared / 10) + 1;
+    int newLevel = (linesCleared / 1) + 1;
     if (newLevel > level) {
       level = newLevel;
       updateDropSpeed();
@@ -96,9 +97,10 @@ public class GameScoring {
 
   /**
    * 하드 드롭 점수 추가
+   * 레벨에 따라 점수가 증가합니다
    */
   public void addHardDropPoints(int distance) {
-    currentScore += distance * HARD_DROP_MULTIPLIER;
+    currentScore += distance * HARD_DROP_MULTIPLIER * level;
   }
 
   /**

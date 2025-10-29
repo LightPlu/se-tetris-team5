@@ -153,6 +153,7 @@ public class GameEngine {
       }
 
       gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
+      
       handleItemSpawnAndCollect(clearedLines);
       spawnNextBlock();
       return false;
@@ -251,6 +252,7 @@ public class GameEngine {
     }
 
     gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
+    
     handleItemSpawnAndCollect(clearedLines);
     spawnNextBlock();
     return true;

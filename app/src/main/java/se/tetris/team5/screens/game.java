@@ -504,8 +504,12 @@ public class game extends JPanel implements KeyListener {
 
   protected void moveDown() {
     // GameEngine의 moveBlockDown()만 호출하여 상태 변경
-        gameEngine.moveBlockDown();
+    gameEngine.moveBlockDown();
     syncWithGameEngine();
+    
+    // 레벨 변경 시 타이머 속도 업데이트
+    updateTimerSpeed();
+    
     if (gameEngine.isGameOver()) {
       gameOver();
       return;
@@ -529,9 +533,23 @@ public class game extends JPanel implements KeyListener {
     // 필요시 바로 gameEngine.getCurrentBlock() 등으로 참조
   }
 
+  /**
+   * 타이머 속도를 현재 레벨에 맞게 업데이트합니다
+   */
+  private void updateTimerSpeed() {
+    if (timer != null && !isPaused && !isTimeStopped) {
+      int newInterval = gameEngine.getGameScoring().getTimerInterval();
+      timer.setDelay(newInterval);
+    }
+  }
+
   protected void hardDrop() {
     gameEngine.hardDrop();
     syncWithGameEngine();
+    
+    // 레벨 변경 시 타이머 속도 업데이트
+    updateTimerSpeed();
+    
     if (gameEngine.isGameOver()) {
       gameOver();
       return;
@@ -1253,6 +1271,9 @@ public class game extends JPanel implements KeyListener {
     
     // 게임 타이머 재시작
     if (!isPaused && !gameEngine.isGameOver()) {
+      // 타임스톱 중 레벨이 변경되었을 수 있으므로 속도 업데이트 후 시작
+      int currentInterval = gameEngine.getGameScoring().getTimerInterval();
+      timer.setDelay(currentInterval);
       timer.start();
     }
     
