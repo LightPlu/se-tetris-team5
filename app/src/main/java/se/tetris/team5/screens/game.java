@@ -2,14 +2,21 @@ package se.tetris.team5.screens;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextPane;
 import javax.swing.Timer;
+import javax.swing.border.EmptyBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -37,6 +44,11 @@ public class game extends JPanel implements KeyListener {
   private GameBoard gameBoard;
   private NextBlockBoard nextBlockBoard;
   private ScoreBoard scoreBoard;
+  // Modern UI fields
+  private JPanel nextVisualPanel;
+  private JLabel scoreValueLabel;
+  private JLabel levelLabel;
+  private JLabel linesLabel;
 
   // 게임 엔진 (순수 게임 로직)
   private GameEngine gameEngine;
@@ -123,18 +135,118 @@ public class game extends JPanel implements KeyListener {
     add(gameBoard, BorderLayout.CENTER);
 
     // 오른쪽 패널 (다음 블록 + 점수)
-    JPanel rightPanel = new JPanel(new BorderLayout());
-    rightPanel.setBackground(Color.BLACK);
+  JPanel rightPanel = new JPanel();
+  rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+  rightPanel.setBackground(new Color(18, 18, 24));
+  rightPanel.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
+  // Limit the overall right column width (the dark panel) so it stays visibly narrower than the game area
+  rightPanel.setPreferredSize(new java.awt.Dimension(260, 0));
+  rightPanel.setMinimumSize(new java.awt.Dimension(220, 0));
 
-    // 다음 블록 보드 (오른쪽 위)
-    nextBlockBoard = new NextBlockBoard();
-    rightPanel.add(nextBlockBoard, BorderLayout.NORTH);
+    // Next block panel (titled box) - use a graphic preview for modern look
+  nextBlockBoard = new NextBlockBoard();
+  nextVisualPanel = new JPanel() {
+    @Override
+    protected void paintComponent(java.awt.Graphics g) {
+      super.paintComponent(g);
+      java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+      g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+      int w = getWidth();
+      int h = getHeight();
+      int cellSize = Math.min(w / 6, h / 6);
+      int gridSize = cellSize * 4;
+      int startX = (w - gridSize) / 2;
+      int startY = (h - gridSize) / 2;
+      Block next = null;
+      if (gameEngine != null) next = gameEngine.getNextBlock();
+      g2.setColor(new Color(18, 18, 24));
+      g2.fillRoundRect(0, 0, w, h, 10, 10);
+      for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+          int x = startX + c * cellSize;
+          int y = startY + r * cellSize;
+          g2.setColor(new Color(40, 40, 48));
+          g2.fillRoundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 6, 6);
+          if (next != null && r < next.height() && c < next.width() && next.getShape(c, r) == 1) {
+            Color col = next.getColor();
+            if (col == null) col = Color.CYAN;
+            g2.setColor(col);
+            g2.fillRoundRect(x + 4, y + 4, cellSize - 8, cellSize - 8, 6, 6);
+            g2.setColor(new Color(255,255,255,40));
+            g2.fillRoundRect(x + 4, y + 4, (cellSize - 8)/2, (cellSize - 8)/2, 4, 4);
+          }
+        }
+      }
+      g2.dispose();
+    }
+  };
+  nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
+  JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
+  nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
+  rightPanel.add(nextWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-    // 점수 보드 (오른쪽 아래)
-    scoreBoard = new ScoreBoard();
-    rightPanel.add(scoreBoard, BorderLayout.CENTER);
+  // Score / Info panel (titled box) - modern cards for score, level, lines
+  scoreBoard = new ScoreBoard();
+  JPanel scoreInfo = new JPanel();
+  scoreInfo.setOpaque(false);
+  scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
+  scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
+  scoreValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+  scoreValueLabel.setForeground(new Color(255, 220, 100));
+  scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(scoreValueLabel);
+  scoreInfo.add(javax.swing.Box.createVerticalStrut(8));
+  JPanel smallRow = new JPanel(); smallRow.setOpaque(false);
+  smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
+  levelLabel = new JLabel("레벨: 1");
+  levelLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+  levelLabel.setForeground(new Color(200, 200, 200));
+  levelLabel.setBorder(new EmptyBorder(0,8,0,8));
+  linesLabel = new JLabel("줄: 0");
+  linesLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+  linesLabel.setForeground(new Color(200, 200, 200));
+  linesLabel.setBorder(new EmptyBorder(0,8,0,8));
+  smallRow.add(levelLabel);
+  smallRow.add(javax.swing.Box.createHorizontalGlue());
+  smallRow.add(linesLabel);
+  scoreInfo.add(smallRow);
+  scoreInfo.setPreferredSize(new java.awt.Dimension(280, 200));
 
-    add(rightPanel, BorderLayout.EAST);
+  JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
+  infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  infoWrapper.setMaximumSize(new java.awt.Dimension(240, 200));
+  rightPanel.add(infoWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
+
+  // Controls panel (titled box) — re-add at the bottom per user request
+  JPanel controlsBox = new JPanel(new BorderLayout());
+  controlsBox.setOpaque(false);
+  JTextPane controlsPane = new JTextPane();
+  controlsPane.setEditable(false);
+  controlsPane.setOpaque(false);
+  controlsPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+  controlsPane.setForeground(Color.WHITE);
+  StringBuilder ctrl = new StringBuilder();
+  ctrl.append("조작키 안내\n\n");
+  ctrl.append("↑ : 회전\n");
+  ctrl.append("↓ : 소프트 드롭\n");
+  ctrl.append("← → : 이동\n");
+  ctrl.append("Space : 하드 드롭\n");
+  ctrl.append("ESC : 나가기\n");
+  controlsPane.setText(ctrl.toString());
+  controlsBox.add(controlsPane, BorderLayout.CENTER);
+  JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
+  controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
+  rightPanel.add(controlsWrapper);
+
+  // Controls panel (titled box) — re-use scoreBoard's text pane styling by creating a simple info pane
+  // We remove the controls text from the 게임 정보 panel as requested.
+  // If a separate controls panel is desired later, we can add a compact icon-based hint.
+
+  add(rightPanel, BorderLayout.EAST);
 
     // Document default style.
     styleSet = new SimpleAttributeSet();
@@ -167,6 +279,54 @@ public class game extends JPanel implements KeyListener {
     timer.setDelay(userInterval);
     timer.setInitialDelay(userInterval); // 초기 지연을 설정하여 바로 실행 방지
     timer.start();
+  }
+
+  /**
+   * Helper to create a titled boxed panel with a colored border and title label.
+   * Keeps UI styling separate from game logic.
+   */
+  private JPanel createTitledPanel(String title, JComponent content, Color titleColor, Color borderColor) {
+    // Modern boxed panel: subtle background, colored title and thin border
+    JPanel wrapper = new JPanel(new BorderLayout());
+    wrapper.setOpaque(false);
+
+    // Title
+    JLabel titleLabel = new JLabel(title, javax.swing.SwingConstants.LEFT);
+    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+    titleLabel.setForeground(titleColor);
+    titleLabel.setBorder(new EmptyBorder(0, 6, 8, 6));
+
+    // Inner panel with rounded border and dark background
+    JPanel inner = new JPanel(new BorderLayout()) {
+      @Override
+      protected void paintComponent(java.awt.Graphics g) {
+        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(new Color(24, 24, 32));
+        int arc = 12;
+        g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
+        // colored border
+        g2.setColor(borderColor);
+        g2.setStroke(new java.awt.BasicStroke(2f));
+        g2.drawRoundRect(1, 1, Math.max(0, getWidth()-2), Math.max(0, getHeight()-2), arc, arc);
+        g2.dispose();
+        super.paintComponent(g);
+      }
+    };
+    inner.setOpaque(false);
+    inner.setBorder(new EmptyBorder(10, 10, 10, 10));
+    // ensure content uses inner background when appropriate
+    if (content != null) {
+      content.setOpaque(false);
+      inner.add(content, BorderLayout.CENTER);
+    }
+
+    wrapper.add(titleLabel, BorderLayout.NORTH);
+    wrapper.add(inner, BorderLayout.CENTER);
+
+    // Preferred sizing
+    wrapper.setPreferredSize(new java.awt.Dimension(320, Math.max(120, content != null ? content.getPreferredSize().height + 48 : 140)));
+    return wrapper;
   }
 
   protected void moveDown() {
@@ -352,20 +512,14 @@ public class game extends JPanel implements KeyListener {
   sb.append("레벨: ").append(gameEngine.getGameScoring().getLevel()).append("\n");
   sb.append("줄: ").append(gameEngine.getGameScoring().getLinesCleared()).append("\n");
     sb.append("\n");
-    
-    // 타임스톱 충전 상태 표시
+
+    // 타임스톱 충전 상태 표시 (kept brief)
     if (gameEngine.hasTimeStopCharge()) {
-      sb.append("⏱️ 타임스톱: 사용가능\n");
+      sb.append("⏱️ 타임스톱: 사용 가능\n");
       sb.append("(Shift로 5초 정지)\n");
       sb.append("\n");
     }
-    
-    sb.append("조작법:\n");
-    sb.append("↑: 회전\n");
-    sb.append("↓: 소프트 드롭\n");
-    sb.append("←→: 이동\n");
-    sb.append("Space: 하드 드롭\n");
-    sb.append("ESC: 나가기\n");
+    // NOTE: 조작키 설명은 게임 정보에서 제거했습니다 per request.
 
     scoreBoard.getTextPane().setText(sb.toString());
     scoreBoard.getTextPane().getStyledDocument().setCharacterAttributes(
@@ -555,16 +709,33 @@ public class game extends JPanel implements KeyListener {
     // 플레이 시간 계산
     long playTime = System.currentTimeMillis() - gameStartTime;
 
-    // 점수를 ScoreManager에 저장
+    // Prompt the user for their name using a modal dialog.
+    // If the user cancels the dialog, return to the home screen without saving.
+    // If they submit (even an empty string), save the score (empty -> "Player") and
+    // navigate to the scoreboard screen.
     ScoreManager scoreManager = ScoreManager.getInstance();
-    String playerName = "Player"; // 기본 플레이어 이름 (추후 입력 받도록 개선 가능)
     int currentScore = gameEngine.getGameScoring().getCurrentScore();
     int level = gameEngine.getGameScoring().getLevel();
     int linesCleared = gameEngine.getGameScoring().getLinesCleared();
-    scoreManager.addScore(playerName, currentScore, level, linesCleared, playTime);
 
-    // ScreenController를 통해 홈 화면으로 돌아가기
-    screenController.showScreen("home");
+    // Note: this call is already on the EDT because Timer is a Swing Timer,
+    // so it's safe to show a modal dialog here.
+    String inputName = JOptionPane.showInputDialog(this,
+        "게임이 끝났습니다. 이름을 입력하세요:",
+        "게임 종료",
+        JOptionPane.PLAIN_MESSAGE);
+
+    if (inputName == null) {
+      // User cancelled -> go back to home without saving
+      screenController.showScreen("home");
+      return;
+    }
+    inputName = inputName.trim();
+    if (inputName.isEmpty()) inputName = "Player";
+
+    // Save the score and navigate to the scoreboard
+    scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime);
+    screenController.showScreen("score");
   }
 
   @Override

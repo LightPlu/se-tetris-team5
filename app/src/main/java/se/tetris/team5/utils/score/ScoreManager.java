@@ -9,6 +9,13 @@ public class ScoreManager {
     private static ScoreManager instance;
     private List<ScoreEntry> scores;
     private static final int MAX_SCORES = 100; // 최대 저장할 스코어 수
+    // Names used by previous initial dummy-population. If found in loaded data,
+    // they are likely leftover dummy entries and will be removed on load.
+    private static final java.util.Set<String> LEGACY_DUMMY_NAMES = new java.util.HashSet<>(java.util.Arrays.asList(
+        "테트리스마스터", "블록킹", "라인클리어", "스피드러너", "퍼펙트플레이어",
+        "게임러", "챌린저", "프로게이머", "아케이드킹", "레트로게이머",
+        "블록버스터", "퍼즐마니아", "스코어헌터", "랭킹1위", "전설의플레이어"
+    ));
     
     public static class ScoreEntry implements Serializable {
         private static final long serialVersionUID = 1L;
@@ -128,8 +135,16 @@ public class ScoreManager {
     }
     
     public void clearAllScores() {
+        // Clear in-memory list and remove the backing file so that scores are truly wiped.
         scores.clear();
-        saveScores();
+        try {
+            File f = new File(SCORE_FILE);
+            if (f.exists()) {
+                // attempt to delete the file; if deletion fails, still keep in-memory cleared state
+                f.delete();
+            }
+        } catch (Exception ignored) {
+        }
     }
     
     private void loadScores() {
@@ -140,18 +155,25 @@ public class ScoreManager {
                     @SuppressWarnings("unchecked")
                     List<ScoreEntry> loadedScores = (List<ScoreEntry>) ois.readObject();
                     scores = loadedScores;
-                    
-                    // 로드 후 정렬 (혹시 파일이 손상된 경우 대비)
+
+                    // Remove any legacy dummy entries that might have been persisted by
+                    // older versions of the app. This keeps the loaded list clean.
+                    scores.removeIf(se -> se.getPlayerName() != null && LEGACY_DUMMY_NAMES.contains(se.getPlayerName()));
+
+                    // 로드 후 정렬
                     scores.sort((a, b) -> Integer.compare(b.getScore(), a.getScore()));
                 }
             } else {
-                // 초기 더미 데이터 생성 (테스트용)
-                createInitialScores();
+                // Do not auto-create dummy initial scores. If there is no score file,
+                // start with an empty list so clearing scores truly removes data.
+                scores = new ArrayList<>();
             }
         } catch (Exception e) {
             System.err.println("스코어 로드 실패: " + e.getMessage());
+            // If loading fails, start with an empty score list. Do NOT populate
+            // with initial dummy data so that clearing remains effective.
+            System.err.println("스코어 로드 실패: " + e.getMessage());
             scores = new ArrayList<>();
-            createInitialScores();
         }
     }
     
@@ -165,21 +187,5 @@ public class ScoreManager {
         }
     }
     
-    private void createInitialScores() {
-        // 초기 더미 데이터 (테스트용)
-        String[] names = {"테트리스마스터", "블록킹", "라인클리어", "스피드러너", "퍼펙트플레이어", 
-                         "게임러", "챌린저", "프로게이머", "아케이드킹", "레트로게이머",
-                         "블록버스터", "퍼즐마니아", "스코어헌터", "랭킹1위", "전설의플레이어"};
-        
-        Random random = new Random();
-        
-        for (int i = 0; i < 15; i++) {
-            int score = 50000 - (i * 2000) + random.nextInt(1000);
-            int level = Math.max(1, 15 - i + random.nextInt(3));
-            int lines = score / 100 + random.nextInt(50);
-            long playTime = (300 + random.nextInt(600)) * 1000; // 5-15분
-            
-            addScore(names[i], score, level, lines, playTime);
-        }
-    }
+    // createInitialScores removed: we no longer auto-populate dummy scores on first run.
 }
