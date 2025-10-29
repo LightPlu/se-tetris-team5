@@ -848,10 +848,10 @@ public class game extends JPanel implements KeyListener {
       }
     }
 
-    // Show held item state ONLY for TimeStop. DoubleScore is not shown as a held item.
+    // Show held state ONLY for TimeStop. Do not display other items here.
     se.tetris.team5.items.Item held = gameEngine.getAcquiredItem();
     String itemDesc;
-    if (held != null && held instanceof se.tetris.team5.items.TimeStopItem) {
+    if (gameEngine.hasTimeStopCharge() || (held != null && held instanceof se.tetris.team5.items.TimeStopItem)) {
       itemDesc = "타임스톱 보유중";
     } else {
       itemDesc = "보유한 아이템 없음";
