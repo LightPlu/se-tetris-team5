@@ -301,38 +301,80 @@ public class BoardManager {
    * @return 제거된 줄 수
    */
   public int clearLines() {
-    int clearedLinesCount = 0;
+    java.util.List<Integer> rows = clearLinesInternal();
+    return rows.size();
+  }
 
-    for (int row = HEIGHT - 1; row >= 0; row--) {
-      // 현재 줄이 가득 찼는지 확인 (고정된 블록만 고려)
+  /**
+   * Clear lines and return the list of cleared row indices (0..HEIGHT-1).
+   * This is a more informative API for UI consumers that want to animate per-row clears.
+   */
+  public java.util.List<Integer> clearLinesWithRows() {
+    return clearLinesInternal();
+  }
+
+  /**
+   * Internal implementation that actually clears full rows and returns their indices.
+   */
+  private java.util.List<Integer> clearLinesInternal() {
+    java.util.List<Integer> clearedRows = new java.util.ArrayList<>();
+
+    // First pass: collect all full rows on the board (fixed blocks only)
+    for (int row = 0; row < HEIGHT; row++) {
       boolean fullLine = true;
       for (int col = 0; col < WIDTH; col++) {
-        if (board[row][col] != 1) { // 고정된 블록(값 1)만 고려
+        if (board[row][col] != 1) { // consider only fixed blocks
           fullLine = false;
+          break;
         }
       }
       if (fullLine) {
-        clearedLinesCount++;
-        // 아래 줄을 한 칸씩 내림
-        for (int moveRow = row; moveRow > 0; moveRow--) {
-          for (int col = 0; col < WIDTH; col++) {
-            board[moveRow][col] = board[moveRow - 1][col];
-            boardColors[moveRow][col] = boardColors[moveRow - 1][col];
-            boardItems[moveRow][col] = boardItems[moveRow - 1][col];
-          }
-        }
-        // 맨 위 줄은 빈 줄로 만듦
-        for (int col = 0; col < WIDTH; col++) {
-          board[0][col] = 0;
-          boardColors[0][col] = null;
-          boardItems[0][col] = null;
-        }
-        // 같은 줄을 다시 검사해야 하므로 row를 증가시킴
-        row++;
+        clearedRows.add(row);
       }
     }
 
-    return clearedLinesCount;
+    if (!clearedRows.isEmpty()) {
+      // Build new compressed boards by copying non-cleared rows from bottom to top.
+      // This avoids index-shift complexities when deleting multiple rows.
+      java.util.Set<Integer> clearedSet = new java.util.HashSet<>(clearedRows);
+
+      int[][] newBoard = new int[HEIGHT][WIDTH];
+      Color[][] newBoardColors = new Color[HEIGHT][WIDTH];
+      se.tetris.team5.items.Item[][] newBoardItems = new se.tetris.team5.items.Item[HEIGHT][WIDTH];
+
+      int writeRow = HEIGHT - 1;
+      for (int readRow = HEIGHT - 1; readRow >= 0; readRow--) {
+        if (clearedSet.contains(readRow)) continue; // skip cleared row
+        // copy this row to writeRow
+        for (int col = 0; col < WIDTH; col++) {
+          newBoard[writeRow][col] = board[readRow][col];
+          newBoardColors[writeRow][col] = boardColors[readRow][col];
+          newBoardItems[writeRow][col] = boardItems[readRow][col];
+        }
+        writeRow--;
+      }
+
+      // fill remaining top rows with empty
+      for (int r = writeRow; r >= 0; r--) {
+        for (int c = 0; c < WIDTH; c++) {
+          newBoard[r][c] = 0;
+          newBoardColors[r][c] = null;
+          newBoardItems[r][c] = null;
+        }
+      }
+
+      // replace original boards
+      this.board = newBoard;
+      this.boardColors = newBoardColors;
+      this.boardItems = newBoardItems;
+
+      // Return rows in ascending order (top->bottom) for UI convenience
+      java.util.Collections.sort(clearedRows);
+      // Debug: log cleared rows for troubleshooting animation issues
+      System.out.println("[BoardManager DEBUG] clearedRows=" + clearedRows);
+    }
+
+    return clearedRows;
   }
 
   /**

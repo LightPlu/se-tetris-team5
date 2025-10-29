@@ -46,6 +46,8 @@ public class GameBoard extends JTextPane {
     // per-row animation progress map (rowIndex -> progress 0..1)
     private java.util.Map<Integer, Float> animRowProgress = new java.util.LinkedHashMap<>();
     private javax.swing.Timer animTimer = null;
+    // per-row particle lists for explosion effect
+    private java.util.Map<Integer, java.util.List<Particle>> rowParticles = new java.util.HashMap<>();
 
     public GameBoard() {
         initComponents();
@@ -81,27 +83,39 @@ public class GameBoard extends JTextPane {
      */
     public void renderBoard(int[][] board, Color[][] colors, Item[][] items, Block currBlock, int currX, int currY) {
         if (board != null) {
-            // detect rows that were just cleared by comparing previous snapshot to new board
-            if (previousBoard != null && previousBoard.length == board.length) {
-                java.util.List<Integer> cleared = new java.util.ArrayList<>();
-                for (int r = 0; r < Math.min(previousBoard.length, HEIGHT); r++) {
-                    boolean wasFull = true;
-                    for (int c = 0; c < Math.min(previousBoard[r].length, WIDTH); c++) {
-                        if (previousBoard[r][c] != 1) { wasFull = false; break; }
-                    }
-                    boolean isFull = true;
+            // debug: log a small summary so we can see when renderBoard is called
+            try {
+                int occupied = 0;
+                int fullNow = 0;
+                int fullPrev = -1;
+                for (int r = 0; r < Math.min(board.length, HEIGHT); r++) {
+                    boolean rowFull = true;
                     for (int c = 0; c < Math.min(board[r].length, WIDTH); c++) {
-                        if (board[r][c] != 1) { isFull = false; break; }
+                        if (board[r][c] == 1 || board[r][c] == 2) occupied++;
+                        if (board[r][c] != 1 && board[r][c] != 2) rowFull = false;
                     }
-                    // if it was full and now is not full -> it was cleared
-                    if (wasFull && !isFull) {
-                        cleared.add(r);
+                    if (rowFull) fullNow++;
+                }
+                if (previousBoard != null) {
+                    fullPrev = 0;
+                    for (int r = 0; r < Math.min(previousBoard.length, HEIGHT); r++) {
+                        boolean rowFull = true;
+                        for (int c = 0; c < Math.min(previousBoard[r].length, WIDTH); c++) {
+                            if (previousBoard[r][c] != 1 && previousBoard[r][c] != 2) { rowFull = false; break; }
+                        }
+                        if (rowFull) fullPrev++;
                     }
                 }
-                if (!cleared.isEmpty()) {
-                    triggerClearAnimation(cleared);
-                }
+                System.out.println("[GameBoard] renderBoard called. occupied=" + occupied + ", fullNow=" + fullNow + ", fullPrev=" + fullPrev);
+            } catch (Exception ex) {
+                // don't let debug logging interfere with rendering
             }
+            // NOTE: previous-board diff based detection of cleared rows has been
+            // disabled. Cleared-row animations are triggered explicitly by the
+            // GameEngine -> UI plumbing (game consumes engine.consumeLastClearedRows()
+            // and calls triggerClearAnimation). Keeping both detection mechanisms
+            // enabled caused timing/race issues where only a subset of rows were
+            // animated (esp. on hard-drop). Rely on the engine-provided list now.
 
             // copy minimal state reference (don't mutate)
             overlayBoard = board;
@@ -149,9 +163,9 @@ public class GameBoard extends JTextPane {
         int cellW = Math.max(4, gridW / WIDTH);
         int cellH = Math.max(4, gridH / HEIGHT);
         int cellSize = Math.min(cellW, cellH);
-        int gridPixelW = cellSize * WIDTH;
-        int gridPixelH = cellSize * HEIGHT;
-        int startX = (w - gridPixelW) / 2;
+    int gridPixelW = cellSize * WIDTH;
+    int gridPixelH = cellSize * HEIGHT;
+    int startX = (w - gridPixelW) / 2;
         int startY = (h - gridPixelH) / 2;
 
         // draw empty cell backgrounds
@@ -215,21 +229,56 @@ public class GameBoard extends JTextPane {
             }
         }
         g2.dispose();
-        // draw cleared-row animation overlay if active
+        // draw cleared-row animation overlay if active (strong full-row orange flash)
         if (animRowProgress != null && !animRowProgress.isEmpty()) {
             Graphics2D g3 = (Graphics2D) g.create();
             g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             for (java.util.Map.Entry<Integer, Float> en : animRowProgress.entrySet()) {
                 int row = en.getKey();
                 float prog = en.getValue();
-                float alpha = 1f - prog; // fade out
-                int a = Math.max(20, (int) (alpha * 180));
-                java.awt.Color overlay = new java.awt.Color(255, 200, 80, a);
-                g3.setColor(overlay);
+                // stronger flash curve: start bright then fade quickly
+                float alpha = Math.max(0f, 1f - prog);
+                // emphasize initial flash
+                float flash = (float) Math.sin((1f - prog) * Math.PI);
+                float outerAlpha = Math.max(0f, Math.min(1f, flash * 0.95f + alpha * 0.05f));
+                int opaOuter = (int) (outerAlpha * 220);
+                java.awt.Color outer = new java.awt.Color(255, 150, 40, Math.max(30, opaOuter));
+
                 int y = startY + row * cellSize;
-                g3.fillRoundRect(startX + 3, y + 3, gridPixelW - 6, cellSize - 6, 6, 6);
+                // full-width opaque band
+                g3.setColor(outer);
+                g3.fillRect(startX, y, gridPixelW, cellSize);
+
+                // inner glow (smaller, brighter center)
+                float innerAlpha = Math.max(0f, outerAlpha * 0.8f + 0.1f);
+                int opaInner = (int) (innerAlpha * 200);
+                java.awt.Color inner = new java.awt.Color(255, 210, 120, Math.max(20, opaInner));
+                int inset = Math.max(2, cellSize / 8);
+                g3.setColor(inner);
+                g3.fillRect(startX + inset, y + inset, gridPixelW - inset * 2, cellSize - inset * 2);
             }
             g3.dispose();
+        }
+
+        // draw explosion particles for cleared rows
+        if (rowParticles != null && !rowParticles.isEmpty()) {
+            Graphics2D g4 = (Graphics2D) g.create();
+            g4.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            for (java.util.Map.Entry<Integer, java.util.List<Particle>> en : rowParticles.entrySet()) {
+                int row = en.getKey();
+                java.util.List<Particle> pls = en.getValue();
+                int baseY = startY + row * cellSize;
+                for (Particle p : pls) {
+                    int px = Math.round(startX + p.x);
+                    int py = Math.round(baseY + p.y);
+                    int sz = Math.max(2, p.size);
+                    int ia = Math.max(0, Math.min(255, (int) (p.alpha * 255)));
+                    java.awt.Color pc = new java.awt.Color(p.color.getRed(), p.color.getGreen(), p.color.getBlue(), ia);
+                    g4.setColor(pc);
+                    g4.fillOval(px - sz/2, py - sz/2, sz, sz);
+                }
+            }
+            g4.dispose();
         }
 
         // If requested, draw the JTextPane text on top of the graphics (used for pause/menu messages)
@@ -249,14 +298,20 @@ public class GameBoard extends JTextPane {
             }
         }
 
+    // debug
+    System.out.println("[GameBoard] triggerClearAnimation rows=" + rows + ", existingAnimRows=" + animRowProgress.keySet());
+    // spawn particles even if the timer is already running so new clears get visualized
+    spawnRowParticles(rows);
+
         if (animTimer != null && animTimer.isRunning()) {
-            return; // timer already running; it will pick up new rows
+            return; // timer already running; it will pick up new rows and particles
         }
 
         animTimer = new javax.swing.Timer(40, new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 java.util.List<Integer> finished = new java.util.ArrayList<>();
+                // advance row fade progress
                 for (java.util.Map.Entry<Integer, Float> en : new java.util.ArrayList<>(animRowProgress.entrySet())) {
                     float p = en.getValue() + 0.08f;
                     if (p >= 1f) {
@@ -266,14 +321,91 @@ public class GameBoard extends JTextPane {
                     }
                 }
                 for (Integer k : finished) animRowProgress.remove(k);
-                if (animRowProgress.isEmpty()) {
+
+                // advance particles
+                java.util.List<Integer> emptyRows = new java.util.ArrayList<>();
+                for (java.util.Map.Entry<Integer, java.util.List<Particle>> en : new java.util.ArrayList<>(rowParticles.entrySet())) {
+                    java.util.List<Particle> pls = en.getValue();
+                    for (Particle p : new java.util.ArrayList<>(pls)) {
+                        p.vy += 0.4f; // gravity
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.life -= 0.06f;
+                        p.alpha = Math.max(0f, p.life / p.maxLife);
+                        if (p.life <= 0f) pls.remove(p);
+                    }
+                    if (pls.isEmpty()) emptyRows.add(en.getKey());
+                }
+                for (Integer k : emptyRows) rowParticles.remove(k);
+
+                if (animRowProgress.isEmpty() && rowParticles.isEmpty()) {
                     animTimer.stop();
                 }
                 repaint();
             }
         });
+        System.out.println("[GameBoard] animTimer started");
         animTimer.setInitialDelay(0);
         animTimer.start();
+    }
+
+    /**
+     * Create explosion particles for the cleared rows. Called by external code before starting
+     * the animation timer; we compute pixel-relative positions so paintComponent can render them.
+     */
+    private void spawnRowParticles(java.util.List<Integer> rows) {
+        if (rows == null || rows.isEmpty()) return;
+        int w = getWidth();
+        int h = getHeight();
+        int pad = 20;
+        int gridW = w - pad*2;
+        int gridH = h - pad*2;
+        int cellW = Math.max(4, gridW / WIDTH);
+        int cellH = Math.max(4, gridH / HEIGHT);
+        int cellSize = Math.min(cellW, cellH);
+    java.util.Random rand = new java.util.Random();
+
+        for (Integer row : rows) {
+            if (row == null) continue;
+            java.util.List<Particle> pls = new java.util.ArrayList<>();
+            for (int c = 0; c < WIDTH; c++) {
+                // spawn more fragments per cell for a stronger visible effect
+                int fragments = 6;
+                for (int f = 0; f < fragments; f++) {
+                    // positions are relative to the left edge of the grid; we'll offset by startX when drawing
+                    float cx = c * cellSize + cellSize * 0.5f + (rand.nextFloat() - 0.5f) * cellSize * 0.6f;
+                    float cy = cellSize * 0.5f + (rand.nextFloat() - 0.5f) * cellSize * 0.4f;
+                    float vx = (rand.nextFloat() - 0.5f) * 10f;
+                    float vy = -(rand.nextFloat() * 10f + 3f);
+                    float life = 0.9f + rand.nextFloat() * 1.2f;
+                    int size = Math.max(5, Math.round(cellSize * (0.35f + rand.nextFloat() * 0.45f)));
+                    java.awt.Color col = Color.ORANGE;
+                    try {
+                        if (overlayColors != null && overlayColors.length > row && overlayColors[row][c] != null) {
+                            col = overlayColors[row][c];
+                        }
+                    } catch (Exception ignored) {}
+                    Particle p = new Particle(cx, cy, vx, vy, life, size, col);
+                    pls.add(p);
+                }
+            }
+            rowParticles.put(row, pls);
+            System.out.println("[GameBoard] spawned " + pls.size() + " particles for row=" + row);
+        }
+    }
+
+    /** Simple particle used for explosion fragments. Positions are relative to the left of the grid. */
+    private static class Particle {
+        float x, y; // pixel offsets relative to left edge of the grid
+        float vx, vy;
+        float life, maxLife;
+        float alpha = 1f;
+        int size;
+        java.awt.Color color;
+
+        Particle(float x, float y, float vx, float vy, float life, int size, java.awt.Color color) {
+            this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.maxLife = life; this.size = size; this.color = color;
+        }
     }
 
     /**

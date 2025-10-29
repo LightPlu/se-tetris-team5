@@ -255,6 +255,26 @@ public class game extends JPanel implements KeyListener {
       }
     });
 
+    // DEBUG: Force multi-row clear animation test (press 'A') — triggers explosion on bottom rows so
+    // you can visually confirm multi-row animations regardless of actual game clears.
+    this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke('A'), "forceClearAnim");
+    this.getActionMap().put("forceClearAnim", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        try {
+          // choose a few bottom rows to demonstrate multiple simultaneous animations
+          java.util.List<Integer> demo = new java.util.ArrayList<>();
+          int h = gameBoard.getBoardHeight();
+          // last 4 rows (if available)
+          for (int r = Math.max(0, h - 4); r < h; r++) demo.add(r);
+          System.out.println("[DEBUG] force clear anim rows=" + demo);
+          gameBoard.triggerClearAnimation(demo);
+        } catch (Exception ex) {
+          // ignore
+        }
+      }
+    });
+
     // 오른쪽 패널 (다음 블록 + 점수)
   JPanel rightPanel = new JPanel();
   rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
@@ -659,6 +679,16 @@ public class game extends JPanel implements KeyListener {
       }
     }
     gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY);
+    // If the engine recorded cleared rows during the last move, consume them and trigger animations.
+    try {
+      java.util.List<Integer> clearedRows = gameEngine.consumeLastClearedRows();
+      if (clearedRows != null && !clearedRows.isEmpty()) {
+        System.out.println("[game screen] consuming cleared rows for animation: " + clearedRows);
+        gameBoard.triggerClearAnimation(clearedRows);
+      }
+    } catch (Exception ex) {
+      // safe-guard: don't let UI update fail due to animation triggering
+    }
   }
 
   /**
