@@ -304,8 +304,8 @@ public class home extends JPanel implements KeyListener {
         
         for(int i = 0; i < menuButtons.length; i++) {
             if(i == selectedMenu) {
-                // 선택된 버튼 스타일 - 밝은 청록색
-                menuButtons[i].setBackground(Color.CYAN);
+                // 선택된 버튼 스타일 - 색맹 모드 고려 색상
+                menuButtons[i].setBackground(GameSettings.getInstance().getUIColor("success"));
                 menuButtons[i].setForeground(Color.BLACK);
                 menuButtons[i].setBorder(BorderFactory.createLoweredBevelBorder());
                 

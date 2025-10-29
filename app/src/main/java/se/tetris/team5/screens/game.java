@@ -1507,24 +1507,32 @@ public class game extends JPanel implements KeyListener {
     if (color.equals(new Color(64, 64, 64)))
       return "W";
 
-    // 색맹 모드 색상들도 체크
-    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-    if (color.equals(settings.getColorForBlock("I")))
+    // 색맹 모드 색상들도 체크 (8색 명확한 팔레트)
+    if (color.equals(new Color(135, 206, 250)))   // sky blue (하늘색)
       return "I";
-    if (color.equals(settings.getColorForBlock("O")))
+    if (color.equals(new Color(255, 255, 0)))     // yellow (노란색)
       return "O";
-    if (color.equals(settings.getColorForBlock("T")))
+    if (color.equals(new Color(199, 21, 133)))    // reddish purple (적자색)
       return "T";
-    if (color.equals(settings.getColorForBlock("L")))
+    if (color.equals(new Color(255, 165, 0)))     // orange (주황색)
       return "L";
-    if (color.equals(settings.getColorForBlock("J")))
+    if (color.equals(new Color(0, 0, 255)))       // blue (파란색)
       return "J";
-    if (color.equals(settings.getColorForBlock("S")))
+    if (color.equals(new Color(0, 158, 115)))     // bluish green (청록색)
       return "S";
-    if (color.equals(settings.getColorForBlock("Z")))
+    if (color.equals(new Color(213, 94, 0)))      // vermilion (주홍색)
       return "Z";
-    if (color.equals(settings.getColorForBlock("W")))
+    if (color.equals(new Color(85, 85, 85)))      // 밝은 검정색
       return "W";
+
+    // 현재 설정의 색상과도 비교
+    se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+    String[] blockTypes = {"I", "O", "T", "L", "J", "S", "Z", "W"};
+    for (String type : blockTypes) {
+      if (color.equals(settings.getColorForBlock(type))) {
+        return type;
+      }
+    }
 
     return "O"; // 기본값
   }

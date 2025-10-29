@@ -202,9 +202,9 @@ public class setting {
                 int endIndex = text.indexOf("◄") + 1;
                 if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
                     SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
-                    // 색맹 모드일 때는 구별하기 쉬운 밝은 노란색, 일반 모드일 때는 초록색
+                    // 색맹 모드일 때는 모든 색각 이상자가 구분 가능한 밝은 노란색, 일반 모드일 때는 초록색
                     Color highlightColor = gameSettings.isColorblindMode() ? 
-                        new Color(240, 228, 66) : Color.GREEN;
+                        gameSettings.getUIColor("highlight") : Color.GREEN;
                     StyleConstants.setForeground(selectedStyle, highlightColor);
                     StyleConstants.setBold(selectedStyle, true);
                     doc.setCharacterAttributes(startIndex, endIndex - startIndex, selectedStyle, false);

@@ -187,11 +187,10 @@ public class GameBoard extends JTextPane {
                         if (overlayColors != null && overlayColors[r][c] != null) col = overlayColors[r][c];
                         int x = startX + c * cellSize;
                         int y = startY + r * cellSize;
-                        g2.setColor(col);
-                        g2.fillRoundRect(x+3, y+3, cellSize-6, cellSize-6, 6, 6);
-                        // highlight
-                        g2.setColor(new Color(255,255,255,40));
-                        g2.fillRoundRect(x+4, y+4, (cellSize-6)/2, (cellSize-6)/2, 4, 4);
+                        
+                        // 색상과 패턴을 함께 그리기
+                        String blockType = guessBlockTypeFromColor(col);
+                        drawBlockWithPattern(g2, x, y, cellSize, col, blockType);
 
                         // If there's an item on this locked cell, draw an item glyph
                         if (overlayItems != null && overlayItems[r][c] != null) {
@@ -215,14 +214,15 @@ public class GameBoard extends JTextPane {
                             int y = startY + boardY * cellSize;
                             Color col = currentBlock.getColor();
                             if (col == null) col = Color.CYAN;
-                            g2.setColor(col);
-                            g2.fillRoundRect(x+3, y+3, cellSize-6, cellSize-6, 6, 6);
-                                g2.setColor(new Color(255,255,255,60));
-                                g2.fillRoundRect(x+4, y+4, (cellSize-6)/2, (cellSize-6)/2, 4, 4);
-                                // draw item on the moving block if present
-                                if (currentBlock.getItem(rx, ry) != null) {
-                                    drawItemGlyph(g2, currentBlock.getItem(rx, ry), x, y, cellSize);
-                                }
+                            
+                            // 현재 블록도 패턴과 함께 그리기
+                            String blockType = currentBlock.getBlockType();
+                            drawBlockWithPattern(g2, x, y, cellSize, col, blockType);
+                            
+                            // draw item on the moving block if present
+                            if (currentBlock.getItem(rx, ry) != null) {
+                                drawItemGlyph(g2, currentBlock.getItem(rx, ry), x, y, cellSize);
+                            }
                         }
                     }
                 }
@@ -578,6 +578,103 @@ public class GameBoard extends JTextPane {
 
     public char getBorderChar() {
         return BORDER_CHAR;
+    }
+    
+    /**
+     * 색상과 패턴을 함께 그려서 블록 타입을 더 명확하게 구분
+     */
+    private void drawBlockWithPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, java.awt.Color color, String blockType) {
+        // 기본 블록 배경 그리기
+        g2.setColor(color);
+        g2.fillRoundRect(x+3, y+3, cellSize-6, cellSize-6, 6, 6);
+        
+        // 색맹 모드일 때만 패턴 추가
+        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+        if (settings.isColorblindMode()) {
+            drawBlockPattern(g2, x, y, cellSize, blockType);
+        }
+        
+        // 기본 하이라이트
+        g2.setColor(new java.awt.Color(255,255,255,40));
+        g2.fillRoundRect(x+4, y+4, (cellSize-6)/2, (cellSize-6)/2, 4, 4);
+    }
+    
+    /**
+     * 블록 타입별 고유 패턴 그리기
+     */
+    private void drawBlockPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, String blockType) {
+        g2.setColor(new java.awt.Color(0, 0, 0, 120)); // 반투명 검정색 패턴
+        int innerSize = cellSize - 10;
+        int patX = x + 5;
+        int patY = y + 5;
+        
+        java.awt.Stroke oldStroke = g2.getStroke();
+        g2.setStroke(new java.awt.BasicStroke(2.0f));
+        
+        switch (blockType) {
+            case "I": // 수직선 패턴
+                g2.drawLine(patX + innerSize/2, patY + 2, patX + innerSize/2, patY + innerSize - 2);
+                break;
+            case "O": // 작은 사각형 패턴
+                int rectSize = innerSize/3;
+                g2.drawRect(patX + (innerSize-rectSize)/2, patY + (innerSize-rectSize)/2, rectSize, rectSize);
+                break;
+            case "T": // T자 패턴
+                g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
+                g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + innerSize - 2);
+                break;
+            case "L": // L자 패턴
+                g2.drawLine(patX + innerSize/3, patY + 2, patX + innerSize/3, patY + innerSize - 2);
+                g2.drawLine(patX + innerSize/3, patY + innerSize - 2, patX + innerSize - 2, patY + innerSize - 2);
+                break;
+            case "J": // J자 패턴 (뒤집힌 L)
+                g2.drawLine(patX + 2*innerSize/3, patY + 2, patX + 2*innerSize/3, patY + innerSize - 2);
+                g2.drawLine(patX + 2, patY + innerSize - 2, patX + 2*innerSize/3, patY + innerSize - 2);
+                break;
+            case "S": // S자 지그재그 패턴
+                g2.drawLine(patX + 2, patY + 2*innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
+                g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize/2, patY + innerSize/3);
+                g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
+                break;
+            case "Z": // Z자 패턴
+                g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize/2, patY + innerSize/3);
+                g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
+                g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize - 2, patY + 2*innerSize/3);
+                break;
+            case "W": // 무게추 - X 패턴
+                g2.drawLine(patX + 2, patY + 2, patX + innerSize - 2, patY + innerSize - 2);
+                g2.drawLine(patX + innerSize - 2, patY + 2, patX + 2, patY + innerSize - 2);
+                break;
+        }
+        
+        g2.setStroke(oldStroke);
+    }
+    
+    /**
+     * 색상을 바탕으로 블록 타입을 추정하는 헬퍼 메소드
+     */
+    private String guessBlockTypeFromColor(java.awt.Color color) {
+        // 기본 색상 체크
+        if (color.equals(java.awt.Color.CYAN)) return "I";
+        if (color.equals(java.awt.Color.YELLOW)) return "O";
+        if (color.equals(java.awt.Color.MAGENTA)) return "T";
+        if (color.equals(java.awt.Color.ORANGE)) return "L";
+        if (color.equals(java.awt.Color.BLUE)) return "J";
+        if (color.equals(java.awt.Color.GREEN)) return "S";
+        if (color.equals(java.awt.Color.RED)) return "Z";
+        if (color.equals(new java.awt.Color(64, 64, 64))) return "W";
+        
+        // 색맹 모드 색상 체크
+        if (color.equals(new java.awt.Color(135, 206, 250))) return "I"; // sky blue
+        if (color.equals(new java.awt.Color(255, 255, 0))) return "O";   // yellow
+        if (color.equals(new java.awt.Color(199, 21, 133))) return "T";  // reddish purple
+        if (color.equals(new java.awt.Color(255, 165, 0))) return "L";   // orange
+        if (color.equals(new java.awt.Color(0, 0, 255))) return "J";     // blue
+        if (color.equals(new java.awt.Color(0, 158, 115))) return "S";   // bluish green
+        if (color.equals(new java.awt.Color(213, 94, 0))) return "Z";    // vermilion
+        if (color.equals(new java.awt.Color(85, 85, 85))) return "W";    // 밝은 검정색
+        
+        return "O"; // 기본값
     }
     
     @Override

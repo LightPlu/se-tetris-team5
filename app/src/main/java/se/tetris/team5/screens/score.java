@@ -105,7 +105,7 @@ public class score {
         titlePanel.add(leftControls, BorderLayout.WEST);
 
     JLabel title = new JLabel("SCORE BOARD", SwingConstants.CENTER);
-    title.setForeground(new Color(0, 230, 64)); // neon green
+    title.setForeground(gameSettings.getUIColor("success")); // 색맹 모드 고려 색상
     // slightly smaller title to save vertical space
     title.setFont(createKoreanFont(Font.BOLD, 22));
     // Place the title on the far right as requested
@@ -157,7 +157,7 @@ public class score {
         for (int i = 0; i < headers.length; i++) {
             hgbc.gridx = i; hgbc.weightx = weights[i];
             JLabel hl = new JLabel(headers[i], (i==1)?SwingConstants.LEFT:SwingConstants.CENTER);
-            hl.setForeground(new Color(255, 204, 0)); // warm yellow
+            hl.setForeground(gameSettings.getUIColor("warning")); // 색맹 모드 고려 노란색
             // slightly smaller header font for compact layout
             hl.setFont(createKoreanFont(Font.BOLD, 12));
             // Adjust per-column internal padding to improve visual alignment with row values
@@ -271,11 +271,11 @@ public class score {
      */
     private void updateButtonStyle(JButton button, boolean isSelected) {
         if (isSelected) {
-            button.setBackground(new Color(0, 230, 160));
+            button.setBackground(gameSettings.getUIColor("success"));
             button.setForeground(Color.BLACK);
         } else {
             button.setBackground(new Color(60, 60, 70));
-            button.setForeground(Color.WHITE);
+            button.setForeground(gameSettings.getUIColor("text"));
         }
     }
 
