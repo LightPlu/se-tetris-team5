@@ -1211,6 +1211,13 @@ public class game extends JPanel implements KeyListener {
 
     // Save the score with mode information and navigate to the scoreboard
     scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime, modeString);
+    
+    // 방금 추가된 점수 정보를 시스템 프로퍼티로 저장 (스코어보드에서 강조용)
+    System.setProperty("tetris.highlight.playerName", inputName);
+    System.setProperty("tetris.highlight.score", String.valueOf(currentScore));
+    System.setProperty("tetris.highlight.mode", modeString);
+    System.setProperty("tetris.highlight.playTime", String.valueOf(playTime));
+    
     screenController.showScreen("score");
   }
 
