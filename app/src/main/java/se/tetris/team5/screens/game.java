@@ -74,8 +74,8 @@ public class game extends JPanel implements KeyListener {
 
   // 일시정지 관련 변수
   private boolean isPaused = false;
-  private int pauseMenuIndex = 0; // 0: 게임 계속, 1: 메뉴로 나가기
-  private String[] pauseMenuOptions = { "게임 계속", "메뉴로 나가기" };
+  private int pauseMenuIndex = 0; // 0: 게임 계속, 1: 메뉴로 나가기, 2: 게임 종료
+  private String[] pauseMenuOptions = { "게임 계속", "메뉴로 나가기", "게임 종료" };
 
   // 타임스톱 관련 변수
   private boolean isTimeStopped = false; // 타임스톱 활성화 상태
@@ -1011,16 +1011,19 @@ public class game extends JPanel implements KeyListener {
   }
 
   /**
-   * ESC로 호출되는 일시정지 + 선택 모달. 타이머를 정지시키고 모달로 재개/나가기 선택을 받음.
+   * ESC로 호출되는 일시정지 + 선택 모달. 타이머를 정지시키고 재개/메뉴로 나가기/게임 종료 선택을 받음.
    */
   private void showPauseConfirmDialog() {
     // Stop timer and mark paused
     isPaused = true;
     if (timer != null) timer.stop();
 
-    String[] options = { "계속", "메뉴로 나가기" };
+    String[] options = { "계속", "메뉴로 나가기", "게임 종료" };
     int choice = javax.swing.JOptionPane.showOptionDialog(this,
-        "게임을 일시중단했습니다. 계속하시겠습니까?\n메뉴로 나가면 현재 게임은 취소됩니다.",
+        "게임을 일시중단했습니다.\n\n" +
+        "• 계속: 현재 게임을 이어서 진행합니다.\n" +
+        "• 메뉴로 나가기: 현재 게임을 취소하고 메인 메뉴로 이동합니다.\n" +
+        "• 게임 종료: 테트리스 프로그램을 완전히 종료합니다.",
         "일시정지",
         javax.swing.JOptionPane.DEFAULT_OPTION,
         javax.swing.JOptionPane.QUESTION_MESSAGE,
@@ -1040,9 +1043,15 @@ public class game extends JPanel implements KeyListener {
       if (timer != null) timer.stop();
       screenController.showScreen("home");
       return;
+    } else if (choice == 2) {
+      // 게임 종료 선택: 테트리스 프로그램 완전 종료
+      isPaused = false;
+      if (timer != null) timer.stop();
+      System.exit(0); // 프로그램 완전 종료
+      return;
     }
 
-    // 기본: 계속하기
+    // 기본: 계속하기 (choice == 0 또는 창 닫기)
     resumeGame();
   }
 
@@ -1057,24 +1066,37 @@ public class game extends JPanel implements KeyListener {
   }
 
   /**
-   * 일시정지 메뉴를 그립니다 (단순한 디자인)
+   * 일시정지 메뉴를 그립니다 (3개 옵션 포함)
    */
   private void drawPauseMenu() {
     StringBuilder sb = new StringBuilder();
 
-    // 단순한 일시정지 화면
-    sb.append("\n\n\n\n\n");
+    // 일시정지 화면
+    sb.append("\n\n\n\n");
     sb.append("          === 게임 일시정지 ===\n\n");
 
-    // 메뉴 옵션들 (단순하게)
+    // 메뉴 옵션들
     for (int i = 0; i < pauseMenuOptions.length; i++) {
       sb.append("          ");
       if (i == pauseMenuIndex) {
-        sb.append("> ");
+        sb.append("► ");
       } else {
         sb.append("  ");
       }
       sb.append(pauseMenuOptions[i]);
+      
+      // 각 옵션에 대한 간단한 설명 추가
+      switch (i) {
+        case 0:
+          sb.append(" (현재 게임 이어하기)");
+          break;
+        case 1:
+          sb.append(" (게임 취소 후 메인 메뉴)");
+          break;
+        case 2:
+          sb.append(" (프로그램 완전 종료)");
+          break;
+      }
       sb.append("\n\n");
     }
 
@@ -1246,7 +1268,7 @@ public class game extends JPanel implements KeyListener {
         case KeyEvent.VK_ENTER:
           if (pauseMenuIndex == 0) { // 게임 계속
             resumeGame();
-          } else { // 메뉴로 나가기
+          } else if (pauseMenuIndex == 1) { // 메뉴로 나가기
             // 게임 완전 정지 및 상태 정리
             timer.stop();
             isPaused = false;
@@ -1262,6 +1284,14 @@ public class game extends JPanel implements KeyListener {
 
             // ScreenController를 통해 홈으로 돌아가기
             screenController.showScreen("home");
+          } else { // pauseMenuIndex == 2: 게임 종료
+            // 게임 완전 정지 및 상태 정리
+            timer.stop();
+            isPaused = false;
+            pauseMenuIndex = 0;
+
+            // 프로그램 완전 종료
+            System.exit(0);
           }
           break;
         case KeyEvent.VK_ESCAPE:
