@@ -207,19 +207,20 @@ public class GameSettings {
     se.tetris.team5.utils.score.ScoreManager.getInstance().clearAllScores();
     }
     
-    // 색맹 모드용 색상 팔레트
+    // 색맹 모드용 색상 팔레트 (명확한 8색 구분)
     public java.awt.Color getColorForBlock(String blockType) {
         if (isColorblindMode()) {
-            // 색맹 친화적인 색상 사용
+            // 색각 이상자도 명확히 구분 가능한 8색 팔레트
+            // black, orange, sky blue, bluish green, yellow, blue, vermilion, reddish purple
             switch (blockType) {
-                case "I": return new java.awt.Color(0, 158, 115);    // 청록색 (Teal)
-                case "O": return new java.awt.Color(240, 228, 66);   // 밝은 노란색 (Yellow)
-                case "T": return new java.awt.Color(204, 121, 167);  // 연보라색 (Light Purple)
-                case "L": return new java.awt.Color(230, 159, 0);    // 주황색 (Orange)
-                case "J": return new java.awt.Color(86, 180, 233);   // 하늘색 (Sky Blue)
-                case "S": return new java.awt.Color(0, 114, 178);    // 진한 파란색 (Blue)
-                case "Z": return new java.awt.Color(213, 94, 0);     // 진한 주황색 (Vermillion)
-                case "W": return new java.awt.Color(128, 128, 128);  // 회색 (Gray) - 무게추 블록
+                case "I": return new java.awt.Color(135, 206, 250);  // sky blue (하늘색)
+                case "O": return new java.awt.Color(255, 255, 0);    // yellow (노란색)
+                case "T": return new java.awt.Color(199, 21, 133);   // reddish purple (적자색)
+                case "L": return new java.awt.Color(255, 165, 0);    // orange (주황색)
+                case "J": return new java.awt.Color(0, 0, 255);      // blue (파란색)
+                case "S": return new java.awt.Color(0, 158, 115);    // bluish green (청록색)
+                case "Z": return new java.awt.Color(213, 94, 0);     // vermilion (주홍색)
+                case "W": return new java.awt.Color(85, 85, 85);     // 밝은 검정색 - 무게추 블록
                 default: return java.awt.Color.WHITE;
             }
         } else {
@@ -238,15 +239,19 @@ public class GameSettings {
         }
     }
     
-    // UI 색상도 색맹 모드에 따라 변경
+    // UI 색상도 색맹 모드에 따라 변경 (8색 팔레트 기반)
     public java.awt.Color getUIColor(String element) {
         if (isColorblindMode()) {
-            // 색맹 친화적인 UI 색상
+            // 명확한 8색 팔레트를 활용한 UI 색상
             switch (element) {
                 case "background": return java.awt.Color.BLACK;
-                case "text": return new java.awt.Color(240, 240, 240);     // 밝은 회색 텍스트
-                case "highlight": return new java.awt.Color(240, 228, 66); // 밝은 노란색 하이라이트 (색맹 친화적)
-                case "border": return new java.awt.Color(128, 128, 128);   // 회색 테두리
+                case "text": return new java.awt.Color(245, 245, 245);     // 매우 밝은 회색 텍스트 (높은 대비)
+                case "highlight": return new java.awt.Color(255, 255, 0);  // yellow (노란색) - 가장 눈에 잘 띄는 색
+                case "border": return new java.awt.Color(170, 170, 170);   // 밝은 회색 테두리
+                case "success": return new java.awt.Color(0, 158, 115);    // bluish green (청록색)
+                case "error": return new java.awt.Color(213, 94, 0);       // vermilion (주홍색)
+                case "warning": return new java.awt.Color(255, 255, 0);    // yellow (노란색)
+                case "info": return new java.awt.Color(135, 206, 250);     // sky blue (하늘색)
                 default: return java.awt.Color.WHITE;
             }
         } else {
@@ -256,6 +261,10 @@ public class GameSettings {
                 case "text": return java.awt.Color.WHITE;
                 case "highlight": return java.awt.Color.GREEN; // 일반 모드에서는 초록색
                 case "border": return java.awt.Color.GRAY;
+                case "success": return java.awt.Color.GREEN;
+                case "error": return java.awt.Color.RED;
+                case "warning": return java.awt.Color.YELLOW;
+                case "info": return java.awt.Color.CYAN;
                 default: return java.awt.Color.WHITE;
             }
         }
