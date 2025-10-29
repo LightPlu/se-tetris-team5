@@ -20,7 +20,7 @@ public class BlockFactory {
   public Block createRandomBlock() {
     if (bag.isEmpty()) refillBag();
     int blockType = bag.remove(0);
-    Block b = createBlock(blockType);
+    Block b = createBlock(0);
     return b;
   }
 

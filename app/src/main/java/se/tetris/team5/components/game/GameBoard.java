@@ -41,6 +41,11 @@ public class GameBoard extends JTextPane {
     // When true, the underlying JTextPane text will be painted on top of graphics.
     // Used for pause/menu messages and other text-only overlays.
     private boolean showTextOverlay = false;
+    // previous board snapshot to detect cleared rows (so we can animate without changing engine)
+    private int[][] previousBoard = null;
+    // per-row animation progress map (rowIndex -> progress 0..1)
+    private java.util.Map<Integer, Float> animRowProgress = new java.util.LinkedHashMap<>();
+    private javax.swing.Timer animTimer = null;
 
     public GameBoard() {
         initComponents();
@@ -76,10 +81,37 @@ public class GameBoard extends JTextPane {
      */
     public void renderBoard(int[][] board, Color[][] colors, Item[][] items, Block currBlock, int currX, int currY) {
         if (board != null) {
+            // detect rows that were just cleared by comparing previous snapshot to new board
+            if (previousBoard != null && previousBoard.length == board.length) {
+                java.util.List<Integer> cleared = new java.util.ArrayList<>();
+                for (int r = 0; r < Math.min(previousBoard.length, HEIGHT); r++) {
+                    boolean wasFull = true;
+                    for (int c = 0; c < Math.min(previousBoard[r].length, WIDTH); c++) {
+                        if (previousBoard[r][c] != 1) { wasFull = false; break; }
+                    }
+                    boolean isFull = true;
+                    for (int c = 0; c < Math.min(board[r].length, WIDTH); c++) {
+                        if (board[r][c] != 1) { isFull = false; break; }
+                    }
+                    // if it was full and now is not full -> it was cleared
+                    if (wasFull && !isFull) {
+                        cleared.add(r);
+                    }
+                }
+                if (!cleared.isEmpty()) {
+                    triggerClearAnimation(cleared);
+                }
+            }
+
             // copy minimal state reference (don't mutate)
             overlayBoard = board;
             overlayColors = colors;
             overlayItems = items;
+            // snapshot for next comparison (shallow copy of rows)
+            previousBoard = new int[board.length][board[0].length];
+            for (int i = 0; i < board.length; i++) {
+                System.arraycopy(board[i], 0, previousBoard[i], 0, board[i].length);
+            }
         }
         this.currentBlock = currBlock;
         this.currentX = currX;
@@ -183,10 +215,65 @@ public class GameBoard extends JTextPane {
             }
         }
         g2.dispose();
+        // draw cleared-row animation overlay if active
+        if (animRowProgress != null && !animRowProgress.isEmpty()) {
+            Graphics2D g3 = (Graphics2D) g.create();
+            g3.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            for (java.util.Map.Entry<Integer, Float> en : animRowProgress.entrySet()) {
+                int row = en.getKey();
+                float prog = en.getValue();
+                float alpha = 1f - prog; // fade out
+                int a = Math.max(20, (int) (alpha * 180));
+                java.awt.Color overlay = new java.awt.Color(255, 200, 80, a);
+                g3.setColor(overlay);
+                int y = startY + row * cellSize;
+                g3.fillRoundRect(startX + 3, y + 3, gridPixelW - 6, cellSize - 6, 6, 6);
+            }
+            g3.dispose();
+        }
+
         // If requested, draw the JTextPane text on top of the graphics (used for pause/menu messages)
         if (showTextOverlay) {
             super.paintComponent(g);
         }
+    }
+
+    /** Trigger a cleared-rows animation for the given rows (row indices, 0..HEIGHT-1). */
+    public void triggerClearAnimation(java.util.List<Integer> rows) {
+        if (rows == null || rows.isEmpty()) return;
+        // register rows for animation (if not already present)
+        for (Integer r : rows) {
+            if (r == null) continue;
+            if (!animRowProgress.containsKey(r)) {
+                animRowProgress.put(r, 0f);
+            }
+        }
+
+        if (animTimer != null && animTimer.isRunning()) {
+            return; // timer already running; it will pick up new rows
+        }
+
+        animTimer = new javax.swing.Timer(40, new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                java.util.List<Integer> finished = new java.util.ArrayList<>();
+                for (java.util.Map.Entry<Integer, Float> en : new java.util.ArrayList<>(animRowProgress.entrySet())) {
+                    float p = en.getValue() + 0.08f;
+                    if (p >= 1f) {
+                        finished.add(en.getKey());
+                    } else {
+                        animRowProgress.put(en.getKey(), p);
+                    }
+                }
+                for (Integer k : finished) animRowProgress.remove(k);
+                if (animRowProgress.isEmpty()) {
+                    animTimer.stop();
+                }
+                repaint();
+            }
+        });
+        animTimer.setInitialDelay(0);
+        animTimer.start();
     }
 
     /**

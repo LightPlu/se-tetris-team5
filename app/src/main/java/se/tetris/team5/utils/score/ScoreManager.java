@@ -145,7 +145,10 @@ public class ScoreManager {
             }
         } catch (Exception ignored) {
         }
+        // persist the cleared state (overwrite file with empty list)
+        saveScores();
     }
+    
     
     private void loadScores() {
         try {

@@ -88,32 +88,7 @@ public class score {
             if (res == JOptionPane.YES_OPTION) screenController.showScreen("home");
         });
 
-        JButton resetScores = new JButton("스코어 초기화");
-        resetScores.setFocusable(false);
-        resetScores.setBackground(new Color(60, 60, 68));
-        resetScores.setForeground(Color.WHITE);
-        resetScores.setBorder(BorderFactory.createEmptyBorder(6,12,6,12));
-        resetScores.addActionListener(ae -> {
-            int res = JOptionPane.showConfirmDialog(screenController,
-                "모든 스코어를 초기화 하시겠습니까? (복구 불가)",
-                "스코어 초기화",
-                JOptionPane.YES_NO_OPTION);
-            if (res == JOptionPane.YES_OPTION) {
-                try {
-                    scoreManager.clearAllScores();
-                } catch (Exception ex) {
-                    // ignore; ensure UI still updates
-                }
-                // After clearing, stop using the in-memory sample list so the screen
-                // shows the (now empty) persisted list and placeholder instead of sample entries.
-                showOnlyDummy = false;
-                currentPage = 0;
-                SwingUtilities.invokeLater(this::renderScores);
-            }
-        });
-
         leftControls.add(topBack);
-        leftControls.add(resetScores);
         titlePanel.add(leftControls, BorderLayout.WEST);
 
     JLabel title = new JLabel("SCORE BOARD", SwingConstants.CENTER);
