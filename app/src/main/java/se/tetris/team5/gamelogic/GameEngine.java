@@ -116,7 +116,10 @@ public class GameEngine {
 
     if (movementManager.moveDown(currentBlock, x, y)) {
       y++;
-      gameScoring.addPoints(applyDoubleScore(1)); // 소프트 드롭 점수
+      // 무게추 블록(WBlock)일 때는 점수를 부여하지 않음
+      if (!(currentBlock instanceof se.tetris.team5.blocks.WBlock)) {
+        gameScoring.addPoints(applyDoubleScore(1)); // 소프트 드롭 점수
+      }
       boardManager.placeBlock(currentBlock, x, y);
       return true;
     } else {
@@ -214,7 +217,11 @@ public class GameEngine {
     boardManager.eraseBlock(currentBlock, x, y);
     int dropDistance = movementManager.hardDrop(currentBlock, x, y);
     y = movementManager.getDropPosition(currentBlock, x, y);
-    gameScoring.addHardDropPoints(applyDoubleScore(dropDistance));
+    
+    // 무게추 블록(WBlock)일 때는 하드드롭 점수를 부여하지 않음
+    if (!(currentBlock instanceof se.tetris.team5.blocks.WBlock)) {
+      gameScoring.addHardDropPoints(applyDoubleScore(dropDistance));
+    }
 
     boardManager.placeBlock(currentBlock, x, y);
     java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
