@@ -23,6 +23,11 @@ public class home extends JPanel implements KeyListener {
     // 메뉴 상태 관리
     private boolean inDifficultySelection = false; // 난이도 선택 화면인지 여부
     
+    // 도움말 표시 관리
+    private boolean showHelpMessage = false; // 도움말 메시지 표시 여부
+    private Timer helpMessageTimer; // 도움말 메시지 자동 숨김 타이머
+    private JWindow helpWindow; // 도움말 창
+    
     // 창 크기 정보
     private int windowWidth;
     private int windowHeight;
@@ -546,6 +551,122 @@ public class home extends JPanel implements KeyListener {
         }
     }
     
+    /**
+     * 도움말 메시지를 표시합니다 (JWindow 사용)
+     */
+    private void showHelpMessage() {
+        if (helpWindow != null) {
+            helpWindow.dispose(); // 기존 창 제거
+        }
+        
+        showHelpMessage = true;
+        createHelpWindow();
+        
+        // 기존 타이머가 있으면 정지
+        if (helpMessageTimer != null && helpMessageTimer.isRunning()) {
+            helpMessageTimer.stop();
+        }
+        
+        // 3초 후 자동으로 도움말 숨김
+        helpMessageTimer = new Timer(3000, e -> {
+            hideHelpMessage();
+        });
+        helpMessageTimer.setRepeats(false);
+        helpMessageTimer.start();
+    }
+    
+    /**
+     * 도움말 메시지를 숨깁니다
+     */
+    private void hideHelpMessage() {
+        if (showHelpMessage) {
+            showHelpMessage = false;
+            if (helpWindow != null) {
+                helpWindow.dispose();
+                helpWindow = null;
+            }
+        }
+        
+        if (helpMessageTimer != null && helpMessageTimer.isRunning()) {
+            helpMessageTimer.stop();
+        }
+    }
+    
+    /**
+     * 도움말 창을 생성합니다
+     */
+    private void createHelpWindow() {
+        // 부모 프레임 찾기
+        Window parentWindow = SwingUtilities.getWindowAncestor(this);
+        if (parentWindow == null) {
+            return; // 부모 창이 없으면 표시하지 않음
+        }
+        
+        helpWindow = new JWindow(parentWindow);
+        helpWindow.setAlwaysOnTop(true); // 항상 맨 위에 표시
+        
+        // 도움말 패널 생성
+        JPanel helpPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // 배경 (진한 검은색)
+                g2d.setColor(new Color(0, 0, 0, 230));
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                // 테두리 (밝은 청록색)
+                g2d.setColor(new Color(0, 230, 160));
+                g2d.setStroke(new BasicStroke(3));
+                g2d.drawRect(2, 2, getWidth() - 4, getHeight() - 4);
+                
+                g2d.dispose();
+            }
+        };
+        
+        helpPanel.setOpaque(false);
+        helpPanel.setLayout(new BorderLayout());
+        
+        // 내용 추가
+        JLabel titleLabel = new JLabel("🎮 조작법", SwingConstants.CENTER);
+        titleLabel.setFont(getFontForSize(getFontSize()));
+        titleLabel.setForeground(new Color(0, 230, 160));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 10, 10, 10));
+        
+        String helpText = "<html><center>" +
+                "⬆️⬇️  위/아래 화살표: 메뉴 선택<br/>" +
+                "⏎  엔터키: 선택 확인<br/>" +
+                "⎋  ESC: 뒤로가기/종료<br/><br/>" +
+                "<span style='color: #FFD700'>💡 3초 후 자동으로 사라집니다</span>" +
+                "</center></html>";
+        
+        JLabel contentLabel = new JLabel(helpText, SwingConstants.CENTER);
+        contentLabel.setFont(getFontForSize(getFontSize() - 2));
+        contentLabel.setForeground(Color.WHITE);
+        contentLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
+        
+        helpPanel.add(titleLabel, BorderLayout.NORTH);
+        helpPanel.add(contentLabel, BorderLayout.CENTER);
+        
+        helpWindow.add(helpPanel);
+        
+        // 크기와 위치 설정
+        int panelWidth = getButtonWidth() + 100;
+        int panelHeight = 200;
+        helpWindow.setSize(panelWidth, panelHeight);
+        
+        // 부모 창 중심에서 하단에 위치
+        Point parentLocation = parentWindow.getLocationOnScreen();
+        Dimension parentSize = parentWindow.getSize();
+        int x = parentLocation.x + (parentSize.width - panelWidth) / 2;
+        int y = parentLocation.y + parentSize.height - panelHeight - 100;
+        
+        helpWindow.setLocation(x, y);
+        helpWindow.setVisible(true);
+    }
+    
 
     
     // JTextPane 호환성을 위한 display 메서드
@@ -583,23 +704,22 @@ public class home extends JPanel implements KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-
-        
-
-        
         String[] currentOptions = getCurrentMenuOptions();
         
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
                 selectedMenu = (selectedMenu - 1 + currentOptions.length) % currentOptions.length;
                 updateMenuSelection();
+                hideHelpMessage(); // 유효한 키를 누르면 도움말 숨김
                 break;
             case KeyEvent.VK_DOWN:
                 selectedMenu = (selectedMenu + 1) % currentOptions.length;
                 updateMenuSelection();
+                hideHelpMessage(); // 유효한 키를 누르면 도움말 숨김
                 break;
             case KeyEvent.VK_ENTER:
                 selectCurrentMenu();
+                hideHelpMessage(); // 유효한 키를 누르면 도움말 숨김
                 break;
             case KeyEvent.VK_ESCAPE:
                 if (inDifficultySelection) {
@@ -609,6 +729,11 @@ public class home extends JPanel implements KeyListener {
                     // 메인 메뉴에서 ESC: 종료 확인
                     showExitConfirmation();
                 }
+                hideHelpMessage(); // 유효한 키를 누르면 도움말 숨김
+                break;
+            default:
+                // 다른 키를 누르면 도움말 표시
+                showHelpMessage();
                 break;
         }
     }

@@ -21,6 +21,7 @@ public class score {
     
     // 모드 필터링
     private String currentGameModeFilter = "ITEM"; // "ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"
+    private JButton[] modeTabButtons; // 모드 탭 버튼들을 저장
 
     // Pagination
     private static final int PAGE_SIZE = 10;
@@ -224,21 +225,19 @@ public class score {
         String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
         String[] modeNames = {"아이템", "쉬움", "보통", "어려움"};
         
+        // 버튼 배열 초기화
+        modeTabButtons = new JButton[modes.length];
+        
         for (int i = 0; i < modes.length; i++) {
             String mode = modes[i];
             String modeName = modeNames[i];
             
             JButton tabButton = new JButton(modeName);
             tabButton.setFocusable(false);
+            tabButton.setOpaque(true); // 배경색을 제대로 보이게 하기 위해 필요
             
             // 현재 선택된 모드에 따른 스타일
-            if (mode.equals(currentGameModeFilter)) {
-                tabButton.setBackground(new Color(0, 230, 160));
-                tabButton.setForeground(Color.BLACK);
-            } else {
-                tabButton.setBackground(new Color(60, 60, 70));
-                tabButton.setForeground(Color.WHITE);
-            }
+            updateButtonStyle(tabButton, mode.equals(currentGameModeFilter));
             
             tabButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
             tabButton.setFont(createKoreanFont(Font.BOLD, 12));
@@ -246,14 +245,41 @@ public class score {
             tabButton.addActionListener(e -> {
                 currentGameModeFilter = mode;
                 currentPage = 0; // 모드 변경 시 첫 페이지로 이동
-                buildUI(); // UI 재구성
+                updateModeTabButtons(); // 버튼 색상 업데이트만
                 renderScores(); // 점수 다시 로드
             });
             
+            // 버튼 저장
+            modeTabButtons[i] = tabButton;
             tabPanel.add(tabButton);
         }
         
         return tabPanel;
+    }
+
+    /**
+     * 버튼 스타일 업데이트
+     */
+    private void updateButtonStyle(JButton button, boolean isSelected) {
+        if (isSelected) {
+            button.setBackground(new Color(0, 230, 160));
+            button.setForeground(Color.BLACK);
+        } else {
+            button.setBackground(new Color(60, 60, 70));
+            button.setForeground(Color.WHITE);
+        }
+    }
+
+    /**
+     * 모든 모드 탭 버튼들의 색상 업데이트
+     */
+    private void updateModeTabButtons() {
+        if (modeTabButtons != null) {
+            String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+            for (int i = 0; i < modeTabButtons.length && i < modes.length; i++) {
+                updateButtonStyle(modeTabButtons[i], modes[i].equals(currentGameModeFilter));
+            }
+        }
     }
 
     private JPanel buildPodiumPanel() {
@@ -898,6 +924,56 @@ public class score {
         return null;
     }
 
+    /**
+     * 특정 게임 모드로 전환
+     */
+    private void switchToMode(String mode) {
+        if (!mode.equals(currentGameModeFilter)) {
+            currentGameModeFilter = mode;
+            currentPage = 0; // 모드 변경 시 첫 페이지로 이동
+            updateModeTabButtons(); // 버튼 색상 업데이트만
+            renderScores(); // 점수 다시 로드
+        }
+    }
+
+    /**
+     * 이전 게임 모드로 전환 (위 화살표)
+     */
+    private void switchToPreviousMode() {
+        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+        int currentIndex = -1;
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i].equals(currentGameModeFilter)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex > 0) {
+            switchToMode(modes[currentIndex - 1]);
+        } else if (currentIndex == 0) {
+            switchToMode(modes[modes.length - 1]); // 순환: 첫 번째에서 마지막으로
+        }
+    }
+
+    /**
+     * 다음 게임 모드로 전환 (아래 화살표)
+     */
+    private void switchToNextMode() {
+        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+        int currentIndex = -1;
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i].equals(currentGameModeFilter)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex >= 0 && currentIndex < modes.length - 1) {
+            switchToMode(modes[currentIndex + 1]);
+        } else if (currentIndex == modes.length - 1) {
+            switchToMode(modes[0]); // 순환: 마지막에서 첫 번째로
+        }
+    }
+
     private class ScoreKeyListener implements KeyListener {
         @Override
         public void keyTyped(KeyEvent e) {
@@ -937,6 +1013,24 @@ public class score {
                         currentPage++;
                         renderScores();
                     }
+                    break;
+                case KeyEvent.VK_1:
+                    switchToMode("ITEM");
+                    break;
+                case KeyEvent.VK_2:
+                    switchToMode("NORMAL_EASY");
+                    break;
+                case KeyEvent.VK_3:
+                    switchToMode("NORMAL_NORMAL");
+                    break;
+                case KeyEvent.VK_4:
+                    switchToMode("NORMAL_HARD");
+                    break;
+                case KeyEvent.VK_UP:
+                    switchToPreviousMode();
+                    break;
+                case KeyEvent.VK_DOWN:
+                    switchToNextMode();
                     break;
             }
             e.consume();
