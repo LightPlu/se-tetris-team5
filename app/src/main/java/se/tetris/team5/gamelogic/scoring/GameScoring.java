@@ -88,7 +88,7 @@ public class GameScoring {
     currentScore += points;
 
     // 레벨 업 체크 (10줄마다 레벨 증가)
-    int newLevel = (linesCleared / 1) + 1;
+    int newLevel = (linesCleared / 10) + 1;
     if (newLevel > level) {
       level = newLevel;
       updateDropSpeed();
