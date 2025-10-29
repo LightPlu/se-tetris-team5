@@ -82,6 +82,13 @@ public class GameEngine {
       boardManager.placeBlock(currentBlock, x, y);
       boardManager.fixBlock(currentBlock, x, y);
       int clearedLines = boardManager.clearLines();
+      
+      // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인
+      if (boardManager.wasTimeStopItemCleared()) {
+        hasTimeStopCharge = true;
+        System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+      }
+      
       gameScoring.addLinesCleared(clearedLines);
       handleItemSpawnAndCollect(clearedLines);
       spawnNextBlock();
@@ -152,6 +159,13 @@ public class GameEngine {
     boardManager.placeBlock(currentBlock, x, y);
     boardManager.fixBlock(currentBlock, x, y);
     int clearedLines = boardManager.clearLines();
+    
+    // 타임스톱 아이템이 줄 삭제로 제거되었는지 확인
+    if (boardManager.wasTimeStopItemCleared()) {
+      hasTimeStopCharge = true;
+      System.out.println("[타임스톱 충전 완료] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+    }
+    
     gameScoring.addLinesCleared(clearedLines);
     handleItemSpawnAndCollect(clearedLines);
     spawnNextBlock();
@@ -188,19 +202,17 @@ public class GameEngine {
       }
     }
 
-    // 아이템 획득 처리
+    // 아이템 획득 처리 (타임스톱 제외 - 타임스톱은 줄 삭제 시 충전)
     if (nextBlock != null) {
       for (int j = 0; j < nextBlock.height(); j++) {
         for (int i = 0; i < nextBlock.width(); i++) {
           se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
           if (item != null) {
             acquiredItem = item;
-            // TimeStopItem인 경우 충전 상태로 변경
-            if (item instanceof se.tetris.team5.items.TimeStopItem) {
-              hasTimeStopCharge = true;
-              System.out.println("[타임스톱 충전] Shift 키를 눌러 5초간 게임을 멈출 수 있습니다!");
+            // TimeStopItem은 줄 삭제 시에만 충전되므로 여기서 처리하지 않음
+            if (!(item instanceof se.tetris.team5.items.TimeStopItem)) {
+              System.out.println("[아이템 획득 대기] " + item);
             }
-            System.out.println("[아이템 획득 대기] " + item);
             break;
           }
         }

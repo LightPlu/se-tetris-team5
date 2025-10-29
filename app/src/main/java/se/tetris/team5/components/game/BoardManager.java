@@ -295,6 +295,18 @@ public class BoardManager {
     return true;
   }
 
+  // 마지막으로 삭제된 줄에 타임스톱 아이템이 있었는지 여부
+  private boolean timeStopItemCleared = false;
+
+  /**
+   * 마지막 줄 삭제 시 타임스톱 아이템이 있었는지 반환하고 플래그 초기화
+   */
+  public boolean wasTimeStopItemCleared() {
+    boolean result = timeStopItemCleared;
+    timeStopItemCleared = false; // 플래그 초기화
+    return result;
+  }
+
   /**
    * 가득 찬 줄을 제거하고 위의 줄들을 아래로 내립니다
    * 
@@ -302,6 +314,7 @@ public class BoardManager {
    */
   public int clearLines() {
     int clearedLinesCount = 0;
+    timeStopItemCleared = false; // 매 clearLines 호출 시 초기화
 
     for (int row = HEIGHT - 1; row >= 0; row--) {
       // 현재 줄이 가득 찼는지 확인 (고정된 블록만 고려)
@@ -312,6 +325,14 @@ public class BoardManager {
         }
       }
       if (fullLine) {
+        // 줄을 삭제하기 전에 타임스톱 아이템이 있는지 확인
+        for (int col = 0; col < WIDTH; col++) {
+          if (boardItems[row][col] instanceof se.tetris.team5.items.TimeStopItem) {
+            timeStopItemCleared = true;
+            System.out.println("[타임스톱 아이템 발견] 줄 삭제로 타임스톱 충전!");
+          }
+        }
+        
         clearedLinesCount++;
         // 아래 줄을 한 칸씩 내림
         for (int moveRow = row; moveRow > 0; moveRow--) {
