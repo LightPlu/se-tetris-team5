@@ -18,6 +18,9 @@ public class score {
     private JScrollPane scoreListScroll;
     // By default show real persisted scores. Do not auto-show in-memory dummy entries.
     private boolean showOnlyDummy = false;
+    
+    // 모드 필터링
+    private String currentGameModeFilter = "ITEM"; // "ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"
 
     // Pagination
     private static final int PAGE_SIZE = 10;
@@ -56,7 +59,7 @@ public class score {
         // make textPane transparent so background image shows
         textPane.setOpaque(false);
         textPane.setForeground(gameSettings.getUIColor("text"));
-        textPane.setFont(new Font("Arial", Font.BOLD, 14));
+        textPane.setFont(createKoreanFont(Font.BOLD, 14));
 
         // Remove previous key listeners and add our own
         for (KeyListener kl : textPane.getKeyListeners()) {
@@ -94,13 +97,23 @@ public class score {
     JLabel title = new JLabel("SCORE BOARD", SwingConstants.CENTER);
     title.setForeground(new Color(0, 230, 64)); // neon green
     // slightly smaller title to save vertical space
-    title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+    title.setFont(createKoreanFont(Font.BOLD, 22));
     // Place the title on the far right as requested
     titlePanel.add(title, BorderLayout.EAST);
+        
+        // 모드 선택 탭 패널
+        JPanel modeTabPanel = createModeTabPanel();
+        
         // We'll compose the whole UI into a background panel so an image can show behind it
         JPanel bgPanel = createBackgroundPanel();
         bgPanel.setLayout(new BorderLayout());
-        bgPanel.add(titlePanel, BorderLayout.NORTH);
+        
+        // 상단에 타이틀과 모드 탭을 함께 배치
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.add(titlePanel, BorderLayout.NORTH);
+        headerPanel.add(modeTabPanel, BorderLayout.SOUTH);
+        bgPanel.add(headerPanel, BorderLayout.NORTH);
 
         // Center: podium + list
         JPanel center = new JPanel(new BorderLayout());
@@ -127,8 +140,6 @@ public class score {
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, gameSettings.getUIColor("border")));
     header.setName("score-header");
     String[] headers = {"순위", "이름", "점수", "줄", "플레이타임", "날짜"};
-    // Adjusted weights: give a bit more room to '순위' and '날짜' to prevent truncation
-    // New distribution: rank, name, score, lines, playtime, date
     double[] weights = {0.08, 0.30, 0.15, 0.10, 0.13, 0.24};
     GridBagConstraints hgbc = new GridBagConstraints();
     // Use normal insets so header and rows align predictably after layout
@@ -138,7 +149,7 @@ public class score {
             JLabel hl = new JLabel(headers[i], (i==1)?SwingConstants.LEFT:SwingConstants.CENTER);
             hl.setForeground(new Color(255, 204, 0)); // warm yellow
             // slightly smaller header font for compact layout
-            hl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            hl.setFont(createKoreanFont(Font.BOLD, 12));
             // Adjust per-column internal padding to improve visual alignment with row values
             // i==0 (순위): add extra right padding so 이름 doesn't overlap
             // i==1 (이름): keep small left padding
@@ -205,6 +216,46 @@ public class score {
     SwingUtilities.invokeLater(this::renderScores);
     }
 
+    private JPanel createModeTabPanel() {
+        JPanel tabPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 8));
+        tabPanel.setOpaque(false);
+        
+        // 모드 탭 버튼들
+        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+        String[] modeNames = {"아이템", "쉬움", "보통", "어려움"};
+        
+        for (int i = 0; i < modes.length; i++) {
+            String mode = modes[i];
+            String modeName = modeNames[i];
+            
+            JButton tabButton = new JButton(modeName);
+            tabButton.setFocusable(false);
+            
+            // 현재 선택된 모드에 따른 스타일
+            if (mode.equals(currentGameModeFilter)) {
+                tabButton.setBackground(new Color(0, 230, 160));
+                tabButton.setForeground(Color.BLACK);
+            } else {
+                tabButton.setBackground(new Color(60, 60, 70));
+                tabButton.setForeground(Color.WHITE);
+            }
+            
+            tabButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+            tabButton.setFont(createKoreanFont(Font.BOLD, 12));
+            
+            tabButton.addActionListener(e -> {
+                currentGameModeFilter = mode;
+                currentPage = 0; // 모드 변경 시 첫 페이지로 이동
+                buildUI(); // UI 재구성
+                renderScores(); // 점수 다시 로드
+            });
+            
+            tabPanel.add(tabButton);
+        }
+        
+        return tabPanel;
+    }
+
     private JPanel buildPodiumPanel() {
         JPanel podium = new JPanel(new GridBagLayout());
         podium.setOpaque(false);
@@ -230,7 +281,7 @@ public class score {
 
         JLabel name = new JLabel("-", SwingConstants.CENTER);
         name.setForeground(gameSettings.getUIColor("text"));
-        name.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        name.setFont(createKoreanFont(Font.BOLD, 14));
 
         // medal symbol
         String medal = "#" + rank;
@@ -240,7 +291,7 @@ public class score {
 
         JLabel rankLbl = new JLabel(medal, SwingConstants.CENTER);
         rankLbl.setForeground(Color.BLACK);
-        rankLbl.setFont(new Font("Segoe UI", Font.BOLD, rank == 1 ? 20 : 16));
+        rankLbl.setFont(createKoreanFont(Font.BOLD, rank == 1 ? 20 : 16));
 
         // Medal panel draws a rounded card behind the medal icon
         JPanel medalPanel = new JPanel(new GridBagLayout()) {
@@ -288,7 +339,7 @@ public class score {
         pedestal.setOpaque(false);
     pedestal.setPreferredSize(new Dimension(120, 10));
 
-    name.setFont(new Font("Segoe UI", Font.BOLD, rank == 1 ? 14 : 12));
+    name.setFont(createKoreanFont(Font.BOLD, rank == 1 ? 14 : 12));
         name.setForeground(gameSettings.getUIColor("text"));
 
         // mark components so renderScores updates the correct label (name vs medal)
@@ -327,7 +378,8 @@ public class score {
                 int total = buildSampleEntries().size();
                 totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
             } else {
-                totalPages = Math.max(1, scoreManager.getTotalPages(PAGE_SIZE));
+                // 모드 필터링 적용
+                totalPages = Math.max(1, scoreManager.getTotalPagesByMode(PAGE_SIZE, currentGameModeFilter));
             }
             if (currentPage < totalPages - 1) {
                 currentPage++;
@@ -453,6 +505,37 @@ public class score {
      * GIF on the right side (so it doesn't replace the full background). Animated GIF is
      * loaded via ImageIcon (classpath or filesystem fallback) so animation works.
      */
+    // 윈도우에서 한글을 제대로 표시하기 위한 폰트 생성 메서드
+    private Font createKoreanFont(int style, int size) {
+        // 윈도우에서 한글을 잘 지원하는 폰트들을 우선순위대로 시도
+        String[] koreanFonts = {"맑은 고딕", "Malgun Gothic", "굴림", "Gulim", "Arial Unicode MS", "Dialog"};
+        
+        for (String fontName : koreanFonts) {
+            Font font = new Font(fontName, style, size);
+            // 폰트가 시스템에 있는지 확인
+            if (font.getFamily().equals(fontName) || font.canDisplay('한')) {
+                return font;
+            }
+        }
+        
+        // 모든 한글 폰트가 실패하면 기본 Dialog 폰트 사용
+        return new Font(Font.DIALOG, style, size);
+    }
+
+    private String getGameModeDisplay(String gameMode) {
+        if (gameMode == null || gameMode.isEmpty()) {
+            return "아이템";
+        }
+        
+        switch (gameMode) {
+            case "ITEM": return "아이템";
+            case "NORMAL_EASY": return "쉬움";
+            case "NORMAL_NORMAL": return "보통";
+            case "NORMAL_HARD": return "어려움";
+            default: return "아이템";
+        }
+    }
+
     private class BackgroundPanel extends JPanel {
         BackgroundPanel() {
             setOpaque(true);
@@ -484,7 +567,8 @@ public class score {
             sampleForPodium = buildSampleEntries();
             top3 = sampleForPodium.subList(0, Math.min(3, sampleForPodium.size()));
         } else {
-            top3 = scoreManager.getTopScores(3);
+            // 모드 필터링 적용
+            top3 = scoreManager.getTopScoresByMode(3, currentGameModeFilter);
         }
         for (Component c : findAllComponents(currentTextPane)) {
             if (c instanceof JPanel && c.getName() != null && c.getName().startsWith("podium-")) {
@@ -531,12 +615,13 @@ public class score {
             if (start >= sample.size()) pageScores = new java.util.ArrayList<>();
             else pageScores = new java.util.ArrayList<>(sample.subList(start, end));
         } else {
-            pageScores = scoreManager.getScoresPage(currentPage, PAGE_SIZE);
+            // 모드 필터링 적용
+            pageScores = scoreManager.getScoresPageByMode(currentPage, PAGE_SIZE, currentGameModeFilter);
         }
 
     // Debug output to help diagnose why list area may be empty at runtime
-    int dbgTotal = showOnlyDummy ? (sampleForPodium == null ? buildSampleEntries().size() : sampleForPodium.size()) : scoreManager.getTotalScores();
-    System.out.println("[score] totalScores=" + dbgTotal + ", pageScores=" + pageScores.size() + ", currentPage=" + currentPage);
+    int dbgTotal = showOnlyDummy ? (sampleForPodium == null ? buildSampleEntries().size() : sampleForPodium.size()) : scoreManager.getTotalScoresByMode(currentGameModeFilter);
+    System.out.println("[score] mode=" + currentGameModeFilter + ", totalScores=" + dbgTotal + ", pageScores=" + pageScores.size() + ", currentPage=" + currentPage);
 
         // NOTE: persistent dummy injection removed. The UI uses only in-memory sample entries
 
@@ -610,7 +695,7 @@ public class score {
             placeholder.setBorder(BorderFactory.createEmptyBorder(24, 8, 24, 8));
             JLabel noLabel = new JLabel("등록된 기록이 없습니다.", SwingConstants.CENTER);
             noLabel.setForeground(new Color(180, 180, 200));
-            noLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            noLabel.setFont(createKoreanFont(Font.PLAIN, 16));
             noLabel.setHorizontalAlignment(SwingConstants.CENTER);
             placeholder.add(noLabel, BorderLayout.CENTER);
             // keep consistent vertical space so footer/GIF placement doesn't jump
@@ -639,7 +724,7 @@ public class score {
                 ScoreManager.ScoreEntry entry = pageScores.get(i);
                 JLabel colRank = new JLabel(String.valueOf(rank));
                 colRank.setForeground(gameSettings.getUIColor("text"));
-                colRank.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                colRank.setFont(createKoreanFont(Font.BOLD, 14));
                 Dimension d0 = new Dimension(colPixels[0], ROW_HEIGHT);
                 colRank.setPreferredSize(d0);
                 colRank.setMinimumSize(d0);
@@ -648,7 +733,7 @@ public class score {
 
                 JLabel colName = new JLabel(entry.getPlayerName(), SwingConstants.LEFT);
                 colName.setForeground(gameSettings.getUIColor("text"));
-                colName.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                colName.setFont(createKoreanFont(Font.BOLD, 14));
                 Dimension d1 = new Dimension(colPixels[1], ROW_HEIGHT);
                 colName.setPreferredSize(d1);
                 colName.setMinimumSize(d1);
@@ -659,34 +744,37 @@ public class score {
 
                 JLabel colScore = new JLabel(String.format("%,d", entry.getScore()));
                 colScore.setForeground(new Color(220, 220, 220));
-                colScore.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                colScore.setFont(createKoreanFont(Font.PLAIN, 13));
                 Dimension d2 = new Dimension(colPixels[2], ROW_HEIGHT);
                 colScore.setPreferredSize(d2);
                 colScore.setMinimumSize(d2);
                 colScore.setMaximumSize(d2);
                 colScore.setHorizontalAlignment(SwingConstants.CENTER);
 
+                // 줄 수 열
                 JLabel colLines = new JLabel(String.valueOf(entry.getLines()));
                 colLines.setForeground(new Color(200, 200, 200));
-                colLines.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                colLines.setFont(createKoreanFont(Font.PLAIN, 13));
                 Dimension d3 = new Dimension(colPixels[3], ROW_HEIGHT);
                 colLines.setPreferredSize(d3);
                 colLines.setMinimumSize(d3);
                 colLines.setMaximumSize(d3);
                 colLines.setHorizontalAlignment(SwingConstants.CENTER);
 
+                // 플레이 타임 열
                 JLabel colPlay = new JLabel(entry.getFormattedPlayTime());
                 colPlay.setForeground(new Color(200, 200, 200));
-                colPlay.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                colPlay.setFont(createKoreanFont(Font.PLAIN, 13));
                 Dimension d4 = new Dimension(colPixels[4], ROW_HEIGHT);
                 colPlay.setPreferredSize(d4);
                 colPlay.setMinimumSize(d4);
                 colPlay.setMaximumSize(d4);
                 colPlay.setHorizontalAlignment(SwingConstants.CENTER);
 
+                // 날짜 열
                 JLabel colDate = new JLabel(entry.getFormattedDate());
                 colDate.setForeground(new Color(170, 170, 170));
-                colDate.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                colDate.setFont(createKoreanFont(Font.PLAIN, 12));
                 Dimension d5 = new Dimension(colPixels[5], ROW_HEIGHT);
                 colDate.setPreferredSize(d5);
                 colDate.setMinimumSize(d5);
@@ -700,22 +788,24 @@ public class score {
 
                 GridBagConstraints c = new GridBagConstraints();
                 c.gridy = 0; c.fill = GridBagConstraints.BOTH; c.insets = new Insets(2,6,2,6);
-                // Row column weights should match header/colWeights for consistent layout
-                double[] weights = {0.08, 0.30, 0.15, 0.10, 0.13, 0.24};
+                
+                // 고정된 weights 배열 사용
+                double[] rowWeights = {0.08, 0.30, 0.15, 0.10, 0.13, 0.24};
+                
                 // rank
-                c.gridx = 0; c.weightx = weights[0]; c.anchor = GridBagConstraints.CENTER; row.add(colRank, c);
+                c.gridx = 0; c.weightx = rowWeights[0]; c.anchor = GridBagConstraints.CENTER; row.add(colRank, c);
                 // name (left aligned under header)
-                c.gridx = 1; c.weightx = weights[1]; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(2,0,2,6); row.add(colName, c);
+                c.gridx = 1; c.weightx = rowWeights[1]; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(2,0,2,6); row.add(colName, c);
                 // restore insets for other columns
                 c.insets = new Insets(2,6,2,6);
                 // score (center)
-                c.gridx = 2; c.weightx = weights[2]; c.anchor = GridBagConstraints.CENTER; row.add(colScore, c);
+                c.gridx = 2; c.weightx = rowWeights[2]; c.anchor = GridBagConstraints.CENTER; row.add(colScore, c);
                 // lines
-                c.gridx = 3; c.weightx = weights[3]; c.anchor = GridBagConstraints.CENTER; row.add(colLines, c);
+                c.gridx = 3; c.weightx = rowWeights[3]; c.anchor = GridBagConstraints.CENTER; row.add(colLines, c);
                 // playtime
-                c.gridx = 4; c.weightx = weights[4]; c.anchor = GridBagConstraints.CENTER; row.add(colPlay, c);
+                c.gridx = 4; c.weightx = rowWeights[4]; c.anchor = GridBagConstraints.CENTER; row.add(colPlay, c);
                 // date (right)
-                c.gridx = 5; c.weightx = weights[5]; c.anchor = GridBagConstraints.EAST; row.add(colDate, c);
+                c.gridx = 5; c.weightx = rowWeights[5]; c.anchor = GridBagConstraints.EAST; row.add(colDate, c);
                 // force the row to exactly match header width (targetWidth) and fixed height
                 row.setPreferredSize(new Dimension(targetWidth, ROW_HEIGHT));
                 row.setMinimumSize(new Dimension(targetWidth, ROW_HEIGHT));
@@ -745,7 +835,8 @@ public class score {
             int total = buildSampleEntries().size();
             totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
         } else {
-            totalPages = Math.max(1, scoreManager.getTotalPages(PAGE_SIZE));
+            // 모드 필터링 적용
+            totalPages = Math.max(1, scoreManager.getTotalPagesByMode(PAGE_SIZE, currentGameModeFilter));
         }
         JLabel pageInfo = findPageInfoLabel(currentTextPane);
         if (pageInfo == null) {
@@ -839,7 +930,8 @@ public class score {
                         int total = buildSampleEntries().size();
                         totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
                     } else {
-                        totalPages = Math.max(1, scoreManager.getTotalPages(PAGE_SIZE));
+                        // 모드 필터링 적용
+                        totalPages = Math.max(1, scoreManager.getTotalPagesByMode(PAGE_SIZE, currentGameModeFilter));
                     }
                     if (currentPage < totalPages - 1) {
                         currentPage++;

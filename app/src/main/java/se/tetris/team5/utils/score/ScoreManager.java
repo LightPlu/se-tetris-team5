@@ -25,14 +25,21 @@ public class ScoreManager {
         private int lines;
         private long playTime; // 플레이 시간 (밀리초)
         private Date date;
+        private String gameMode; // 게임 모드 (ITEM, NORMAL_EASY, NORMAL_NORMAL, NORMAL_HARD, NORMAL_EXPERT)
         
-        public ScoreEntry(String playerName, int score, int level, int lines, long playTime) {
+        public ScoreEntry(String playerName, int score, int level, int lines, long playTime, String gameMode) {
             this.playerName = playerName;
             this.score = score;
             this.level = level;
             this.lines = lines;
             this.playTime = playTime;
             this.date = new Date();
+            this.gameMode = gameMode != null ? gameMode : "ITEM"; // 기본값
+        }
+        
+        // 호환성을 위한 기존 생성자 (게임 모드 없는 기존 데이터용)
+        public ScoreEntry(String playerName, int score, int level, int lines, long playTime) {
+            this(playerName, score, level, lines, playTime, "ITEM");
         }
         
         // Getters
@@ -42,6 +49,7 @@ public class ScoreManager {
         public int getLines() { return lines; }
         public long getPlayTime() { return playTime; }
         public Date getDate() { return date; }
+        public String getGameMode() { return gameMode; }
         
         public String getFormattedPlayTime() {
             long seconds = playTime / 1000;
@@ -73,12 +81,12 @@ public class ScoreManager {
         return instance;
     }
     
-    public void addScore(String playerName, int score, int level, int lines, long playTime) {
+    public void addScore(String playerName, int score, int level, int lines, long playTime, String gameMode) {
         if (playerName == null || playerName.trim().isEmpty()) {
             playerName = "Unknown Player";
         }
         
-        ScoreEntry newEntry = new ScoreEntry(playerName.trim(), score, level, lines, playTime);
+        ScoreEntry newEntry = new ScoreEntry(playerName.trim(), score, level, lines, playTime, gameMode);
         scores.add(newEntry);
         
         // 점수 순으로 내림차순 정렬
@@ -90,6 +98,11 @@ public class ScoreManager {
         }
         
         saveScores();
+    }
+    
+    // 호환성을 위한 기존 메서드 (기본값으로 ITEM 모드 사용)
+    public void addScore(String playerName, int score, int level, int lines, long playTime) {
+        addScore(playerName, score, level, lines, playTime, "ITEM");
     }
     
     public List<ScoreEntry> getTopScores(int count) {
@@ -116,6 +129,42 @@ public class ScoreManager {
     
     public int getTotalPages(int pageSize) {
         return (int) Math.ceil((double) scores.size() / pageSize);
+    }
+    
+    // 모드별 점수 조회 메서드들 추가
+    public List<ScoreEntry> getScoresPageByMode(int page, int pageSize, String gameMode) {
+        List<ScoreEntry> filteredScores = getScoresByMode(gameMode);
+        int startIndex = page * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, filteredScores.size());
+        
+        if (startIndex >= filteredScores.size()) {
+            return new ArrayList<>();
+        }
+        
+        return new ArrayList<>(filteredScores.subList(startIndex, endIndex));
+    }
+    
+    public List<ScoreEntry> getScoresByMode(String gameMode) {
+        return scores.stream()
+                .filter(score -> gameMode == null || gameMode.equals("ALL") || gameMode.equals(score.getGameMode()))
+                .sorted((a, b) -> Integer.compare(b.getScore(), a.getScore()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+    
+    public List<ScoreEntry> getTopScoresByMode(int count, String gameMode) {
+        List<ScoreEntry> filteredScores = getScoresByMode(gameMode);
+        if (filteredScores.size() <= count) {
+            return new ArrayList<>(filteredScores);
+        }
+        return new ArrayList<>(filteredScores.subList(0, count));
+    }
+    
+    public int getTotalScoresByMode(String gameMode) {
+        return getScoresByMode(gameMode).size();
+    }
+    
+    public int getTotalPagesByMode(int pageSize, String gameMode) {
+        return (int) Math.ceil((double) getTotalScoresByMode(gameMode) / pageSize);
     }
     
     public boolean isHighScore(int score) {

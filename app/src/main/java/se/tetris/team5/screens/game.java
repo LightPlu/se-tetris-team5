@@ -106,6 +106,23 @@ public class game extends JPanel implements KeyListener {
     }
   }
 
+  // 윈도우에서 한글을 제대로 표시하기 위한 폰트 생성 메서드
+  private Font createKoreanFont(int style, int size) {
+    // 윈도우에서 한글을 잘 지원하는 폰트들을 우선순위대로 시도
+    String[] koreanFonts = {"맑은 고딕", "Malgun Gothic", "굴림", "Gulim", "Arial Unicode MS", "Dialog"};
+    
+    for (String fontName : koreanFonts) {
+      Font font = new Font(fontName, style, size);
+      // 폰트가 시스템에 있는지 확인
+      if (font.getFamily().equals(fontName) || font.canDisplay('한')) {
+        return font;
+      }
+    }
+    
+    // 모든 한글 폰트가 실패하면 기본 Dialog 폰트 사용
+    return new Font(Font.DIALOG, style, size);
+  }
+
   public game(ScreenController screenController) {
     // 마우스 클릭 시 포커스 강제 요청 (클릭 후 키 입력 안 먹는 현상 방지)
     addMouseListener(new java.awt.event.MouseAdapter() {
@@ -337,7 +354,7 @@ public class game extends JPanel implements KeyListener {
   itemDescPane = new javax.swing.JTextPane();
   itemDescPane.setEditable(false);
   itemDescPane.setOpaque(false);
-  itemDescPane.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+  itemDescPane.setFont(createKoreanFont(Font.PLAIN, 13));
   itemDescPane.setForeground(new Color(220, 220, 220));
   itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
   JPanel itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
@@ -352,7 +369,7 @@ public class game extends JPanel implements KeyListener {
   scoreInfo.setOpaque(false);
   scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
   scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
-  scoreValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+  scoreValueLabel.setFont(createKoreanFont(Font.BOLD, 28));
   scoreValueLabel.setForeground(new Color(255, 220, 100));
   scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   scoreInfo.add(scoreValueLabel);
@@ -364,11 +381,11 @@ public class game extends JPanel implements KeyListener {
   JPanel smallRow = new JPanel(); smallRow.setOpaque(false);
   smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
   levelLabel = new JLabel("레벨: 1");
-  levelLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+  levelLabel.setFont(createKoreanFont(Font.BOLD, 14));
   levelLabel.setForeground(new Color(200, 200, 200));
   levelLabel.setBorder(new EmptyBorder(0,8,0,8));
   linesLabel = new JLabel("줄: 0");
-  linesLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+  linesLabel.setFont(createKoreanFont(Font.BOLD, 14));
   linesLabel.setForeground(new Color(200, 200, 200));
   linesLabel.setBorder(new EmptyBorder(0,8,0,8));
   smallRow.add(levelLabel);
@@ -379,7 +396,7 @@ public class game extends JPanel implements KeyListener {
   
   // 게임 모드 라벨 추가
   gameModeLabel = new JLabel("모드: 아이템 모드", javax.swing.SwingConstants.CENTER);
-  gameModeLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+  gameModeLabel.setFont(createKoreanFont(Font.BOLD, 13));
   gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
   gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   scoreInfo.add(gameModeLabel);
@@ -398,7 +415,7 @@ public class game extends JPanel implements KeyListener {
   JTextPane controlsPane = new JTextPane();
   controlsPane.setEditable(false);
   controlsPane.setOpaque(false);
-  controlsPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+  controlsPane.setFont(createKoreanFont(Font.PLAIN, 14));
   controlsPane.setForeground(Color.WHITE);
   StringBuilder ctrl = new StringBuilder();
   ctrl.append("조작키 안내\n\n");
@@ -475,7 +492,7 @@ public class game extends JPanel implements KeyListener {
 
     // Title
     JLabel titleLabel = new JLabel(title, javax.swing.SwingConstants.LEFT);
-    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+    titleLabel.setFont(createKoreanFont(Font.BOLD, 16));
     titleLabel.setForeground(titleColor);
     titleLabel.setBorder(new EmptyBorder(0, 6, 8, 6));
 
@@ -1123,19 +1140,46 @@ public class game extends JPanel implements KeyListener {
     // 플레이 시간 계산
     long playTime = System.currentTimeMillis() - gameStartTime;
 
-    // Prompt the user for their name using a modal dialog.
-    // If the user cancels the dialog, return to the home screen without saving.
-    // If they submit (even an empty string), save the score (empty -> "Player") and
-    // navigate to the scoreboard screen.
+    // 현재 게임 모드 정보 가져오기
+    String gameMode = System.getProperty("tetris.game.mode", "ITEM");
+    String gameDiff = System.getProperty("tetris.game.difficulty", "NORMAL");
+    String modeDisplayName;
+    String modeString;
+    
+    if ("ITEM".equals(gameMode)) {
+        modeDisplayName = "아이템 모드";
+        modeString = "ITEM";
+    } else {
+        modeString = "NORMAL_" + gameDiff;
+        switch (gameDiff) {
+            case "EASY": modeDisplayName = "일반 모드 - 쉬움"; break;
+            case "NORMAL": modeDisplayName = "일반 모드 - 보통"; break;
+            case "HARD": modeDisplayName = "일반 모드 - 어려움"; break;
+            case "EXPERT": modeDisplayName = "일반 모드 - 전문가"; break;
+            default: modeDisplayName = "일반 모드 - 보통"; break;
+        }
+    }
+
+    // Prompt the user for their name using a modal dialog with score and mode info.
     ScoreManager scoreManager = ScoreManager.getInstance();
     int currentScore = gameEngine.getGameScoring().getCurrentScore();
     int level = gameEngine.getGameScoring().getLevel();
     int linesCleared = gameEngine.getGameScoring().getLinesCleared();
+    
+    String message = String.format(
+        "게임이 끝났습니다!\n\n" +
+        "게임 모드: %s\n" +
+        "최종 점수: %,d점\n" +
+        "달성 레벨: %d\n" +
+        "제거한 줄: %d\n\n" +
+        "플레이어 이름을 입력하세요:",
+        modeDisplayName, currentScore, level, linesCleared
+    );
 
     // Note: this call is already on the EDT because Timer is a Swing Timer,
     // so it's safe to show a modal dialog here.
     String inputName = JOptionPane.showInputDialog(this,
-        "게임이 끝났습니다. 이름을 입력하세요:",
+        message,
         "게임 종료",
         JOptionPane.PLAIN_MESSAGE);
 
@@ -1147,8 +1191,8 @@ public class game extends JPanel implements KeyListener {
     inputName = inputName.trim();
     if (inputName.isEmpty()) inputName = "Player";
 
-    // Save the score and navigate to the scoreboard
-    scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime);
+    // Save the score with mode information and navigate to the scoreboard
+    scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime, modeString);
     screenController.showScreen("score");
   }
 
