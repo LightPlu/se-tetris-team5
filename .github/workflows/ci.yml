@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "feature/**", "release/**"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            java-version: "21"
+          - os: macos-latest
+            java-version: "21"
+          - os: windows-latest
+            java-version: "21"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ matrix.java-version }}
+          cache: "gradle"
+
+      - name: Cache gradle wrapper & caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties') }}-${{ env.GRADLE_CACHE_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Ensure Gradle wrapper is executable (UNIX)
+        if: runner.os != 'Windows'
+        run: chmod +x ./gradlew
+
+      - name: Build (compile & test)
+        # Use platform-appropriate gradle command
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            .\gradlew.bat --no-daemon build
+          else
+            ./gradlew --no-daemon build
+          fi
+        shell: bash
+
+      - name: Create fat JAR
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            .\gradlew.bat --no-daemon fatJar
+          else
+            ./gradlew --no-daemon fatJar
+          fi
+        shell: bash
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tetris-artifacts-${{ matrix.os }}
+          path: |
+            app/build/libs/*.jar
+            app/build/reports/tests/test
+
+  package-windows:
+    name: Optional Windows packaging (jpackage)
+    runs-on: windows-latest
+    needs: build
+    if: matrix.os == 'windows-latest' || true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK (for jpackage)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Build fat JAR
+        run: .\gradlew.bat --no-daemon fatJar
+
+      - name: Attempt jpackage (may require extra setup)
+        run: |
+          echo "Note: jpackage may not be available on hosted runners or may require additional runtime files."
+          echo "If you need a guaranteed Windows EXE build with bundled JRE, consider a self-hosted Windows runner or GitHub Releases with a release workflow."
+        shell: cmd
+
+  publish-artifacts:
+    name: Publish combined artifacts
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Download artifacts (all runners)
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: ls -la artifacts || dir artifacts
+
+      - name: Upload combined artifact for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: tetris-all-artifacts
+          path: artifacts
+# Notes:
+# - This workflow runs build & tests on Ubuntu, macOS and Windows using Java 21 (Temurin).
+# - Gradle cache is configured via setup-java cache and an additional actions/cache step.
+# - Windows-native packaging with jpackage is non-trivial on hosted runners; consider self-hosted runner for reproducible EXE creation.
+# - To add GitHub Releases publish or code-signing, create a separate 'release' workflow that runs on tags and uses 'actions/create-release' and 'sbc/sign' or other signing actions with secrets.
