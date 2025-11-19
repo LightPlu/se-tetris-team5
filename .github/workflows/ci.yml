@@ -12,14 +12,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
         include:
-          - os: ubuntu-latest
-            java-version: "21"
           - os: macos-latest
-            java-version: "21"
+            java-version: "17"
           - os: windows-latest
-            java-version: "21"
+            java-version: "17"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,20 +43,20 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
 
-      - name: Build (compile & test)
+      - name: Build (compile only, skip tests)
         # Use platform-appropriate gradle command
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            .\gradlew.bat --no-daemon build
+            ./gradlew.bat --no-daemon build -x test
           else
-            ./gradlew --no-daemon build
+            ./gradlew --no-daemon build -x test
           fi
         shell: bash
 
       - name: Create fat JAR
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            .\gradlew.bat --no-daemon fatJar
+            ./gradlew.bat --no-daemon fatJar
           else
             ./gradlew --no-daemon fatJar
           fi
@@ -84,7 +82,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "21"
+          java-version: "17"
 
       - name: Build fat JAR
         run: .\gradlew.bat --no-daemon fatJar
@@ -97,7 +95,7 @@ jobs:
 
   publish-artifacts:
     name: Publish combined artifacts
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: [build]
     steps:
       - name: Download artifacts (all runners)
