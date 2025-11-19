@@ -299,7 +299,16 @@ public class p2p extends JPanel {
     clientStatusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
     panel.add(clientStatusLabel);
     
-    panel.add(Box.createVerticalStrut(30));
+    panel.add(Box.createVerticalStrut(20));
+    
+    // 연결 테스트 버튼
+    JButton testButton = createStyledButton("🔍 연결 테스트", new Color(100, 180, 255));
+    testButton.setMaximumSize(new Dimension(200, 35));
+    testButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    testButton.addActionListener(e -> testConnection());
+    panel.add(testButton);
+    
+    panel.add(Box.createVerticalStrut(20));
     
     // 버튼
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
@@ -494,6 +503,7 @@ public class p2p extends JPanel {
       server.setOnClientConnected(() -> {
         SwingUtilities.invokeLater(() -> {
           isConnected = true;
+          serverStatusLabel.setText("✅ 클라이언트 연결됨!");
           showWaitingPanel();
           setupNetworkHandlers(server.getNetworkManager());
         });
@@ -506,14 +516,48 @@ public class p2p extends JPanel {
       });
       
       server.start();
-      serverStatusLabel.setText("클라이언트 연결 대기 중...");
+      
+      // 서버 시작 성공 메시지
+      String localIP = P2PServer.getLocalIPAddress();
+      serverStatusLabel.setText("✅ 대기 중... (IP: " + localIP + ")");
       serverCancelButton.setEnabled(true);
       
+      // 연결 가이드 표시
+      showServerGuide(localIP);
+      
     } catch (IOException e) {
-      serverStatusLabel.setText("서버 시작 실패: " + e.getMessage());
+      serverStatusLabel.setText("❌ 서버 시작 실패");
       serverStartButton.setEnabled(true);
-      JOptionPane.showMessageDialog(this, "서버를 시작할 수 없습니다:\n" + e.getMessage(), "오류", JOptionPane.ERROR_MESSAGE);
+      
+      String errorMsg = "서버를 시작할 수 없습니다.\n\n";
+      if (e.getMessage().contains("Address already in use")) {
+        errorMsg += "포트 " + DEFAULT_PORT + "가 이미 사용 중입니다.\n";
+        errorMsg += "다른 프로그램을 종료하거나 잠시 후 다시 시도하세요.";
+      } else {
+        errorMsg += "오류: " + e.getMessage();
+      }
+      
+      JOptionPane.showMessageDialog(this, errorMsg, "서버 시작 오류", JOptionPane.ERROR_MESSAGE);
     }
+  }
+  
+  /**
+   * 서버 연결 가이드 표시
+   */
+  private void showServerGuide(String ip) {
+    String guide = String.format(
+      "🌐 서버가 시작되었습니다!\n\n" +
+      "📍 서버 IP 주소: %s\n" +
+      "📍 포트: %d\n\n" +
+      "✅ 클라이언트(상대방)가 접속할 수 있도록:\n" +
+      "   1. 위 IP 주소를 상대방에게 알려주세요\n" +
+      "   2. 상대방이 '클라이언트' 모드를 선택\n" +
+      "   3. 상대방이 IP 주소 입력 후 '연결' 클릭\n\n" +
+      "⚠️ 주의: 같은 WiFi에 연결되어 있어야 합니다!",
+      ip, DEFAULT_PORT
+    );
+    
+    JOptionPane.showMessageDialog(this, guide, "서버 시작 완료", JOptionPane.INFORMATION_MESSAGE);
   }
 
   private void cancelServer() {
@@ -561,7 +605,10 @@ public class p2p extends JPanel {
     } catch (IOException e) {
       clientStatusLabel.setText("연결 실패: " + e.getMessage());
       clientConnectButton.setEnabled(true);
-      JOptionPane.showMessageDialog(this, "서버에 연결할 수 없습니다:\n" + e.getMessage(), "오류", JOptionPane.ERROR_MESSAGE);
+      
+      // 자세한 에러 메시지 생성
+      String errorDetails = getDetailedErrorMessage(e, serverIP);
+      JOptionPane.showMessageDialog(this, errorDetails, "연결 오류", JOptionPane.ERROR_MESSAGE);
     }
   }
 
@@ -571,6 +618,112 @@ public class p2p extends JPanel {
       client = null;
     }
     showModeSelectionPanel();
+  }
+  
+  /**
+   * 연결 테스트 (실제 연결 전 진단)
+   */
+  private void testConnection() {
+    String serverIP = clientIPField.getText().trim();
+    
+    if (!RecentIPManager.isValidIP(serverIP)) {
+      clientStatusLabel.setText("잘못된 IP 주소 형식입니다");
+      JOptionPane.showMessageDialog(this, "올바른 IP 주소를 입력하세요.\n예: 192.168.0.1", "오류", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+    
+    clientStatusLabel.setText("테스트 중...");
+    clientConnectButton.setEnabled(false);
+    
+    // 백그라운드에서 테스트 수행
+    new Thread(() -> {
+      StringBuilder result = new StringBuilder();
+      result.append("🔍 연결 테스트 결과\n\n");
+      result.append("대상 IP: ").append(serverIP).append("\n");
+      result.append("포트: ").append(DEFAULT_PORT).append("\n\n");
+      
+      boolean allPassed = true;
+      
+      // 1. DNS/IP 확인
+      result.append("1️⃣ IP 주소 확인... ");
+      try {
+        java.net.InetAddress addr = java.net.InetAddress.getByName(serverIP);
+        result.append("✅ 통과\n");
+        result.append("   해석된 주소: ").append(addr.getHostAddress()).append("\n\n");
+      } catch (Exception e) {
+        result.append("❌ 실패\n");
+        result.append("   오류: ").append(e.getMessage()).append("\n\n");
+        allPassed = false;
+      }
+      
+      // 2. Ping 테스트
+      result.append("2️⃣ 호스트 도달 가능 여부... ");
+      try {
+        java.net.InetAddress addr = java.net.InetAddress.getByName(serverIP);
+        boolean reachable = addr.isReachable(3000); // 3초 타임아웃
+        if (reachable) {
+          result.append("✅ 통과\n");
+          result.append("   호스트 응답 확인됨\n\n");
+        } else {
+          result.append("⚠️ 경고\n");
+          result.append("   호스트가 응답하지 않음 (방화벽일 수 있음)\n\n");
+        }
+      } catch (Exception e) {
+        result.append("❌ 실패\n");
+        result.append("   오류: ").append(e.getMessage()).append("\n\n");
+        allPassed = false;
+      }
+      
+      // 3. 포트 연결 테스트
+      result.append("3️⃣ 포트 ").append(DEFAULT_PORT).append(" 연결 테스트... ");
+      try {
+        java.net.Socket testSocket = new java.net.Socket();
+        testSocket.connect(new java.net.InetSocketAddress(serverIP, DEFAULT_PORT), 5000);
+        testSocket.close();
+        result.append("✅ 통과\n");
+        result.append("   포트 연결 성공! 서버가 실행 중입니다.\n\n");
+      } catch (java.net.ConnectException e) {
+        result.append("❌ 실패\n");
+        result.append("   연결 거부됨. 서버가 시작되지 않았을 수 있습니다.\n\n");
+        allPassed = false;
+      } catch (java.net.SocketTimeoutException e) {
+        result.append("❌ 실패\n");
+        result.append("   연결 시간 초과. 방화벽을 확인하세요.\n\n");
+        allPassed = false;
+      } catch (Exception e) {
+        result.append("❌ 실패\n");
+        result.append("   오류: ").append(e.getMessage()).append("\n\n");
+        allPassed = false;
+      }
+      
+      // 결과 요약
+      result.append("━━━━━━━━━━━━━━━━━━━━\n");
+      if (allPassed) {
+        result.append("✅ 모든 테스트 통과!\n");
+        result.append("'연결' 버튼을 눌러 게임을 시작하세요.");
+      } else {
+        result.append("⚠️ 일부 테스트 실패\n\n");
+        result.append("해결 방법:\n");
+        result.append("• 서버가 실행 중인지 확인\n");
+        result.append("• 양쪽 PC가 같은 WiFi에 연결되어 있는지 확인\n");
+        result.append("• 방화벽 설정 확인\n");
+        result.append("• IP 주소가 정확한지 다시 확인");
+      }
+      
+      final String finalResult = result.toString();
+      final boolean finalPassed = allPassed;
+      
+      SwingUtilities.invokeLater(() -> {
+        clientStatusLabel.setText(finalPassed ? "✅ 테스트 통과" : "⚠️ 테스트 실패");
+        clientConnectButton.setEnabled(true);
+        JOptionPane.showMessageDialog(
+          this, 
+          finalResult, 
+          "연결 테스트 결과", 
+          finalPassed ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
+        );
+      });
+    }).start();
   }
 
   // === 네트워크 핸들러 설정 ===
@@ -737,6 +890,74 @@ public class p2p extends JPanel {
   }
 
   // === 정리 ===
+  
+  /**
+   * 자세한 에러 메시지 생성
+   */
+  private String getDetailedErrorMessage(IOException e, String serverIP) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("서버에 연결할 수 없습니다.\n\n");
+    
+    String errorMsg = e.getMessage().toLowerCase();
+    
+    // 에러 타입별 상세 설명
+    if (errorMsg.contains("host is down") || errorMsg.contains("no route to host")) {
+      sb.append("🔴 문제: 서버를 찾을 수 없습니다\n\n");
+      sb.append("가능한 원인:\n");
+      sb.append("1. 서버가 실행되지 않음\n");
+      sb.append("   → 상대방 PC에서 서버를 시작했는지 확인\n\n");
+      sb.append("2. IP 주소가 잘못됨\n");
+      sb.append("   → 입력한 IP: ").append(serverIP).append("\n");
+      sb.append("   → 서버 화면에 표시된 IP와 일치하는지 확인\n\n");
+      sb.append("3. 다른 네트워크에 연결됨\n");
+      sb.append("   → 양쪽 PC가 같은 WiFi/공유기에 연결되어야 함\n\n");
+      sb.append("4. 방화벽이 연결을 차단\n");
+      sb.append("   → 방화벽 설정에서 포트 ").append(DEFAULT_PORT).append(" 허용\n");
+      
+    } else if (errorMsg.contains("connection refused")) {
+      sb.append("🔴 문제: 서버가 연결을 거부했습니다\n\n");
+      sb.append("가능한 원인:\n");
+      sb.append("1. 서버가 아직 시작되지 않음\n");
+      sb.append("   → 상대방이 '서버 시작' 버튼을 눌렀는지 확인\n\n");
+      sb.append("2. 포트가 이미 사용 중\n");
+      sb.append("   → 서버를 다시 시작해보세요\n\n");
+      sb.append("3. 이미 다른 클라이언트가 접속 중\n");
+      sb.append("   → 서버는 한 번에 한 명만 접속 가능\n");
+      
+    } else if (errorMsg.contains("timeout") || errorMsg.contains("timed out")) {
+      sb.append("🔴 문제: 연결 시간 초과\n\n");
+      sb.append("가능한 원인:\n");
+      sb.append("1. 네트워크가 너무 느림\n");
+      sb.append("   → 인터넷 연결 상태 확인\n\n");
+      sb.append("2. 서버가 응답하지 않음\n");
+      sb.append("   → 서버 프로그램이 정상 작동 중인지 확인\n\n");
+      sb.append("3. 방화벽이 패킷을 차단\n");
+      sb.append("   → 잠시 방화벽을 끄고 시도해보세요\n");
+      
+    } else if (errorMsg.contains("network is unreachable")) {
+      sb.append("🔴 문제: 네트워크에 연결할 수 없습니다\n\n");
+      sb.append("가능한 원인:\n");
+      sb.append("1. WiFi/이더넷이 연결되지 않음\n");
+      sb.append("   → 네트워크 연결 상태 확인\n\n");
+      sb.append("2. 라우터 문제\n");
+      sb.append("   → 공유기를 재시작해보세요\n\n");
+      sb.append("3. 잘못된 IP 범위\n");
+      sb.append("   → 같은 네트워크(192.168.x.x)인지 확인\n");
+      
+    } else {
+      sb.append("🔴 알 수 없는 오류가 발생했습니다\n\n");
+      sb.append("오류 메시지: ").append(e.getMessage()).append("\n\n");
+      sb.append("일반적인 해결 방법:\n");
+      sb.append("1. 양쪽 PC가 같은 WiFi에 연결되어 있는지 확인\n");
+      sb.append("2. 서버가 먼저 시작되었는지 확인\n");
+      sb.append("3. IP 주소가 정확한지 확인\n");
+      sb.append("4. 방화벽을 일시적으로 끄고 시도\n");
+    }
+    
+    sb.append("\n💡 팁: 같은 WiFi에 연결된 경우에만 작동합니다!");
+    
+    return sb.toString();
+  }
   
   private void cleanup() {
     stopLatencyUpdateTimer();

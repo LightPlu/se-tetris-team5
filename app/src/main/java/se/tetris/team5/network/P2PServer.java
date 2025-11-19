@@ -99,16 +99,20 @@ public class P2PServer {
 
   /**
    * 로컬 IP 주소 가져오기 (클라이언트에게 제공)
+   * 우선순위: 192.168.x.x > 10.x.x.x > 172.16-31.x.x > 기타
    */
   public static String getLocalIPAddress() {
     try {
+      String bestIP = null;
+      int bestPriority = 0;
+      
       // 네트워크 인터페이스 순회하여 활성 IP 찾기
       java.util.Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
       while (interfaces.hasMoreElements()) {
         NetworkInterface iface = interfaces.nextElement();
         
-        // 루프백, 비활성 인터페이스 제외
-        if (iface.isLoopback() || !iface.isUp()) {
+        // 루프백, 비활성, 가상 인터페이스 제외
+        if (iface.isLoopback() || !iface.isUp() || iface.isVirtual()) {
           continue;
         }
         
@@ -118,16 +122,69 @@ public class P2PServer {
           
           // IPv4만 (IPv6 제외)
           if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-            return addr.getHostAddress();
+            String ip = addr.getHostAddress();
+            int priority = getIPPriority(ip);
+            
+            System.out.println("[P2PServer] Found IP: " + ip + 
+                             " on " + iface.getDisplayName() + 
+                             " (priority: " + priority + ")");
+            
+            if (priority > bestPriority) {
+              bestPriority = priority;
+              bestIP = ip;
+            }
           }
         }
       }
+      
+      if (bestIP != null) {
+        System.out.println("[P2PServer] Selected IP: " + bestIP);
+        return bestIP;
+      }
+      
     } catch (SocketException e) {
       System.err.println("[P2PServer] Error getting IP address: " + e.getMessage());
     }
     
     // 실패 시 루프백 반환
+    System.err.println("[P2PServer] No suitable IP found, returning loopback");
     return "127.0.0.1";
+  }
+  
+  /**
+   * IP 주소의 우선순위 계산
+   * 높을수록 좋음
+   */
+  private static int getIPPriority(String ip) {
+    // 192.168.x.x (가정용 WiFi) - 최우선
+    if (ip.startsWith("192.168.")) {
+      return 100;
+    }
+    
+    // 10.x.x.x (일부 기업/학교 네트워크)
+    if (ip.startsWith("10.")) {
+      return 90;
+    }
+    
+    // 172.16.x.x ~ 172.31.x.x (일부 기업 네트워크)
+    if (ip.startsWith("172.")) {
+      try {
+        int second = Integer.parseInt(ip.split("\\.")[1]);
+        if (second >= 16 && second <= 31) {
+          return 80;
+        }
+      } catch (Exception e) {
+        // 파싱 실패 시 무시
+      }
+    }
+    
+    // 169.254.x.x (APIPA, 자동 할당) - 낮은 우선순위
+    if (ip.startsWith("169.254.")) {
+      return 10;
+    }
+    
+    // 기타 (공인 IP 등) - 중간 우선순위
+    return 50;
   }
 
   // === Getters ===

@@ -30,7 +30,7 @@ public class NetworkManager {
   private Runnable onDisconnected;
   
   // 타임아웃 설정
-  private static final int CONNECTION_TIMEOUT_MS = 10000; // 10초
+  private static final int CONNECTION_TIMEOUT_MS = 15000; // 15초 (네트워크가 느릴 수 있음)
   private static final int SOCKET_TIMEOUT_MS = 5000;      // 5초
   private static final int PING_INTERVAL_MS = 1000;       // 1초마다 핑
   private static final int MAX_NO_RESPONSE_MS = 5000;     // 5초 동안 응답 없으면 끊김
@@ -44,29 +44,57 @@ public class NetworkManager {
    * 서버로 연결 (클라이언트 모드)
    */
   public void connectToServer(String host, int port) throws IOException {
-    System.out.println("[NetworkManager] Connecting to " + host + ":" + port);
-    socket = new Socket();
-    socket.connect(new InetSocketAddress(host, port), CONNECTION_TIMEOUT_MS);
-    socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-    initStreams();
-    connected = true;
-    running = true;
+    System.out.println("[NetworkManager] Attempting connection to " + host + ":" + port);
+    System.out.println("[NetworkManager] Connection timeout: " + CONNECTION_TIMEOUT_MS + "ms");
     
-    // 연결 성공 콜백
-    if (onConnected != null) {
-      executor.submit(onConnected);
+    try {
+      socket = new Socket();
+      
+      // 연결 시도 전 호스트 도달 가능 여부 확인
+      System.out.println("[NetworkManager] Testing host reachability...");
+      InetAddress addr = InetAddress.getByName(host);
+      System.out.println("[NetworkManager] Host resolved: " + addr.getHostAddress());
+      
+      // 실제 연결 시도
+      System.out.println("[NetworkManager] Connecting to socket...");
+      socket.connect(new InetSocketAddress(host, port), CONNECTION_TIMEOUT_MS);
+      
+      System.out.println("[NetworkManager] Socket connected successfully");
+      socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+      
+      initStreams();
+      connected = true;
+      running = true;
+      
+      // 연결 성공 콜백
+      if (onConnected != null) {
+        executor.submit(onConnected);
+      }
+      
+      // 수신 스레드 시작
+      startReceiving();
+      
+      // 핑 스레드 시작
+      startPingThread();
+      
+      // 연결 감시 스레드 시작
+      startConnectionMonitor();
+      
+      System.out.println("[NetworkManager] Connection established and threads started");
+      
+    } catch (java.net.UnknownHostException e) {
+      System.err.println("[NetworkManager] Unknown host: " + host);
+      throw new IOException("호스트를 찾을 수 없습니다: " + host, e);
+    } catch (java.net.ConnectException e) {
+      System.err.println("[NetworkManager] Connection refused: " + e.getMessage());
+      throw new IOException("연결이 거부되었습니다. 서버가 실행 중인지 확인하세요.", e);
+    } catch (java.net.SocketTimeoutException e) {
+      System.err.println("[NetworkManager] Connection timeout after " + CONNECTION_TIMEOUT_MS + "ms");
+      throw new IOException("연결 시간이 초과되었습니다. 네트워크 상태를 확인하세요.", e);
+    } catch (IOException e) {
+      System.err.println("[NetworkManager] Connection failed: " + e.getMessage());
+      throw e;
     }
-    
-    // 수신 스레드 시작
-    startReceiving();
-    
-    // 핑 스레드 시작
-    startPingThread();
-    
-    // 연결 감시 스레드 시작
-    startConnectionMonitor();
-    
-    System.out.println("[NetworkManager] Connected to server");
   }
 
   /**
