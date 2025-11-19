@@ -31,9 +31,9 @@ public class NetworkManager {
   
   // 타임아웃 설정
   private static final int CONNECTION_TIMEOUT_MS = 15000; // 15초 (네트워크가 느릴 수 있음)
-  private static final int SOCKET_TIMEOUT_MS = 5000;      // 5초
-  private static final int PING_INTERVAL_MS = 1000;       // 1초마다 핑
-  private static final int MAX_NO_RESPONSE_MS = 5000;     // 5초 동안 응답 없으면 끊김
+  private static final int SOCKET_TIMEOUT_MS = 3000;      // 3초 (읽기 타임아웃)
+  private static final int PING_INTERVAL_MS = 2000;       // 2초마다 핑
+  private static final int MAX_NO_RESPONSE_MS = 30000;    // 30초 동안 응답 없으면 끊김 (충분히 길게)
 
   public NetworkManager() {
     this.executor = Executors.newFixedThreadPool(3);
@@ -167,16 +167,19 @@ public class NetworkManager {
       while (running && connected) {
         try {
           GameStateMessage message = (GameStateMessage) in.readObject();
-          lastReceivedTime = System.currentTimeMillis();
+          long currentTime = System.currentTimeMillis();
+          lastReceivedTime = currentTime;
           
           // 핑/퐁 처리
           if (message.getType() == GameStateMessage.MessageType.PING) {
+            System.out.println("[NetworkManager] Received PING, sending PONG");
             sendPong();
           } else if (message.getType() == GameStateMessage.MessageType.PONG) {
-            latency = message.getLatency();
-            // System.out.println("[NetworkManager] Latency: " + latency + "ms");
+            latency = currentTime - lastPingTime;
+            System.out.println("[NetworkManager] Received PONG, latency: " + latency + "ms");
           } else {
             // 일반 메시지 처리
+            System.out.println("[NetworkManager] Received: " + message.getType());
             if (messageHandler != null) {
               messageHandler.accept(message);
             }
@@ -205,7 +208,10 @@ public class NetworkManager {
       while (running && connected) {
         try {
           Thread.sleep(PING_INTERVAL_MS);
-          sendPing();
+          if (connected) {
+            System.out.println("[NetworkManager] Sending PING...");
+            sendPing();
+          }
         } catch (InterruptedException e) {
           break;
         }
@@ -219,15 +225,17 @@ public class NetworkManager {
    */
   private void startConnectionMonitor() {
     executor.submit(() -> {
-      System.out.println("[NetworkManager] Connection monitor started");
+      System.out.println("[NetworkManager] Connection monitor started (timeout: " + MAX_NO_RESPONSE_MS + "ms)");
       while (running && connected) {
         try {
-          Thread.sleep(1000);
+          Thread.sleep(3000); // 3초마다 체크
           
           // 일정 시간 동안 응답 없으면 끊김으로 판단
           long timeSinceLastReceived = System.currentTimeMillis() - lastReceivedTime;
+          System.out.println("[NetworkManager] Monitor check - time since last message: " + timeSinceLastReceived + "ms");
+          
           if (timeSinceLastReceived > MAX_NO_RESPONSE_MS) {
-            System.err.println("[NetworkManager] No response for " + timeSinceLastReceived + "ms. Connection lost.");
+            System.err.println("[NetworkManager] No response for " + timeSinceLastReceived + "ms (max: " + MAX_NO_RESPONSE_MS + "ms). Connection lost.");
             handleDisconnect();
             break;
           }
