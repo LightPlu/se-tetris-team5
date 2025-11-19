@@ -132,8 +132,9 @@ public class BoardManager {
    * 블록을 보드에 고정합니다 (고정된 블록)
    * 
    * @param removedItems 이 리스트에 삭제로 인해 제거된 아이템들을 추가합니다 (null 허용)
+   * @return 줄삭제 아이템으로 지워진 블럭 수 (점수 계산에 사용)
    */
-  public void fixBlock(Block block, int x, int y, java.util.List<se.tetris.team5.items.Item> removedItems) {
+  public int fixBlock(Block block, int x, int y, java.util.List<se.tetris.team5.items.Item> removedItems) {
     // 무게추 블록 특수 처리: WBlock인 경우, 해당 블록이 차지하는 열들의 고정 블록들을 모두 제거
     // 그리고 블록을 가장 아래에 고정시킨다.
     if (block instanceof se.tetris.team5.blocks.WBlock) {
@@ -175,7 +176,7 @@ public class BoardManager {
         }
       }
 
-      return; // 특수 처리 후 종료
+      return 0; // 특수 처리 후 종료 (줄삭제 아이템 없음)
     }
 
     if (block instanceof se.tetris.team5.blocks.DotBlock) {
@@ -199,21 +200,22 @@ public class BoardManager {
         }
       }
 
-      // 블록의 각 칸 위치에서 폭발 실행
+      // 블록의 각 칸 위치에서 폭발 실행하고 제거된 블럭 수 카운트
+      int totalExplodedBlocks = 0;
       for (int i = 0; i < block.width(); i++) {
         for (int j = 0; j < block.height(); j++) {
           if (block.getShape(i, j) == 1) {
             int centerX = x + i;
             int centerY = y + j;
 
-            // 각 칸을 중심으로 3x3 범위 폭발
-            explodeArea(centerX, centerY);
+            // 각 칸을 중심으로 3x3 범위 폭발하고 제거된 블럭 수 합산
+            totalExplodedBlocks += explodeArea(centerX, centerY);
           }
         }
       }
 
-      System.out.println("[폭탄 블록] 폭발 완료! 폭탄 블록은 고정되지 않음");
-      return; // 폭탄 블록 자체는 고정하지 않고 종료
+      System.out.println("[폭탄 블록] 폭발 완료! 총 " + totalExplodedBlocks + "개 블록 제거됨");
+      return totalExplodedBlocks; // 폭발로 제거된 블럭 수 반환
     }
 
     // 기본 고정 처리 (기존 동작)
@@ -233,11 +235,18 @@ public class BoardManager {
       }
     }
     // 줄삭제 아이템이 있는 줄을 즉시 삭제 (가득 차지 않아도)
+    int removedBlockCount = 0; // 줄삭제로 지워진 블럭 수
     if (!lineClearRows.isEmpty()) {
       // 내림차순 정렬(아래줄부터 삭제해야 인덱스 꼬임 방지)
       java.util.List<Integer> sortedRows = new java.util.ArrayList<>(lineClearRows);
       sortedRows.sort(java.util.Collections.reverseOrder());
       for (int row : sortedRows) {
+        // 줄에서 지워질 블럭 수 카운트 (고정된 블럭만)
+        for (int col = 0; col < WIDTH; col++) {
+          if (board[row][col] == 1) {
+            removedBlockCount++;
+          }
+        }
         // 수집: 삭제되는 줄의 아이템들을 removedItems에 추가
         if (removedItems != null) {
           for (int col = 0; col < WIDTH; col++) {
@@ -262,6 +271,7 @@ public class BoardManager {
         }
       }
     }
+    return removedBlockCount; // 줄삭제 아이템으로 지워진 블럭 수 반환
   }
 
   /**

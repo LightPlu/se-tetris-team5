@@ -135,7 +135,11 @@ public class GameEngine {
     } else {
       boardManager.placeBlock(currentBlock, x, y);
       java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
-      boardManager.fixBlock(currentBlock, x, y, removedItems);
+      int lineClearRemovedBlocks = boardManager.fixBlock(currentBlock, x, y, removedItems);
+      // 줄삭제 아이템으로 지워진 블럭 수만큼 점수 추가 (30점/블럭)
+      if (lineClearRemovedBlocks > 0) {
+        gameScoring.addPoints(applyDoubleScore(lineClearRemovedBlocks * 30));
+      }
       int clearedLines = boardManager.clearLines(removedItems);
       // capture cleared rows for UI animation and notify listeners before we continue
       try {
@@ -240,7 +244,11 @@ public class GameEngine {
 
     boardManager.placeBlock(currentBlock, x, y);
     java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
-    boardManager.fixBlock(currentBlock, x, y, removedItems);
+    int lineClearRemovedBlocks = boardManager.fixBlock(currentBlock, x, y, removedItems);
+    // 줄삭제 아이템으로 지워진 블럭 수만큼 점수 추가 (30점/블럭)
+    if (lineClearRemovedBlocks > 0) {
+      gameScoring.addPoints(applyDoubleScore(lineClearRemovedBlocks * 30));
+    }
     int clearedLines = boardManager.clearLines(removedItems);
     // capture cleared rows for UI animation and notify listeners before we continue
     try {
