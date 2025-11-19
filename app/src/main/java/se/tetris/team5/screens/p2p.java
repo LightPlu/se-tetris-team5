@@ -50,7 +50,10 @@ public class p2p extends JPanel {
   private JLabel waitingMessageLabel;
   private JLabel connectionInfoLabel;
   private JLabel latencyLabel;
+  private JLabel myReadyStatusLabel;      // 내 준비 상태
+  private JLabel opponentReadyStatusLabel; // 상대방 준비 상태
   private JButton readyButton;
+  private JButton startGameButton;        // 게임 시작 버튼 (양측 준비 완료 시)
   private JButton disconnectButton;
   
   // 게임 모드 선택 UI (서버만)
@@ -394,12 +397,48 @@ public class p2p extends JPanel {
     
     panel.add(Box.createVerticalStrut(30));
     
+    // === 준비 상태 표시 ===
+    JPanel readyStatusPanel = new JPanel();
+    readyStatusPanel.setLayout(new BoxLayout(readyStatusPanel, BoxLayout.Y_AXIS));
+    readyStatusPanel.setOpaque(false);
+    readyStatusPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    
+    // 내 준비 상태
+    myReadyStatusLabel = new JLabel("내 상태: ❌ 준비 안됨", SwingConstants.CENTER);
+    myReadyStatusLabel.setFont(createKoreanFont(Font.BOLD, 16));
+    myReadyStatusLabel.setForeground(new Color(255, 200, 100));
+    myReadyStatusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    readyStatusPanel.add(myReadyStatusLabel);
+    
+    readyStatusPanel.add(Box.createVerticalStrut(10));
+    
+    // 상대방 준비 상태
+    opponentReadyStatusLabel = new JLabel("상대방: ❌ 준비 안됨", SwingConstants.CENTER);
+    opponentReadyStatusLabel.setFont(createKoreanFont(Font.BOLD, 16));
+    opponentReadyStatusLabel.setForeground(new Color(150, 150, 150));
+    opponentReadyStatusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    readyStatusPanel.add(opponentReadyStatusLabel);
+    
+    panel.add(readyStatusPanel);
+    panel.add(Box.createVerticalStrut(30));
+    
     // 준비 버튼
     readyButton = createStyledButton("준비 완료", new Color(100, 255, 100));
     readyButton.setMaximumSize(new Dimension(200, 50));
     readyButton.setAlignmentX(Component.CENTER_ALIGNMENT);
     readyButton.addActionListener(e -> toggleReady());
     panel.add(readyButton);
+    
+    panel.add(Box.createVerticalStrut(15));
+    
+    // 게임 시작 버튼 (양측 준비 완료 시에만 표시)
+    startGameButton = createStyledButton("🎮 게임 시작!", new Color(255, 150, 0));
+    startGameButton.setMaximumSize(new Dimension(220, 55));
+    startGameButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    startGameButton.setFont(createKoreanFont(Font.BOLD, 18));
+    startGameButton.addActionListener(e -> startGame());
+    startGameButton.setVisible(false); // 기본적으로 숨김
+    panel.add(startGameButton);
     
     panel.add(Box.createVerticalStrut(20));
     
@@ -751,6 +790,7 @@ public class p2p extends JPanel {
       case READY:
         // 상대방 준비 완료
         opponentReady = true;
+        updateReadyStatus(); // UI 업데이트
         checkStartGame();
         break;
         
@@ -786,6 +826,9 @@ public class p2p extends JPanel {
   private void toggleReady() {
     isReady = !isReady;
     
+    // UI 업데이트
+    updateReadyStatus();
+    
     if (isReady) {
       readyButton.setText("준비 취소");
       readyButton.setBackground(new Color(255, 150, 100));
@@ -797,27 +840,66 @@ public class p2p extends JPanel {
       } else {
         client.getNetworkManager().sendMessage(msg);
       }
-      
-      checkStartGame();
     } else {
       readyButton.setText("준비 완료");
       readyButton.setBackground(new Color(100, 255, 100));
+      
+      // 준비 취소 메시지 전송 (향후 구현)
+    }
+    
+    checkStartGame();
+  }
+  
+  /**
+   * 준비 상태 UI 업데이트
+   */
+  private void updateReadyStatus() {
+    // 내 상태 업데이트
+    if (isReady) {
+      myReadyStatusLabel.setText("내 상태: ✅ 준비 완료!");
+      myReadyStatusLabel.setForeground(new Color(100, 255, 100));
+    } else {
+      myReadyStatusLabel.setText("내 상태: ❌ 준비 안됨");
+      myReadyStatusLabel.setForeground(new Color(255, 200, 100));
+    }
+    
+    // 상대방 상태 업데이트
+    if (opponentReady) {
+      opponentReadyStatusLabel.setText("상대방: ✅ 준비 완료!");
+      opponentReadyStatusLabel.setForeground(new Color(100, 255, 100));
+    } else {
+      opponentReadyStatusLabel.setText("상대방: ❌ 준비 안됨");
+      opponentReadyStatusLabel.setForeground(new Color(150, 150, 150));
     }
   }
 
   private void checkStartGame() {
     if (isReady && opponentReady) {
-      // 양측 준비 완료 → 게임 시작
-      GameStateMessage msg = new GameStateMessage(GameStateMessage.MessageType.GAME_START);
-      if (isServer) {
-        server.getNetworkManager().sendMessage(msg);
+      // 양측 준비 완료 → 게임 시작 버튼 표시
+      startGameButton.setVisible(true);
+      waitingMessageLabel.setText("🎮 양측 준비 완료!");
+      waitingMessageLabel.setForeground(new Color(255, 215, 0));
+    } else {
+      // 한쪽이라도 준비 안됨 → 게임 시작 버튼 숨김
+      startGameButton.setVisible(false);
+      if (isReady && !opponentReady) {
+        waitingMessageLabel.setText("⏳ 상대방 대기 중...");
+        waitingMessageLabel.setForeground(new Color(255, 200, 100));
+      } else {
+        waitingMessageLabel.setText("✅ 연결됨!");
+        waitingMessageLabel.setForeground(new Color(100, 255, 100));
       }
-      startGame();
     }
   }
 
   private void startGame() {
     stopLatencyUpdateTimer();
+    
+    // 양측에 게임 시작 메시지 전송 (서버만)
+    if (isServer) {
+      GameStateMessage msg = new GameStateMessage(GameStateMessage.MessageType.GAME_START);
+      server.getNetworkManager().sendMessage(msg);
+    }
     
     // P2P 게임 화면으로 전환
     System.out.println("[p2p] Starting P2P game with mode: " + selectedGameMode);
@@ -873,6 +955,19 @@ public class p2p extends JPanel {
       serverStatusLabel.setText("대기 중...");
       clientConnectButton.setEnabled(true);
       clientStatusLabel.setText("IP를 입력하고 연결하세요");
+      
+      // 준비 상태 초기화
+      if (myReadyStatusLabel != null) {
+        myReadyStatusLabel.setText("내 상태: ❌ 준비 안됨");
+        myReadyStatusLabel.setForeground(new Color(255, 200, 100));
+      }
+      if (opponentReadyStatusLabel != null) {
+        opponentReadyStatusLabel.setText("상대방: ❌ 준비 안됨");
+        opponentReadyStatusLabel.setForeground(new Color(150, 150, 150));
+      }
+      if (startGameButton != null) {
+        startGameButton.setVisible(false);
+      }
       
       showModeSelectionPanel();
     });
