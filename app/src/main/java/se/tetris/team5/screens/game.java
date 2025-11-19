@@ -349,7 +349,7 @@ public class game extends JPanel implements KeyListener {
       g2.dispose();
     }
     
-    /**
+    /*
      * Draw item indicator overlay on a block cell
      */
     private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int size, se.tetris.team5.items.Item item) {
