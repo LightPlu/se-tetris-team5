@@ -46,19 +46,21 @@ public class home extends JPanel implements KeyListener {
         "일반 모드",
         "아이템 모드",
         "대전 모드",
+        "P2P 대전",
         "스코어 보기", 
         "설정",
         "종료"
     };
     
     private String[] mainMenuIcons = {
-        "🎮", "💎", "⚔️", "🏆", "⚙️", "❌"
+        "🎮", "💎", "⚔️", "�", "�🏆", "⚙️", "❌"
     };
     
     private String[] mainMenuDescriptions = {
         "난이도를 선택하여 일반 테트리스를 플레이합니다",
         "아이템이 포함된 테트리스를 플레이합니다",
         "다른 플레이어와 1대1 대결을 펼칩니다",
+        "네트워크를 통해 다른 PC와 대전합니다",
         "역대 최고 기록들을 확인합니다",
         "게임 설정을 변경합니다",
         "게임을 종료합니다"
@@ -454,13 +456,16 @@ public class home extends JPanel implements KeyListener {
                 case 2: // 대전 모드
                     startBattleMode();
                     break;
-                case 3: // 스코어 보기
+                case 3: // P2P 대전
+                    startP2PMode();
+                    break;
+                case 4: // 스코어 보기
                     screenController.showScreen("score");
                     break;
-                case 4: // 설정
+                case 5: // 설정
                     screenController.showScreen("setting");
                     break;
-                case 5: // 종료
+                case 6: // 종료
                     showExitConfirmation();
                     break;
             }
@@ -563,6 +568,14 @@ public class home extends JPanel implements KeyListener {
         screenController.updateWindowSize();
         
         screenController.showScreen("game");
+    }
+    
+    /**
+     * P2P 대전 모드를 시작합니다
+     */
+    private void startP2PMode() {
+        System.out.println("[게임 시작] P2P 대전 모드");
+        screenController.showScreen("p2p");
     }
     
     /**

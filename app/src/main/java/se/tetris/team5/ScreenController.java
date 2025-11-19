@@ -10,6 +10,7 @@ import se.tetris.team5.screens.score;
 import se.tetris.team5.screens.setting;
 import se.tetris.team5.screens.game;
 import se.tetris.team5.screens.battle;
+import se.tetris.team5.screens.p2p;
 import se.tetris.team5.utils.setting.GameSettings;
 import se.tetris.team5.components.home.BGMManager;
 
@@ -23,6 +24,7 @@ public class ScreenController extends JFrame {
     private setting settingScreen;
     private game gameScreen;
     private battle battleScreen;
+    private p2p p2pScreen;
     
     // Loading screen components
     private JLabel loadingBackgroundLabel;
@@ -117,6 +119,7 @@ public class ScreenController extends JFrame {
         settingScreen = new setting(this);
         gameScreen = new game(this);
         battleScreen = new battle(this);
+        p2pScreen = new p2p(this);
     }
     
     public void showScreen(String screenName) {
@@ -202,6 +205,14 @@ public class ScreenController extends JFrame {
                 settingScreen.display(textPane);
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     textPane.requestFocusInWindow();
+                });
+                break;
+            case "p2p":
+                // P2P 대전 모드 화면
+                getContentPane().add(p2pScreen);
+                p2pScreen.onShow(); // 화면 초기화
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    p2pScreen.requestFocusInWindow();
                 });
                 break;
             default:
