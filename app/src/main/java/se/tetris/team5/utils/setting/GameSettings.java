@@ -70,6 +70,15 @@ public class GameSettings {
         saveSettings();
     }
     
+    /**
+     * 커스텀 창 크기를 설정합니다 (대전 모드 등에서 사용)
+     */
+    public void setCustomWindowSize(int width, int height) {
+        String customSize = width + "x" + height;
+        properties.setProperty("window.size", customSize);
+        // 대전 모드용 임시 크기는 저장하지 않음 (메모리에만)
+    }
+    
     public int getWindowWidth() {
         String size = getWindowSize();
         return Integer.parseInt(size.split("x")[0]);
