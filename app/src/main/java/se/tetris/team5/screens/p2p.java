@@ -23,6 +23,9 @@ public class p2p extends JPanel {
   private P2PClient client;
   private RecentIPManager ipManager;
   
+  // 네트워크 매니저 (게임 화면으로 전달용)
+  private NetworkManager currentNetworkManager;
+  
   // UI 컴포넌트
   private JPanel modeSelectionPanel;
   private JPanel serverPanel;
@@ -729,6 +732,9 @@ public class p2p extends JPanel {
   // === 네트워크 핸들러 설정 ===
   
   private void setupNetworkHandlers(NetworkManager networkManager) {
+    // NetworkManager 저장 (게임 화면으로 전달용)
+    this.currentNetworkManager = networkManager;
+    
     networkManager.setMessageHandler(message -> {
       SwingUtilities.invokeLater(() -> handleMessage(message));
     });
@@ -820,9 +826,29 @@ public class p2p extends JPanel {
     System.setProperty("tetris.p2p.mode", selectedGameMode);
     System.setProperty("tetris.p2p.isServer", String.valueOf(isServer));
     
-    // p2pGame 화면으로 전환 (아직 미구현)
-    // TODO: p2pGame 화면 구현 후 연결
-    JOptionPane.showMessageDialog(this, "게임 시작! (p2pGame 화면 구현 예정)", "알림", JOptionPane.INFORMATION_MESSAGE);
+    // p2pGame 화면 생성 및 시작
+    try {
+      p2pGame gameScreen = new p2pGame(screenController, currentNetworkManager, isServer);
+      
+      // ScreenController의 컨텐트 패널 교체
+      screenController.getContentPane().removeAll();
+      screenController.getContentPane().add(gameScreen);
+      screenController.revalidate();
+      screenController.repaint();
+      
+      // 게임 시작
+      gameScreen.startNewGame();
+      gameScreen.requestFocusInWindow();
+      
+      System.out.println("[p2p] P2P game screen launched successfully");
+    } catch (Exception e) {
+      System.err.println("[p2p] Failed to start P2P game: " + e.getMessage());
+      e.printStackTrace();
+      JOptionPane.showMessageDialog(this, 
+        "게임 시작 중 오류가 발생했습니다:\n" + e.getMessage(), 
+        "오류", 
+        JOptionPane.ERROR_MESSAGE);
+    }
   }
 
   // === 연결 해제 처리 ===

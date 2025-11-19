@@ -2,6 +2,7 @@ package se.tetris.team5.network;
 
 import java.io.Serializable;
 import java.awt.Color;
+import se.tetris.team5.blocks.Block;
 
 /**
  * P2P 게임 상태 동기화를 위한 메시지 클래스
@@ -24,6 +25,7 @@ public class GameStateMessage implements Serializable {
     GAME_START,           // 게임 시작
     
     // 게임 플레이 중
+    GAME_STATE,           // 전체 게임 상태 (보드 + 블록 + 점수)
     BLOCK_MOVE,           // 블록 이동 (좌우하)
     BLOCK_ROTATE,         // 블록 회전
     BLOCK_HARD_DROP,      // 하드 드롭
@@ -52,13 +54,21 @@ public class GameStateMessage implements Serializable {
   private int blockRotation;      // 블록 회전 상태 (0-3)
   
   // 보드 상태
-  private int[][] boardState;     // 보드 전체 상태
+  private int[][] board;          // 보드 전체 상태 (간단한 이름)
+  private int[][] boardState;     // 보드 전체 상태 (호환성)
   private int[][][] boardColors;  // 보드 색상 (RGB)
   private String[][] boardItems;  // 보드 아이템 정보
+  
+  // 블록 객체 (직렬화 가능한 형태로 전송)
+  private transient se.tetris.team5.blocks.Block currentBlock;
+  private transient se.tetris.team5.blocks.Block nextBlock;
+  private int currentBlockX;
+  private int currentBlockY;
   
   // 점수 정보
   private int score;
   private int level;
+  private int lines;              // linesCleared의 짧은 이름
   private int linesCleared;
   
   // 아이템 정보
@@ -176,6 +186,61 @@ public class GameStateMessage implements Serializable {
 
   public void setLinesCleared(int linesCleared) {
     this.linesCleared = linesCleared;
+    this.lines = linesCleared;
+  }
+
+  public int getLines() {
+    return lines != 0 ? lines : linesCleared;
+  }
+
+  public void setLines(int lines) {
+    this.lines = lines;
+    this.linesCleared = lines;
+  }
+
+  // Block 객체 getter/setter
+  public se.tetris.team5.blocks.Block getCurrentBlock() {
+    return currentBlock;
+  }
+
+  public void setCurrentBlock(se.tetris.team5.blocks.Block block) {
+    this.currentBlock = block;
+  }
+
+  public se.tetris.team5.blocks.Block getNextBlock() {
+    return nextBlock;
+  }
+
+  public void setNextBlock(se.tetris.team5.blocks.Block block) {
+    this.nextBlock = block;
+  }
+
+  public int getX() {
+    return currentBlockX != 0 ? currentBlockX : blockX;
+  }
+
+  public void setX(int x) {
+    this.currentBlockX = x;
+    this.blockX = x;
+  }
+
+  public int getY() {
+    return currentBlockY != 0 ? currentBlockY : blockY;
+  }
+
+  public void setY(int y) {
+    this.currentBlockY = y;
+    this.blockY = y;
+  }
+
+  // 보드 getter/setter (간단한 이름)
+  public int[][] getBoard() {
+    return board != null ? board : boardState;
+  }
+
+  public void setBoard(int[][] board) {
+    this.board = board;
+    this.boardState = board;
   }
 
   public String getItemType() {
@@ -253,5 +318,33 @@ public class GameStateMessage implements Serializable {
   public static Color arrayToColor(int[] rgb) {
     if (rgb == null || rgb.length < 3) return Color.BLACK;
     return new Color(rgb[0], rgb[1], rgb[2]);
+  }
+
+  /**
+   * Color[][] 를 int[][][] 로 변환
+   */
+  public static int[][][] colorArray2DToIntArray(Color[][] colors) {
+    if (colors == null) return null;
+    int[][][] result = new int[colors.length][colors[0].length][3];
+    for (int i = 0; i < colors.length; i++) {
+      for (int j = 0; j < colors[i].length; j++) {
+        result[i][j] = colorToArray(colors[i][j]);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * int[][][] 를 Color[][] 로 변환
+   */
+  public static Color[][] intArrayToColorArray2D(int[][][] intColors) {
+    if (intColors == null) return null;
+    Color[][] result = new Color[intColors.length][intColors[0].length];
+    for (int i = 0; i < intColors.length; i++) {
+      for (int j = 0; j < intColors[i].length; j++) {
+        result[i][j] = arrayToColor(intColors[i][j]);
+      }
+    }
+    return result;
   }
 }
