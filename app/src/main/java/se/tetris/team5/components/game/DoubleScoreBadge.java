@@ -23,7 +23,8 @@ public class DoubleScoreBadge extends JComponent {
   public DoubleScoreBadge() {
     setOpaque(false);
     // compact overall while allowing a larger ring inside
-    setPreferredSize(new Dimension(64, 28));
+    // 너비를 늘려서 "x2 20초" 텍스트가 들어갈 수 있도록 조정
+    setPreferredSize(new Dimension(100, 28));
     setToolTipText("Double score active");
   }
 
@@ -90,6 +91,19 @@ public class DoubleScoreBadge extends JComponent {
     int ty = (h + fm.getAscent()) / 2 - 2;
     g2.setColor(Color.WHITE);
     g2.drawString(text, tx, ty);
+    
+    // 남은 시간을 초 단위로 표시 (x2 오른쪽에)
+    if (remainingMillis > 0) {
+      int remainingSecs = (int) Math.ceil(remainingMillis / 1000.0);
+      String timeText = remainingSecs + "초";
+      Font timeFont = new Font("Segoe UI", Font.BOLD, Math.max(8, h / 3));
+      g2.setFont(timeFont);
+      FontMetrics timeFm = g2.getFontMetrics();
+      int timeTx = tx + fm.stringWidth(text) + 6;
+      int timeTy = (h + timeFm.getAscent()) / 2 - 2;
+      g2.setColor(new Color(255, 255, 255, 230));
+      g2.drawString(timeText, timeTx, timeTy);
+    }
 
     g2.dispose();
   }
