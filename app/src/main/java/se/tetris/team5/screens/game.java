@@ -55,6 +55,7 @@ public class game extends JPanel implements KeyListener {
   private JLabel gameModeLabel;
   private DoubleScoreBadge doubleScoreBadge;
   private javax.swing.JTextPane itemDescPane;
+  private JPanel itemDescWrapper; // 아이템 설명 패널 래퍼
 
   // 게임 엔진 (순수 게임 로직)
   private GameEngine gameEngine;
@@ -392,13 +393,14 @@ public class game extends JPanel implements KeyListener {
   rightPanel.add(javax.swing.Box.createVerticalStrut(8));
 
   // Item description panel (shows description when next block contains an item)
+  // 아이템 모드일 때만 표시 (가시성은 reset()에서 제어)
   itemDescPane = new javax.swing.JTextPane();
   itemDescPane.setEditable(false);
   itemDescPane.setOpaque(false);
   itemDescPane.setFont(createKoreanFont(Font.PLAIN, 13));
   itemDescPane.setForeground(new Color(220, 220, 220));
   itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
-  JPanel itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
+  itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
   itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
   rightPanel.add(itemDescWrapper);
@@ -1191,6 +1193,12 @@ public class game extends JPanel implements KeyListener {
       gameBoard.setShowTextOverlay(false);
     }
     isTimeStopped = false;
+
+    // 게임 모드에 따라 아이템 설명 패널 가시성 제어
+    String gameMode = System.getProperty("tetris.game.mode", "ITEM");
+    if (itemDescWrapper != null) {
+      itemDescWrapper.setVisible("ITEM".equals(gameMode));
+    }
 
     // GameEngine을 통해 게임 리셋
     gameEngine.resetGame();
