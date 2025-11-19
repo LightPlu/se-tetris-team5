@@ -30,13 +30,32 @@ public class P2PServer {
    */
   public void start() throws IOException {
     System.out.println("[P2PServer] Starting server on port " + port);
-    serverSocket = new ServerSocket(port);
+    
+    // 기존 ServerSocket이 남아있으면 정리
+    if (serverSocket != null && !serverSocket.isClosed()) {
+      System.out.println("[P2PServer] Closing existing ServerSocket...");
+      try {
+        serverSocket.close();
+      } catch (IOException e) {
+        System.err.println("[P2PServer] Error closing old socket: " + e.getMessage());
+      }
+    }
+    
+    // 새 ServerSocket 생성
+    serverSocket = new ServerSocket();
+    
+    // SO_REUSEADDR 옵션 설정 (포트 재사용 허용)
+    serverSocket.setReuseAddress(true);
+    
+    // 포트 바인딩
+    serverSocket.bind(new InetSocketAddress(port));
     serverSocket.setSoTimeout(0); // 무한 대기
+    
     running = true;
     
     executor.submit(this::acceptClient);
     
-    System.out.println("[P2PServer] Server started. Waiting for client...");
+    System.out.println("[P2PServer] Server started on port " + port + " (SO_REUSEADDR enabled)");
   }
 
   /**
@@ -81,20 +100,43 @@ public class P2PServer {
     System.out.println("[P2PServer] Stopping server...");
     running = false;
     
+    // NetworkManager 정리
     if (networkManager != null) {
-      networkManager.disconnect();
-    }
-    
-    try {
-      if (serverSocket != null) {
-        serverSocket.close();
+      try {
+        networkManager.disconnect();
+      } catch (Exception e) {
+        System.err.println("[P2PServer] Error disconnecting NetworkManager: " + e.getMessage());
       }
-    } catch (IOException e) {
-      System.err.println("[P2PServer] Error closing server socket: " + e.getMessage());
+      networkManager = null;
     }
     
-    executor.shutdownNow();
-    System.out.println("[P2PServer] Server stopped");
+    // ServerSocket 정리
+    if (serverSocket != null) {
+      try {
+        if (!serverSocket.isClosed()) {
+          serverSocket.close();
+          System.out.println("[P2PServer] ServerSocket closed");
+        }
+      } catch (IOException e) {
+        System.err.println("[P2PServer] Error closing server socket: " + e.getMessage());
+      }
+      serverSocket = null;
+    }
+    
+    // Executor 종료
+    if (executor != null && !executor.isShutdown()) {
+      executor.shutdownNow();
+      try {
+        if (!executor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+          System.err.println("[P2PServer] Executor did not terminate in time");
+        }
+      } catch (InterruptedException e) {
+        System.err.println("[P2PServer] Interrupted while waiting for executor termination");
+        Thread.currentThread().interrupt();
+      }
+    }
+    
+    System.out.println("[P2PServer] Server stopped and resources cleaned up");
   }
 
   /**

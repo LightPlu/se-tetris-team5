@@ -834,13 +834,22 @@ public class p2p extends JPanel {
     isReady = false;
     opponentReady = false;
     
-    JOptionPane.showMessageDialog(this, 
-      "연결이 끊어졌습니다.\nP2P 대전 모드 초기 화면으로 돌아갑니다.", 
-      "연결 끊김", 
-      JOptionPane.WARNING_MESSAGE);
-    
-    cleanup();
-    showModeSelectionPanel();
+    SwingUtilities.invokeLater(() -> {
+      JOptionPane.showMessageDialog(this, 
+        "연결이 끊어졌습니다.\nP2P 대전 모드 초기 화면으로 돌아갑니다.", 
+        "연결 끊김", 
+        JOptionPane.WARNING_MESSAGE);
+      
+      cleanup();
+      
+      // UI 상태 초기화
+      serverStartButton.setEnabled(true);
+      serverStatusLabel.setText("대기 중...");
+      clientConnectButton.setEnabled(true);
+      clientStatusLabel.setText("IP를 입력하고 연결하세요");
+      
+      showModeSelectionPanel();
+    });
   }
 
   // === 지연 업데이트 타이머 ===
@@ -944,6 +953,17 @@ public class p2p extends JPanel {
       sb.append("3. 잘못된 IP 범위\n");
       sb.append("   → 같은 네트워크(192.168.x.x)인지 확인\n");
       
+    } else if (errorMsg.contains("address already in use") || errorMsg.contains("bind")) {
+      sb.append("🔴 문제: 포트가 이미 사용 중입니다\n\n");
+      sb.append("해결 방법:\n");
+      sb.append("1. 이전 서버가 완전히 종료되지 않음\n");
+      sb.append("   → 프로그램을 완전히 종료하고 다시 시작\n\n");
+      sb.append("2. 다른 프로그램이 포트 사용 중\n");
+      sb.append("   → 다른 프로그램을 종료하거나\n");
+      sb.append("   → 1-2분 후 다시 시도\n\n");
+      sb.append("3. 시스템이 포트를 해제하지 않음\n");
+      sb.append("   → 잠시 기다렸다가 다시 시도\n");
+      
     } else {
       sb.append("🔴 알 수 없는 오류가 발생했습니다\n\n");
       sb.append("오류 메시지: ").append(e.getMessage()).append("\n\n");
@@ -962,19 +982,31 @@ public class p2p extends JPanel {
   private void cleanup() {
     stopLatencyUpdateTimer();
     
+    System.out.println("[p2p] Cleaning up resources...");
+    
     if (server != null) {
-      server.stop();
+      try {
+        server.stop();
+      } catch (Exception e) {
+        System.err.println("[p2p] Error stopping server: " + e.getMessage());
+      }
       server = null;
     }
     
     if (client != null) {
-      client.disconnect();
+      try {
+        client.disconnect();
+      } catch (Exception e) {
+        System.err.println("[p2p] Error disconnecting client: " + e.getMessage());
+      }
       client = null;
     }
     
     isConnected = false;
     isReady = false;
     opponentReady = false;
+    
+    System.out.println("[p2p] Cleanup completed");
   }
 
   /**

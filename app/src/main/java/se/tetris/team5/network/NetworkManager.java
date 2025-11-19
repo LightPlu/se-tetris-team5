@@ -279,10 +279,32 @@ public class NetworkManager {
    * 소켓 종료
    */
   private void closeSocket() {
+    System.out.println("[NetworkManager] Closing socket resources...");
+    
     try {
-      if (out != null) out.close();
-      if (in != null) in.close();
-      if (socket != null) socket.close();
+      if (out != null) {
+        out.close();
+        out = null;
+      }
+    } catch (IOException e) {
+      System.err.println("[NetworkManager] Error closing output stream: " + e.getMessage());
+    }
+    
+    try {
+      if (in != null) {
+        in.close();
+        in = null;
+      }
+    } catch (IOException e) {
+      System.err.println("[NetworkManager] Error closing input stream: " + e.getMessage());
+    }
+    
+    try {
+      if (socket != null && !socket.isClosed()) {
+        socket.close();
+        System.out.println("[NetworkManager] Socket closed");
+        socket = null;
+      }
     } catch (IOException e) {
       System.err.println("[NetworkManager] Error closing socket: " + e.getMessage());
     }
@@ -293,26 +315,47 @@ public class NetworkManager {
    */
   public void disconnect() {
     System.out.println("[NetworkManager] Disconnecting...");
+    
+    if (!running && !connected) {
+      System.out.println("[NetworkManager] Already disconnected");
+      return;
+    }
+    
     running = false;
     connected = false;
     
-    // DISCONNECT 메시지 전송
+    // DISCONNECT 메시지 전송 (최선의 노력)
     try {
-      if (out != null) {
+      if (out != null && socket != null && !socket.isClosed()) {
         GameStateMessage disconnectMsg = new GameStateMessage(GameStateMessage.MessageType.DISCONNECT);
         synchronized (out) {
           out.writeObject(disconnectMsg);
           out.flush();
         }
+        System.out.println("[NetworkManager] DISCONNECT message sent");
       }
     } catch (IOException e) {
       // 이미 끊긴 경우 무시
+      System.out.println("[NetworkManager] Could not send DISCONNECT message (connection already closed)");
     }
     
+    // 소켓 정리
     closeSocket();
-    executor.shutdownNow();
     
-    System.out.println("[NetworkManager] Disconnected");
+    // Executor 종료
+    if (executor != null && !executor.isShutdown()) {
+      executor.shutdownNow();
+      try {
+        if (!executor.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS)) {
+          System.err.println("[NetworkManager] Executor did not terminate in time");
+        }
+      } catch (InterruptedException e) {
+        System.err.println("[NetworkManager] Interrupted while waiting for executor termination");
+        Thread.currentThread().interrupt();
+      }
+    }
+    
+    System.out.println("[NetworkManager] Disconnected and cleaned up");
   }
 
   // === Getters ===
