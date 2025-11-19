@@ -49,7 +49,7 @@ jobs:
         # Use platform-appropriate gradle command
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            .\gradlew.bat --no-daemon build
+            ./gradlew.bat --no-daemon build
           else
             ./gradlew --no-daemon build
           fi
@@ -58,7 +58,7 @@ jobs:
       - name: Create fat JAR
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            .\gradlew.bat --no-daemon fatJar
+            ./gradlew.bat --no-daemon fatJar
           else
             ./gradlew --no-daemon fatJar
           fi
