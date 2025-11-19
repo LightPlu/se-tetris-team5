@@ -45,18 +45,20 @@ public class home extends JPanel implements KeyListener {
     private String[] mainMenuOptions = {
         "일반 모드",
         "아이템 모드",
+        "대전 모드",
         "스코어 보기", 
         "설정",
         "종료"
     };
     
     private String[] mainMenuIcons = {
-        "⚙️", "💎", "🏆", "⚙️", "❌"
+        "🎮", "💎", "⚔️", "🏆", "⚙️", "❌"
     };
     
     private String[] mainMenuDescriptions = {
         "난이도를 선택하여 일반 테트리스를 플레이합니다",
-        "아이템이 포함된 테트리스를 플레이합니다", 
+        "아이템이 포함된 테트리스를 플레이합니다",
+        "다른 플레이어와 1대1 대결을 펼칩니다",
         "역대 최고 기록들을 확인합니다",
         "게임 설정을 변경합니다",
         "게임을 종료합니다"
@@ -449,13 +451,16 @@ public class home extends JPanel implements KeyListener {
                 case 1: // 아이템 모드 (바로 시작)
                     startItemMode();
                     break;
-                case 2: // 스코어 보기
+                case 2: // 대전 모드
+                    startBattleMode();
+                    break;
+                case 3: // 스코어 보기
                     screenController.showScreen("score");
                     break;
-                case 3: // 설정
+                case 4: // 설정
                     screenController.showScreen("setting");
                     break;
-                case 4: // 종료
+                case 5: // 종료
                     showExitConfirmation();
                     break;
             }
@@ -530,6 +535,32 @@ public class home extends JPanel implements KeyListener {
         // 전역 변수로 게임 모드 저장 (game 화면에서 참조) 
         System.setProperty("tetris.game.mode", "ITEM");
         System.setProperty("tetris.game.difficulty", "NORMAL");
+        
+        screenController.showScreen("game");
+    }
+    
+    /**
+     * 대전 모드로 게임을 시작합니다
+     */
+    private void startBattleMode() {
+        System.out.println("[게임 시작] 대전 모드");
+        
+        // 전역 변수로 게임 모드 저장 (game 화면에서 참조)
+        System.setProperty("tetris.game.mode", "BATTLE");
+        System.setProperty("tetris.game.difficulty", "NORMAL");
+        
+        // 대전 모드는 창 크기를 가로로 2배 확장
+        GameSettings settings = GameSettings.getInstance();
+        // 화면 크기 변경 전에 원래 크기를 시스템 속성에 저장
+        String originalSize = settings.getWindowSize();
+        System.setProperty("tetris.battle.originalSize", originalSize);
+        
+        int originalWidth = settings.getWindowWidth();
+        int originalHeight = settings.getWindowHeight();
+        
+        // 가로를 2배로 확장 (보드 2개 표시)
+        settings.setCustomWindowSize(originalWidth * 2, originalHeight);
+        screenController.updateWindowSize();
         
         screenController.showScreen("game");
     }

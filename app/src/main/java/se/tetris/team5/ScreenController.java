@@ -9,6 +9,7 @@ import se.tetris.team5.screens.home;
 import se.tetris.team5.screens.score;
 import se.tetris.team5.screens.setting;
 import se.tetris.team5.screens.game;
+import se.tetris.team5.screens.battle;
 import se.tetris.team5.utils.setting.GameSettings;
 import se.tetris.team5.components.home.BGMManager;
 
@@ -21,6 +22,7 @@ public class ScreenController extends JFrame {
     private score scoreScreen;
     private setting settingScreen;
     private game gameScreen;
+    private battle battleScreen;
     
     // Loading screen components
     private JLabel loadingBackgroundLabel;
@@ -114,6 +116,7 @@ public class ScreenController extends JFrame {
         scoreScreen = new score(this);
         settingScreen = new setting(this);
         gameScreen = new game(this);
+        battleScreen = new battle(this);
     }
     
     public void showScreen(String screenName) {
@@ -154,22 +157,34 @@ public class ScreenController extends JFrame {
                 // 게임 화면에서는 BGM 정지 (게임 자체 BGM 사용)
                 bgmManager.stopBGM();
                 
-                getContentPane().add(gameScreen);
-                gameScreen.reset();
-                // macOS 대응: 여러 번 포커스 요청 (딜레이 포함)
-                javax.swing.SwingUtilities.invokeLater(() -> {
-                    gameScreen.requestFocusInWindow();
-                    // 2차 딜레이 포커스
-                    new java.util.Timer().schedule(
-                        new java.util.TimerTask() {
-                            @Override
-                            public void run() {
-                                javax.swing.SwingUtilities.invokeLater(() -> gameScreen.requestFocusInWindow());
-                            }
-                        },
-                        150
-                    );
-                });
+                // 대전 모드 체크
+                String gameMode = System.getProperty("tetris.game.mode", "NORMAL");
+                if ("BATTLE".equals(gameMode)) {
+                    // 대전 모드로 전환
+                    getContentPane().add(battleScreen);
+                    battleScreen.startNewGame();
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        battleScreen.requestFocusInWindow();
+                    });
+                } else {
+                    // 일반/아이템 모드
+                    getContentPane().add(gameScreen);
+                    gameScreen.reset();
+                    // macOS 대응: 여러 번 포커스 요청 (딜레이 포함)
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        gameScreen.requestFocusInWindow();
+                        // 2차 딜레이 포커스
+                        new java.util.Timer().schedule(
+                            new java.util.TimerTask() {
+                                @Override
+                                public void run() {
+                                    javax.swing.SwingUtilities.invokeLater(() -> gameScreen.requestFocusInWindow());
+                                }
+                            },
+                            150
+                        );
+                    });
+                }
                 break;
             case "score":
                 // Clear any child components so score can rebuild its UI cleanly
