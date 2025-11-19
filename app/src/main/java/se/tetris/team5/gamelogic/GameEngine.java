@@ -471,10 +471,13 @@ public class GameEngine {
         for (int i = 0; i < nextBlock.width(); i++) {
           se.tetris.team5.items.Item item = nextBlock.getItem(i, j);
           if (item != null) {
-            acquiredItem = item;
-            // TimeStopItem은 줄 삭제 시에만 충전되므로 여기서 처리하지 않음
+            // TimeStopItem은 줄 삭제 시에만 충전되므로 acquiredItem에 저장하지 않음
             if (!(item instanceof se.tetris.team5.items.TimeStopItem)) {
+              acquiredItem = item;
               System.out.println("[아이템 획득 대기] " + item);
+            } else {
+              // TimeStopItem이 블록에 포함되어 있음을 알림
+              System.out.println("[타임스톱 블록] 이 블록을 줄 삭제하면 타임스톱이 충전됩니다!");
             }
             break;
           }
