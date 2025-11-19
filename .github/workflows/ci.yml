@@ -76,7 +76,6 @@ jobs:
     name: Optional Windows packaging (jpackage)
     runs-on: windows-latest
     needs: build
-    if: matrix.os == 'windows-latest' || true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
