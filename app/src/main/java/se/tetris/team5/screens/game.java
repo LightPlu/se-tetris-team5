@@ -337,10 +337,51 @@ public class game extends JPanel implements KeyListener {
             g2.fillRoundRect(x + 4, y + 4, cellSize - 8, cellSize - 8, 6, 6);
             g2.setColor(new Color(255,255,255,40));
             g2.fillRoundRect(x + 4, y + 4, (cellSize - 8)/2, (cellSize - 8)/2, 4, 4);
+            
+            // Draw item indicator if this cell contains an item
+            se.tetris.team5.items.Item cellItem = next.getItem(c, r);
+            if (cellItem != null) {
+              drawItemIndicator(g2, x + 4, y + 4, cellSize - 8, cellItem);
+            }
           }
         }
       }
       g2.dispose();
+    }
+    
+    /**
+     * Draw item indicator overlay on a block cell
+     */
+    private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int size, se.tetris.team5.items.Item item) {
+      // Semi-transparent golden circle overlay
+      g2.setColor(new Color(255, 215, 0, 200)); // Gold with transparency
+      int ovalSize = Math.max(size / 2, 10);
+      int ovalX = x + (size - ovalSize) / 2;
+      int ovalY = y + (size - ovalSize) / 2;
+      g2.fillOval(ovalX, ovalY, ovalSize, ovalSize);
+      
+      // Draw item icon/letter in the center
+      g2.setColor(Color.BLACK);
+      Font iconFont = new Font("Arial", Font.BOLD, Math.max(ovalSize / 2, 8));
+      g2.setFont(iconFont);
+      String icon = getItemIcon(item);
+      java.awt.FontMetrics fm = g2.getFontMetrics();
+      int textX = ovalX + (ovalSize - fm.stringWidth(icon)) / 2;
+      int textY = ovalY + (ovalSize + fm.getAscent()) / 2 - fm.getDescent();
+      g2.drawString(icon, textX, textY);
+    }
+    
+    /**
+     * Get display icon for item type
+     */
+    private String getItemIcon(se.tetris.team5.items.Item item) {
+      if (item instanceof se.tetris.team5.items.LineClearItem) return "L";
+      if (item instanceof se.tetris.team5.items.TimeStopItem) return "⏱";
+      if (item instanceof se.tetris.team5.items.DoubleScoreItem) return "×2";
+      if (item instanceof se.tetris.team5.items.BombItem) return "💣";
+      if (item instanceof se.tetris.team5.items.WeightBlockItem) return "W";
+      if (item instanceof se.tetris.team5.items.ScoreItem) return "S";
+      return "?";
     }
   };
   nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
