@@ -958,27 +958,22 @@ public class game extends JPanel implements KeyListener {
       }
     }
 
-    // Prefer showing an already-acquired item (the one the player is holding) if present.
-    String itemDesc = "다음 블록에 포함된 아이템이 없거나, 대기 중입니다.";
-    se.tetris.team5.items.Item held = gameEngine.getAcquiredItem();
-    if (held != null) {
-      itemDesc = describeItem(held, true);
-    } else {
-      // otherwise check the next block's internal item
-      if (nextBlock != null) {
-        se.tetris.team5.items.Item found = null;
-        outer: for (int r = 0; r < nextBlock.height(); r++) {
-          for (int c = 0; c < nextBlock.width(); c++) {
-            se.tetris.team5.items.Item it = nextBlock.getItem(c, r);
-            if (it != null) {
-              found = it;
-              break outer;
-            }
+    // 아이템 설명 업데이트 - 다음 블록에 포함된 아이템만 설명
+    String itemDesc = "다음 블록에 포함된 아이템이 없습니다.";
+    
+    if (nextBlock != null) {
+      se.tetris.team5.items.Item found = null;
+      outer: for (int r = 0; r < nextBlock.height(); r++) {
+        for (int c = 0; c < nextBlock.width(); c++) {
+          se.tetris.team5.items.Item it = nextBlock.getItem(c, r);
+          if (it != null) {
+            found = it;
+            break outer;
           }
         }
-        if (found != null) {
-          itemDesc = describeItem(found, false);
-        }
+      }
+      if (found != null) {
+        itemDesc = describeItem(found, false);
       }
     }
 
@@ -1000,41 +995,35 @@ public class game extends JPanel implements KeyListener {
   }
 
   /**
-   * Return a user-facing description for an item. If held==true, wording will reflect possession.
+   * Return a user-facing description for an item.
    */
   private String describeItem(se.tetris.team5.items.Item it, boolean held) {
-    if (it == null) return "다음 블록에 포함된 아이템이 없거나, 대기 중입니다.";
-    // Prefer using instanceof checks but fall back to item.getName() to handle any classloader/mapping issues.
+    if (it == null) return "다음 블록에 포함된 아이템이 없습니다.";
+    
     String name = it.getName();
-    if (held) {
-      if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
-        return "(보유) 타임스톱(⏱): Shift 키로 게임을 5초간 멈출 수 있는 충전입니다.";
-      if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
-        return "(보유) 폭탄(B): 사용 시 주변 블록을 제거합니다.";
-      if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
-        return "(보유) 줄삭제(L): 사용 시 특정 줄을 즉시 삭제합니다.";
-      if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
-        se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
-        return "(보유) 점수 아이템(+): 즉시 " + si.getScoreAmount() + " 점을 획득합니다.";
-      }
-      if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
-        return "(보유) 무게추(W): 사용 시 무게추 블록을 소환합니다.";
-      return "(보유) 아이템: " + name;
-    } else {
-      if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
-        return "다음 블록: 타임스톱(⏱) — 줄 삭제 시 획득하면 Shift로 5초 정지 충전.";
-      if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
-        return "다음 블록: 폭탄(B) — 블록 고정 시 폭발로 블록 제거.";
-      if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
-        return "다음 블록: 줄삭제(L) — 블록 고정 시 해당 줄 즉시 삭제.";
-      if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
-        se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
-        return "다음 블록: 점수 아이템(+" + si.getScoreAmount() + ") — 고정 시 점수 획득.";
-      }
-      if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
-        return "다음 블록: 무게추(W) — 다음 블록이 WBlock으로 생성됩니다.";
-      return "다음 블록: 특수 아이템 — " + name;
+    
+    // 다음 블록에 포함된 아이템 설명
+    if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
+      return "⏱ 타임스톱\n이 블록을 줄 삭제하면 Shift 키로 5초간 게임을 멈출 수 있습니다!";
+    
+    if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
+      return "� 폭탄\n블록 고정 시 폭발로 주변 블록을 제거합니다.";
+    
+    if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
+      return "L 줄삭제\n블록 고정 시 해당 줄을 즉시 삭제합니다.";
+    
+    if (it instanceof se.tetris.team5.items.DoubleScoreItem || "DoubleScoreItem".equals(name))
+      return "×2 점수 2배\n블록 고정 시 20초간 모든 점수가 2배가 됩니다!";
+    
+    if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
+      se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
+      return "S 점수 아이템\n블록 고정 시 즉시 +" + si.getScoreAmount() + "점을 획득합니다.";
     }
+    
+    if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
+      return "W 무게추\n다음 블록이 무게추 블록(WBlock)으로 생성됩니다.";
+    
+    return "특수 아이템: " + name;
   }
 
   /**
