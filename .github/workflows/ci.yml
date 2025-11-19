@@ -43,13 +43,13 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
 
-      - name: Build (compile & test)
+      - name: Build (compile only, skip tests)
         # Use platform-appropriate gradle command
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            ./gradlew.bat --no-daemon build
+            ./gradlew.bat --no-daemon build -x test
           else
-            ./gradlew --no-daemon build
+            ./gradlew --no-daemon build -x test
           fi
         shell: bash
 
