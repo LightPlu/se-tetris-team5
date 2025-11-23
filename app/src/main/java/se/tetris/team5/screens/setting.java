@@ -32,14 +32,13 @@ public class setting {
         "뒤로 가기"
     };
     
-    private String[] windowSizes = {"소형", "중형", "대형", "특대형"};
+    private String[] windowSizes = {"소형", "중형", "대형"};  // 3가지로 변경
     private String[] windowSizeValues = {
-        GameSettings.WINDOW_SIZE_SMALL,
-        GameSettings.WINDOW_SIZE_MEDIUM,
-        GameSettings.WINDOW_SIZE_LARGE,
-        GameSettings.WINDOW_SIZE_XLARGE
+        GameSettings.WINDOW_SIZE_SMALL,   // 450x600 (기존 중형)
+        GameSettings.WINDOW_SIZE_MEDIUM,  // 550x700 (기존 대형)
+        GameSettings.WINDOW_SIZE_LARGE    // 650x800 (기존 특대형)
     };
-    private int currentSizeIndex = 1;
+    private int currentSizeIndex = 1;  // 기본값: 중형
     private boolean isKeySettingMode = false;
     private String currentKeyAction = "";
     private String[] keyActions = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "일시정지"};
