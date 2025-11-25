@@ -44,6 +44,16 @@ public class PlayerGamePanel extends JPanel {
   private Timer gameTimer;
   private Timer uiTimer; // UI 업데이트용 별도 타이머
   private long gameStartTime;
+  
+  // 대전모드 공격 블럭 데이터
+  private java.util.List<Color[]> attackBlocksData = new java.util.ArrayList<>();
+  
+  // 대전모드: 누적 공격 줄 수 (게임 전체에서 받은 총 공격 줄 수)
+  private int totalReceivedAttackLines = 0;
+  private static final int MAX_ATTACK_LINES = 10;
+  
+  // 대전모드: 상대방 패널 참조 (공격 블럭 전송용)
+  private PlayerGamePanel opponentPanel;
 
   /**
    * 플레이어 게임 패널 생성 (기본값)
@@ -74,6 +84,14 @@ public class PlayerGamePanel extends JPanel {
   private void initGameEngine() {
     // autoStart=false로 생성하여 자동 시작 방지 (빈 보드 상태)
     gameEngine = new GameEngine(GameBoard.HEIGHT, GameBoard.WIDTH, false);
+    
+    // 대전모드: 블럭 고정 후 공격 블럭 적용 콜백 설정
+    System.out.println("[PlayerGamePanel] 콜백 등록 중...");
+    gameEngine.setOnBlockFixedCallback(() -> {
+      System.out.println("[PlayerGamePanel 콜백] 실행됨!");
+      checkAndApplyAttackBlocks();
+    });
+    System.out.println("[PlayerGamePanel] 콜백 등록 완료");
   }
 
   private void initComponents() {
@@ -282,8 +300,8 @@ public class PlayerGamePanel extends JPanel {
             java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
         int w = getWidth();
         int h = getHeight();
-        int cellSize = Math.min(w / 5, h / 10);
-        int gridWidth = cellSize * 5;
+        int cellSize = Math.min(w / 10, h / 10);
+        int gridWidth = cellSize * 10;
         int gridHeight = cellSize * 10;
         int startX = (w - gridWidth) / 2;
         int startY = (h - gridHeight) / 2;
@@ -291,18 +309,44 @@ public class PlayerGamePanel extends JPanel {
         g2.setColor(new Color(18, 18, 24));
         g2.fillRoundRect(0, 0, w, h, 10, 10);
 
+        // 빈 그리드 배경 (10x10)
         for (int r = 0; r < 10; r++) {
-          for (int c = 0; c < 5; c++) {
+          for (int c = 0; c < 10; c++) {
             int x = startX + c * cellSize;
             int y = startY + r * cellSize;
             g2.setColor(new Color(40, 40, 48));
             g2.fillRoundRect(x + 1, y + 1, cellSize - 2, cellSize - 2, 4, 4);
           }
         }
+        
+        // 공격 블럭 데이터 표시 (아래부터 채움)
+        synchronized (attackBlocksData) {
+          int displayRows = Math.min(attackBlocksData.size(), 10);
+          for (int i = 0; i < displayRows; i++) {
+            Color[] rowData = attackBlocksData.get(i);
+            int rowIndex = 10 - displayRows + i; // 아래부터 표시
+            
+            for (int c = 0; c < Math.min(rowData.length, 10); c++) {
+              if (rowData[c] != null) {
+                int x = startX + c * cellSize;
+                int y = startY + rowIndex * cellSize;
+                
+                // 블럭을 회색으로 채우기 (무게추 블럭과 동일한 색상)
+                g2.setColor(new Color(85, 85, 85));
+                g2.fillRoundRect(x + 4, y + 4, cellSize - 8, cellSize - 8, 6, 6);
+                
+                // 하이라이트 효과
+                g2.setColor(new Color(255, 255, 255, 40));
+                g2.fillRoundRect(x + 4, y + 4, (cellSize - 8) / 2, (cellSize - 8) / 2, 4, 4);
+              }
+            }
+          }
+        }
+        
         g2.dispose();
       }
     };
-    panel.setPreferredSize(new java.awt.Dimension(100, 180));
+    panel.setPreferredSize(new java.awt.Dimension(200, 180));
     return panel;
   }
 
@@ -442,6 +486,15 @@ public class PlayerGamePanel extends JPanel {
       java.util.List<Integer> clearedRows = gameEngine.consumeLastClearedRows();
       if (clearedRows != null && !clearedRows.isEmpty()) {
         gameBoard.triggerClearAnimation(clearedRows);
+        
+        // 대전모드: 2줄 이상 삭제 시 공격 블럭 데이터를 상대방에게 전송
+        if (clearedRows.size() >= 2 && opponentPanel != null) {
+          java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
+          if (attackData != null && !attackData.isEmpty()) {
+            opponentPanel.addAttackBlocks(attackData);
+            System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
+          }
+        }
       }
     } catch (Exception ex) {
       // 애니메이션 처리 실패해도 게임 진행
@@ -500,5 +553,119 @@ public class PlayerGamePanel extends JPanel {
 
   public boolean isGameOver() {
     return gameEngine.isGameOver();
+  }
+
+  /**
+   * 대전모드: 공격 블럭 데이터를 업데이트합니다.
+   * 게임 전체 누적 공격 줄 수가 10줄을 초과할 수 없습니다.
+   * 
+   * @param newAttackBlocks 추가할 공격 블럭 데이터 (각 Color[] 배열이 한 줄을 나타냄)
+   */
+  public void addAttackBlocks(java.util.List<Color[]> newAttackBlocks) {
+    if (newAttackBlocks == null || newAttackBlocks.isEmpty()) {
+      return;
+    }
+    
+    synchronized (attackBlocksData) {
+      // 누적 공격 줄 수 체크
+      int remainingSpace = MAX_ATTACK_LINES - totalReceivedAttackLines;
+      
+      if (remainingSpace <= 0) {
+        System.out.println("[공격 블럭 거부] 누적 공격 줄 수 " + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + " - 더 이상 공격 받을 수 없음");
+        return;
+      }
+      
+      // 추가 가능한 만큼만 추가
+      int linesToAdd = Math.min(newAttackBlocks.size(), remainingSpace);
+      
+      if (linesToAdd < newAttackBlocks.size()) {
+        // 일부만 추가 가능한 경우
+        attackBlocksData.addAll(newAttackBlocks.subList(0, linesToAdd));
+        totalReceivedAttackLines += linesToAdd;
+        System.out.println("[공격 블럭 부분 추가] " + linesToAdd + "/" + newAttackBlocks.size() + "줄만 추가됨, 누적: " + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + "줄");
+      } else {
+        // 전부 추가 가능한 경우
+        attackBlocksData.addAll(newAttackBlocks);
+        totalReceivedAttackLines += newAttackBlocks.size();
+        System.out.println("[공격 블럭 추가] " + newAttackBlocks.size() + "줄 추가됨, 누적: " + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + "줄");
+      }
+    }
+    
+    // UI 업데이트
+    if (attackPanel != null) {
+      attackPanel.repaint();
+    }
+  }
+
+  /**
+   * 대전모드: 대기 중인 공격 블럭을 게임 보드 맨 밑에 적용합니다.
+   */
+  private void applyPendingAttackBlocks() {
+    synchronized (attackBlocksData) {
+      if (attackBlocksData.isEmpty()) {
+        return;
+      }
+      
+      // 공격 블럭을 보드 맨 밑에 추가
+      java.util.List<Color[]> blocksToApply = new java.util.ArrayList<>(attackBlocksData);
+      boolean success = gameEngine.getBoardManager().addAttackBlocksToBottom(blocksToApply);
+      
+      if (success) {
+        // 성공적으로 추가되었으면 공격 블럭 패널 초기화
+        attackBlocksData.clear();
+        if (attackPanel != null) {
+          attackPanel.repaint();
+        }
+        System.out.println("[공격 블럭 적용 완료] 게임 보드에 추가되고 패널 초기화됨");
+      }
+    }
+  }
+
+  /**
+   * 대전모드: 블럭 고정 후 공격 블럭이 있는지 체크하고 적용합니다.
+   */
+  private void checkAndApplyAttackBlocks() {
+    synchronized (attackBlocksData) {
+      System.out.println("[checkAndApplyAttackBlocks] 호출됨 - attackBlocksData 크기: " + attackBlocksData.size());
+      if (!attackBlocksData.isEmpty()) {
+        System.out.println("[블럭 고정 감지] 공격 블럭 적용 시작 - " + attackBlocksData.size() + "줄");
+        applyPendingAttackBlocks();
+      } else {
+        System.out.println("[checkAndApplyAttackBlocks] 공격 블럭 데이터가 비어있음");
+      }
+    }
+  }
+
+  /**
+   * 대전모드: 현재 공격 블럭 데이터를 반환합니다.
+   * 
+   * @return 공격 블럭 데이터 리스트
+   */
+  public java.util.List<Color[]> getAttackBlocksData() {
+    synchronized (attackBlocksData) {
+      return new java.util.ArrayList<>(attackBlocksData);
+    }
+  }
+
+  /**
+   * 대전모드: 공격 블럭 데이터를 초기화합니다.
+   */
+  public void clearAttackBlocks() {
+    synchronized (attackBlocksData) {
+      attackBlocksData.clear();
+    }
+    
+    if (attackPanel != null) {
+      attackPanel.repaint();
+    }
+  }
+
+  /**
+   * 대전모드: 상대방 패널을 설정합니다 (공격 블럭 전송용)
+   * 
+   * @param opponent 상대방 PlayerGamePanel
+   */
+  public void setOpponentPanel(PlayerGamePanel opponent) {
+    this.opponentPanel = opponent;
   }
 }

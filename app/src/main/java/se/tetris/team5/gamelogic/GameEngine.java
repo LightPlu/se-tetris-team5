@@ -42,6 +42,9 @@ public class GameEngine {
   // listeners to notify UI or other observers about state changes (e.g., next
   // block spawned)
   private List<Runnable> listeners = new ArrayList<>();
+  
+  // 대전모드: 블럭 고정 후 콜백 (공격 블럭 적용용)
+  private Runnable onBlockFixedCallback = null;
 
   // Last cleared rows (for UI to consume and animate). Cleared row indices are
   // 0..HEIGHT-1
@@ -191,6 +194,21 @@ public class GameEngine {
       // 블록 높이 패널티 체크
       checkHeightPenalty();
 
+      // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
+      System.out.println("[GameEngine] moveBlockDown - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
+      if (onBlockFixedCallback != null) {
+        System.out.println("[GameEngine] 블럭 고정 완료 - 콜백 호출 시작");
+        try {
+          onBlockFixedCallback.run();
+          System.out.println("[GameEngine] 콜백 실행 완료");
+        } catch (Exception e) {
+          System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
+          e.printStackTrace();
+        }
+      } else {
+        System.out.println("[GameEngine] 콜백이 null입니다!");
+      }
+
       spawnNextBlock();
       return false;
     }
@@ -297,6 +315,21 @@ public class GameEngine {
 
     // 블록 높이 패널티 체크
     checkHeightPenalty();
+
+    // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
+    System.out.println("[GameEngine] hardDrop - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
+    if (onBlockFixedCallback != null) {
+      System.out.println("[GameEngine] 하드드롭 블럭 고정 완료 - 콜백 호출 시작");
+      try {
+        onBlockFixedCallback.run();
+        System.out.println("[GameEngine] 콜백 실행 완료");
+      } catch (Exception e) {
+        System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
+        e.printStackTrace();
+      }
+    } else {
+      System.out.println("[GameEngine] 콜백이 null입니다!");
+    }
 
     spawnNextBlock();
     return true;
@@ -633,6 +666,17 @@ public class GameEngine {
    */
   public long getGameStartTime() {
     return gameStartTime;
+  }
+
+  /**
+   * 대전모드: 블럭 고정 후 콜백 설정
+   * 
+   * @param callback 블럭이 고정된 직후 호출될 콜백
+   */
+  public void setOnBlockFixedCallback(Runnable callback) {
+    System.out.println("[GameEngine] setOnBlockFixedCallback 호출됨 - callback null 여부: " + (callback == null));
+    this.onBlockFixedCallback = callback;
+    System.out.println("[GameEngine] 콜백 저장 완료");
   }
 
   /**
