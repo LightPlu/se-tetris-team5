@@ -1348,10 +1348,10 @@ public class SettingScreenTest {
             int smallIndex = (Integer) currentSizeIndexField.get(smallSetting);
             assertEquals("SMALL 창 크기 인덱스가 올바르게 초기화되어야 합니다", 0, smallIndex);
             
-            gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_XLARGE);
-            setting xlargeSetting = new setting(testScreenController);
-            int xlargeIndex = (Integer) currentSizeIndexField.get(xlargeSetting);
-            assertEquals("XLARGE 창 크기 인덱스가 올바르게 초기화되어야 합니다", 3, xlargeIndex);
+            gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_LARGE);
+            setting largeSetting = new setting(testScreenController);
+            int largeIndex = (Integer) currentSizeIndexField.get(largeSetting);
+            assertEquals("LARGE 창 크기 인덱스가 올바르게 초기화되어야 합니다", 2, largeIndex);
             
         } catch (Exception e) {
             fail("창 크기 인덱스 초기화 테스트 중 예외 발생: " + e.getMessage());

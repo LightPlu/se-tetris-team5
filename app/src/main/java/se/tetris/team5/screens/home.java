@@ -361,41 +361,38 @@ public class home extends JPanel implements KeyListener {
     }
     
     /**
-     * 창 크기에 따른 기본 폰트 크기를 반환합니다
+     * 창 크기에 따른 기본 폰트 크기를 반환합니다 (3가지 크기로 변경)
      */
     private int getFontSize() {
         switch (currentWindowSize) {
-            case SMALL: return 12;
-            case MEDIUM: return 14;
-            case LARGE: return 16;
-            case XLARGE: return 18;
-            default: return 14;
+            case SMALL: return 14;   // 450x600 (기존 중형 크기의 폰트)
+            case MEDIUM: return 16;  // 550x700 (기존 대형 크기의 폰트)
+            case LARGE: return 18;   // 650x800 (기존 특대형 크기의 폰트)
+            default: return 16;
         }
     }
     
     /**
-     * 창 크기에 따른 버튼 너비를 반환합니다
+     * 창 크기에 따른 버튼 너비를 반환합니다 (3가지 크기로 변경)
      */
     private int getButtonWidth() {
         switch (currentWindowSize) {
-            case SMALL: return 200;
-            case MEDIUM: return 250;
-            case LARGE: return 300;
-            case XLARGE: return 350;
-            default: return 250;
+            case SMALL: return 250;   // 450x600 (기존 중형 크기의 버튼)
+            case MEDIUM: return 300;  // 550x700 (기존 대형 크기의 버튼)
+            case LARGE: return 350;   // 650x800 (기존 특대형 크기의 버튼)
+            default: return 300;
         }
     }
     
     /**
-     * 창 크기에 따른 버튼 높이를 반환합니다
+     * 창 크기에 따른 버튼 높이를 반환합니다 (3가지 크기로 변경)
      */
     private int getButtonHeight() {
         switch (currentWindowSize) {
-            case SMALL: return 35;
-            case MEDIUM: return 40;
-            case LARGE: return 45;
-            case XLARGE: return 50;
-            default: return 40;
+            case SMALL: return 40;   // 450x600 (기존 중형 크기의 버튼)
+            case MEDIUM: return 45;  // 550x700 (기존 대형 크기의 버튼)
+            case LARGE: return 50;   // 650x800 (기존 특대형 크기의 버튼)
+            default: return 45;
         }
     }
     

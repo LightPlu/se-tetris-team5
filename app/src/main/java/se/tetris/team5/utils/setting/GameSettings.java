@@ -8,11 +8,10 @@ public class GameSettings {
     private static GameSettings instance;
     private Properties properties;
     
-    // 기본 설정값
-    public static final String WINDOW_SIZE_SMALL = "350x500";
-    public static final String WINDOW_SIZE_MEDIUM = "450x600";
-    public static final String WINDOW_SIZE_LARGE = "550x700";
-    public static final String WINDOW_SIZE_XLARGE = "650x800";
+    // 기본 설정값 (3가지 크기로 변경)
+    public static final String WINDOW_SIZE_SMALL = "450x600";   // 기존 중형 → 소형
+    public static final String WINDOW_SIZE_MEDIUM = "550x700";  // 기존 대형 → 중형
+    public static final String WINDOW_SIZE_LARGE = "650x800";   // 기존 특대형 → 대형
     
     private GameSettings() {
         properties = new Properties();
@@ -48,7 +47,7 @@ public class GameSettings {
     }
     
     public void setDefaultSettings() {
-        properties.setProperty("window.size", WINDOW_SIZE_LARGE);
+        properties.setProperty("window.size", WINDOW_SIZE_MEDIUM);  // 기본값을 중형으로 변경
         properties.setProperty("game.speed", "3");
         properties.setProperty("sound.enabled", "true");
         properties.setProperty("colorblind.mode", "false");
@@ -62,7 +61,7 @@ public class GameSettings {
     }
     
     public String getWindowSize() {
-        return properties.getProperty("window.size", WINDOW_SIZE_LARGE);
+        return properties.getProperty("window.size", WINDOW_SIZE_MEDIUM);  // 기본값을 중형으로 변경
     }
     
     public void setWindowSize(String size) {

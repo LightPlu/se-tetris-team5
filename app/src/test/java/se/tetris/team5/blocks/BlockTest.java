@@ -268,12 +268,12 @@ public class BlockTest {
         // 창 크기 설정 테스트
         settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_SMALL);
         assertEquals("Window size should be SMALL", se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_SMALL, settings.getWindowSize());
-        assertEquals("Small window width should be 350", 350, settings.getWindowWidth());
-        assertEquals("Small window height should be 500", 500, settings.getWindowHeight());
+        assertEquals("Small window width should be 450", 450, settings.getWindowWidth());
+        assertEquals("Small window height should be 600", 600, settings.getWindowHeight());
         
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_XLARGE);
-        assertEquals("XLarge window width should be 650", 650, settings.getWindowWidth());
-        assertEquals("XLarge window height should be 800", 800, settings.getWindowHeight());
+        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_LARGE);
+        assertEquals("Large window width should be 650", 650, settings.getWindowWidth());
+        assertEquals("Large window height should be 800", 800, settings.getWindowHeight());
     }
     
     @Test

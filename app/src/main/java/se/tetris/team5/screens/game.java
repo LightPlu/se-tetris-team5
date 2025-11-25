@@ -300,11 +300,11 @@ public class game extends JPanel implements KeyListener {
   JPanel rightPanel = new JPanel();
   rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
   rightPanel.setBackground(new Color(18, 18, 24));
-  rightPanel.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
+  rightPanel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4)); // 여백 축소 12→4
   // Limit the overall right column width (the dark panel) so it stays visibly narrower than the game area
-  // restore right panel width to original comfortable size
-  rightPanel.setPreferredSize(new java.awt.Dimension(260, 0));
-  rightPanel.setMinimumSize(new java.awt.Dimension(220, 0));
+  // 가로 크기 추가 축소: 220→190, 180→160
+  rightPanel.setPreferredSize(new java.awt.Dimension(190, 0));
+  rightPanel.setMinimumSize(new java.awt.Dimension(160, 0));
 
     // Next block panel (titled box) - use a graphic preview for modern look
   nextBlockBoard = new NextBlockBoard();
@@ -316,33 +316,48 @@ public class game extends JPanel implements KeyListener {
       g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
       int w = getWidth();
       int h = getHeight();
-      int cellSize = Math.min(w / 6, h / 6);
+      // 여백을 최소화하고 셀 크기를 키움 (w/6 -> w/4.5, h/6 -> h/4.5)
+      int cellSize = Math.min((w - 8) / 4, (h - 8) / 4); // 상하좌우 각 4px 여백만 남김
       int gridSize = cellSize * 4;
       int startX = (w - gridSize) / 2;
       int startY = (h - gridSize) / 2;
       Block next = null;
       if (gameEngine != null) next = gameEngine.getNextBlock();
-  if (next != null) System.out.println("[UI DEBUG] nextVisualPanel.paintComponent next=" + next.getClass().getSimpleName());
+      if (next != null) System.out.println("[UI DEBUG] nextVisualPanel.paintComponent next=" + next.getClass().getSimpleName());
+      
+      // 배경 그리기
       g2.setColor(new Color(18, 18, 24));
       g2.fillRoundRect(0, 0, w, h, 10, 10);
+      
+      // 빈 셀 배경 그리기 (GameBoard 스타일)
       for (int r = 0; r < 4; r++) {
         for (int c = 0; c < 4; c++) {
           int x = startX + c * cellSize;
           int y = startY + r * cellSize;
-          g2.setColor(new Color(40, 40, 48));
+          g2.setColor(new Color(28, 28, 36)); // GameBoard와 동일한 색상
           g2.fillRoundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 6, 6);
-          if (next != null && r < next.height() && c < next.width() && next.getShape(c, r) == 1) {
-            Color col = next.getColor();
-            if (col == null) col = Color.CYAN;
-            g2.setColor(col);
-            g2.fillRoundRect(x + 4, y + 4, cellSize - 8, cellSize - 8, 6, 6);
-            g2.setColor(new Color(255,255,255,40));
-            g2.fillRoundRect(x + 4, y + 4, (cellSize - 8)/2, (cellSize - 8)/2, 4, 4);
-            
-            // Draw item indicator if this cell contains an item
-            se.tetris.team5.items.Item cellItem = next.getItem(c, r);
-            if (cellItem != null) {
-              drawItemIndicator(g2, x + 4, y + 4, cellSize - 8, cellItem);
+        }
+      }
+      
+      // 다음 블록 그리기 (GameBoard의 drawBlockWithPattern 스타일)
+      if (next != null) {
+        for (int r = 0; r < 4; r++) {
+          for (int c = 0; c < 4; c++) {
+            if (r < next.height() && c < next.width() && next.getShape(c, r) == 1) {
+              int x = startX + c * cellSize;
+              int y = startY + r * cellSize;
+              Color col = next.getColor();
+              if (col == null) col = Color.CYAN;
+              String blockType = next.getBlockType();
+              
+              // GameBoard와 동일한 방식으로 블록 그리기
+              drawBlockCellWithPattern(g2, x, y, cellSize, col, blockType);
+              
+              // 아이템 표시
+              se.tetris.team5.items.Item cellItem = next.getItem(c, r);
+              if (cellItem != null) {
+                drawItemIndicator(g2, x, y, cellSize, cellItem);
+              }
             }
           }
         }
@@ -350,42 +365,163 @@ public class game extends JPanel implements KeyListener {
       g2.dispose();
     }
     
-    /*
-     * Draw item indicator overlay on a block cell
-     */
-    private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int size, se.tetris.team5.items.Item item) {
-      // Semi-transparent golden circle overlay
-      g2.setColor(new Color(255, 215, 0, 200)); // Gold with transparency
-      int ovalSize = Math.max(size / 2, 10);
-      int ovalX = x + (size - ovalSize) / 2;
-      int ovalY = y + (size - ovalSize) / 2;
-      g2.fillOval(ovalX, ovalY, ovalSize, ovalSize);
+    // GameBoard의 drawBlockWithPattern과 동일한 로직
+    private void drawBlockCellWithPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, Color color, String blockType) {
+      // 기본 블록 배경 그리기
+      g2.setColor(color);
+      g2.fillRoundRect(x+3, y+3, cellSize-6, cellSize-6, 6, 6);
       
-      // Draw item icon/letter in the center
-      g2.setColor(Color.BLACK);
-      Font iconFont = new Font("Arial", Font.BOLD, Math.max(ovalSize / 2, 8));
-      g2.setFont(iconFont);
-      String icon = getItemIcon(item);
-      java.awt.FontMetrics fm = g2.getFontMetrics();
-      int textX = ovalX + (ovalSize - fm.stringWidth(icon)) / 2;
-      int textY = ovalY + (ovalSize + fm.getAscent()) / 2 - fm.getDescent();
-      g2.drawString(icon, textX, textY);
+      // 색맹 모드일 때만 패턴 추가
+      se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+      if (settings.isColorblindMode()) {
+        drawBlockPattern(g2, x, y, cellSize, blockType);
+      }
+      
+      // 기본 하이라이트
+      g2.setColor(new Color(255,255,255,40));
+      g2.fillRoundRect(x+4, y+4, (cellSize-6)/2, (cellSize-6)/2, 4, 4);
     }
     
-    /**
-     * Get display icon for item type
-     */
-    private String getItemIcon(se.tetris.team5.items.Item item) {
-      if (item instanceof se.tetris.team5.items.LineClearItem) return "L";
-      if (item instanceof se.tetris.team5.items.TimeStopItem) return "⏱";
-      if (item instanceof se.tetris.team5.items.DoubleScoreItem) return "×2";
-      if (item instanceof se.tetris.team5.items.BombItem) return "💣";
-      if (item instanceof se.tetris.team5.items.WeightBlockItem) return "W";
-      if (item instanceof se.tetris.team5.items.ScoreItem) return "S";
-      return "?";
+    // 블록 타입별 패턴 그리기
+    private void drawBlockPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, String blockType) {
+      g2.setColor(new Color(0, 0, 0, 120));
+      int innerSize = cellSize - 10;
+      int patX = x + 5;
+      int patY = y + 5;
+      
+      java.awt.Stroke oldStroke = g2.getStroke();
+      g2.setStroke(new java.awt.BasicStroke(2.0f));
+      
+      switch (blockType) {
+        case "I": // 수직선
+          g2.drawLine(patX + innerSize/2, patY + 2, patX + innerSize/2, patY + innerSize - 2);
+          break;
+        case "O": // 사각형
+          int rectSize = innerSize/3;
+          g2.drawRect(patX + (innerSize-rectSize)/2, patY + (innerSize-rectSize)/2, rectSize, rectSize);
+          break;
+        case "T": // T자
+          g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + innerSize - 2);
+          break;
+        case "L": // L자
+          g2.drawLine(patX + innerSize/3, patY + 2, patX + innerSize/3, patY + innerSize - 2);
+          g2.drawLine(patX + innerSize/3, patY + innerSize - 2, patX + innerSize - 2, patY + innerSize - 2);
+          break;
+        case "J": // J자
+          g2.drawLine(patX + 2*innerSize/3, patY + 2, patX + 2*innerSize/3, patY + innerSize - 2);
+          g2.drawLine(patX + 2, patY + innerSize - 2, patX + 2*innerSize/3, patY + innerSize - 2);
+          break;
+        case "S": // S자
+          g2.drawLine(patX + 2, patY + 2*innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize/2, patY + innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
+          break;
+        case "Z": // Z자
+          g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize/2, patY + innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize - 2, patY + 2*innerSize/3);
+          break;
+        case "W": // 무게추 - X 패턴
+          g2.drawLine(patX + 2, patY + 2, patX + innerSize - 2, patY + innerSize - 2);
+          g2.drawLine(patX + innerSize - 2, patY + 2, patX + 2, patY + innerSize - 2);
+          break;
+      }
+      
+      g2.setStroke(oldStroke);
+    }
+    
+    // GameBoard의 drawItemGlyph와 유사한 스타일로 아이템 표시
+    private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int cellSize, se.tetris.team5.items.Item item) {
+      int cx = x + cellSize/2;
+      int cy = y + cellSize/2;
+      int r = Math.max(6, cellSize/3);
+
+      // 배경 링
+      g2.setColor(new Color(0,0,0,120));
+      g2.fillOval(cx - r - 1, cy - r - 1, r*2 + 2, r*2 + 2);
+
+      if (item instanceof se.tetris.team5.items.TimeStopItem) {
+        // 시계 아이콘
+        g2.setColor(new Color(60, 180, 170));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        int hw = Math.max(2, r/4);
+        g2.fillOval(cx - hw, cy - hw, hw*2, hw*2);
+        g2.setColor(new Color(255,255,255,200));
+        g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r/6)));
+        g2.drawLine(cx, cy, cx + r/2, cy - r/3);
+      } else if (item instanceof se.tetris.team5.items.BombItem) {
+        // 폭탄 아이콘
+        g2.setColor(new Color(30, 10, 10));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(new Color(255, 90, 90));
+        g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r/6)));
+        g2.drawOval(cx - r + 1, cy - r + 1, r*2 - 2, r*2 - 2);
+        g2.setColor(new Color(255, 200, 80));
+        g2.fillOval(cx + r - Math.max(4, r/4), cy - r - Math.max(2, r/6), Math.max(4, r/3), Math.max(4, r/3));
+      } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+        // 라인 클리어 아이콘
+        g2.setColor(new Color(255, 200, 70));
+        int badgeSize = Math.max(r, 12);
+        int arc = Math.max(6, badgeSize / 3);
+        g2.fillRoundRect(cx - badgeSize, cy - badgeSize, badgeSize * 2, badgeSize * 2, arc, arc);
+        g2.setColor(new Color(255,255,255,220));
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont((float) Math.max(10, badgeSize));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "L";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
+        // 더블 스코어 아이콘
+        g2.setColor(new Color(255, 215, 0));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "×2";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      } else if (item instanceof se.tetris.team5.items.WeightBlockItem) {
+        // 무게추 아이콘
+        g2.setColor(new Color(80, 80, 80));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "W";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      } else if (item instanceof se.tetris.team5.items.ScoreItem) {
+        // 스코어 아이콘
+        g2.setColor(new Color(100, 200, 255));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "S";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      }
     }
   };
-  nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
+  nextVisualPanel.setPreferredSize(new java.awt.Dimension(190, 130)); // 높이 증가 100->130
   JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
   nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
@@ -426,13 +562,13 @@ public class game extends JPanel implements KeyListener {
   levelLabel = new JLabel("레벨: 1");
   levelLabel.setFont(createKoreanFont(Font.BOLD, 14));
   levelLabel.setForeground(new Color(200, 200, 200));
-  levelLabel.setBorder(new EmptyBorder(0,8,0,8));
+  levelLabel.setBorder(new EmptyBorder(0,4,0,4)); // 여백 축소 8→4
   linesLabel = new JLabel("줄: 0");
   linesLabel.setFont(createKoreanFont(Font.BOLD, 14));
   linesLabel.setForeground(new Color(200, 200, 200));
-  linesLabel.setBorder(new EmptyBorder(0,8,0,8));
+  linesLabel.setBorder(new EmptyBorder(0,4,0,4)); // 여백 축소 8→4
   smallRow.add(levelLabel);
-  smallRow.add(javax.swing.Box.createHorizontalGlue());
+  smallRow.add(javax.swing.Box.createHorizontalStrut(12)); // Glue 대신 고정 간격 12px
   smallRow.add(linesLabel);
   scoreInfo.add(smallRow);
   scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
@@ -444,7 +580,7 @@ public class game extends JPanel implements KeyListener {
   gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   scoreInfo.add(gameModeLabel);
   
-  scoreInfo.setPreferredSize(new java.awt.Dimension(280, 220));
+  scoreInfo.setPreferredSize(new java.awt.Dimension(170, 220)); // 가로 크기 추가 축소 200→170
 
   JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
   infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
@@ -537,7 +673,7 @@ public class game extends JPanel implements KeyListener {
     JLabel titleLabel = new JLabel(title, javax.swing.SwingConstants.LEFT);
     titleLabel.setFont(createKoreanFont(Font.BOLD, 16));
     titleLabel.setForeground(titleColor);
-    titleLabel.setBorder(new EmptyBorder(0, 6, 8, 6));
+    titleLabel.setBorder(new EmptyBorder(0, 4, 6, 4)); // 여백 축소 (좌우 6→4, 하단 8→6)
 
     // Inner panel with rounded border and dark background
     JPanel inner = new JPanel(new BorderLayout()) {
@@ -557,7 +693,7 @@ public class game extends JPanel implements KeyListener {
       }
     };
     inner.setOpaque(false);
-    inner.setBorder(new EmptyBorder(10, 10, 10, 10));
+    inner.setBorder(new EmptyBorder(6, 6, 6, 6)); // 여백 축소 10→6
     // ensure content uses inner background when appropriate
     if (content != null) {
       content.setOpaque(false);
@@ -567,8 +703,8 @@ public class game extends JPanel implements KeyListener {
     wrapper.add(titleLabel, BorderLayout.NORTH);
     wrapper.add(inner, BorderLayout.CENTER);
 
-    // Preferred sizing
-    wrapper.setPreferredSize(new java.awt.Dimension(320, Math.max(120, content != null ? content.getPreferredSize().height + 48 : 140)));
+    // Preferred sizing - 가로 크기 추가 축소 220→190
+    wrapper.setPreferredSize(new java.awt.Dimension(190, Math.max(120, content != null ? content.getPreferredSize().height + 48 : 140)));
     return wrapper;
   }
 
