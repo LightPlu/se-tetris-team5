@@ -83,33 +83,7 @@ public class GameBoard extends JTextPane {
      */
     public void renderBoard(int[][] board, Color[][] colors, Item[][] items, Block currBlock, int currX, int currY) {
         if (board != null) {
-            // debug: log a small summary so we can see when renderBoard is called
-            try {
-                int occupied = 0;
-                int fullNow = 0;
-                int fullPrev = -1;
-                for (int r = 0; r < Math.min(board.length, HEIGHT); r++) {
-                    boolean rowFull = true;
-                    for (int c = 0; c < Math.min(board[r].length, WIDTH); c++) {
-                        if (board[r][c] == 1 || board[r][c] == 2) occupied++;
-                        if (board[r][c] != 1 && board[r][c] != 2) rowFull = false;
-                    }
-                    if (rowFull) fullNow++;
-                }
-                if (previousBoard != null) {
-                    fullPrev = 0;
-                    for (int r = 0; r < Math.min(previousBoard.length, HEIGHT); r++) {
-                        boolean rowFull = true;
-                        for (int c = 0; c < Math.min(previousBoard[r].length, WIDTH); c++) {
-                            if (previousBoard[r][c] != 1 && previousBoard[r][c] != 2) { rowFull = false; break; }
-                        }
-                        if (rowFull) fullPrev++;
-                    }
-                }
-                System.out.println("[GameBoard] renderBoard called. occupied=" + occupied + ", fullNow=" + fullNow + ", fullPrev=" + fullPrev);
-            } catch (Exception ex) {
-                // don't let debug logging interfere with rendering
-            }
+            // Debug logging disabled for performance
             // NOTE: previous-board diff based detection of cleared rows has been
             // disabled. Cleared-row animations are triggered explicitly by the
             // GameEngine -> UI plumbing (game consumes engine.consumeLastClearedRows()
@@ -300,8 +274,6 @@ public class GameBoard extends JTextPane {
             }
         }
 
-    // debug
-    System.out.println("[GameBoard] triggerClearAnimation rows=" + rows + ", existingAnimRows=" + animRowProgress.keySet());
     // spawn particles even if the timer is already running so new clears get visualized
     spawnRowParticles(rows);
 
@@ -346,7 +318,6 @@ public class GameBoard extends JTextPane {
                 repaint();
             }
         });
-        System.out.println("[GameBoard] animTimer started");
         animTimer.setInitialDelay(0);
         animTimer.start();
     }
@@ -392,7 +363,6 @@ public class GameBoard extends JTextPane {
                 }
             }
             rowParticles.put(row, pls);
-            System.out.println("[GameBoard] spawned " + pls.size() + " particles for row=" + row);
         }
     }
 

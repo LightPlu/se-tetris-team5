@@ -80,7 +80,8 @@ public class game extends JPanel implements KeyListener {
 
   // 타임스톱 관련 변수
   private boolean isTimeStopped = false; // 타임스톱 활성화 상태
-  // Timer used to tick the visible countdown every second while time-stop is active
+  // Timer used to tick the visible countdown every second while time-stop is
+  // active
   private Timer timeStopCountdownTimer;
   // remaining seconds to show in the UI countdown
   private int timeStopRemaining = 0;
@@ -110,8 +111,8 @@ public class game extends JPanel implements KeyListener {
   // 윈도우에서 한글을 제대로 표시하기 위한 폰트 생성 메서드
   private Font createKoreanFont(int style, int size) {
     // 윈도우에서 한글을 잘 지원하는 폰트들을 우선순위대로 시도
-    String[] koreanFonts = {"맑은 고딕", "Malgun Gothic", "굴림", "Gulim", "Arial Unicode MS", "Dialog"};
-    
+    String[] koreanFonts = { "맑은 고딕", "Malgun Gothic", "굴림", "Gulim", "Arial Unicode MS", "Dialog" };
+
     for (String fontName : koreanFonts) {
       Font font = new Font(fontName, style, size);
       // 폰트가 시스템에 있는지 확인
@@ -119,7 +120,7 @@ public class game extends JPanel implements KeyListener {
         return font;
       }
     }
-    
+
     // 모든 한글 폰트가 실패하면 기본 Dialog 폰트 사용
     return new Font(Font.DIALOG, style, size);
   }
@@ -133,37 +134,38 @@ public class game extends JPanel implements KeyListener {
       }
     });
 
-  this.screenController = screenController;
-  setLayout(new BorderLayout());
-  setBackground(Color.BLACK);
+    this.screenController = screenController;
+    setLayout(new BorderLayout());
+    setBackground(Color.BLACK);
 
-  initComponents();
-  setFocusable(true);
-  setFocusTraversalKeysEnabled(false); // Tab 등도 이벤트로 받기
-  addKeyListener(this);
-  // Robust focus handling: request focus when showing and on mouse enter
-  addHierarchyListener(new java.awt.event.HierarchyListener() {
-    @Override
-    public void hierarchyChanged(java.awt.event.HierarchyEvent e) {
-      if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+    initComponents();
+    setFocusable(true);
+    setFocusTraversalKeysEnabled(false); // Tab 등도 이벤트로 받기
+    addKeyListener(this);
+    // Robust focus handling: request focus when showing and on mouse enter
+    addHierarchyListener(new java.awt.event.HierarchyListener() {
+      @Override
+      public void hierarchyChanged(java.awt.event.HierarchyEvent e) {
+        if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+          requestFocusInWindow();
+        }
+      }
+    });
+    addMouseListener(new java.awt.event.MouseAdapter() {
+      @Override
+      public void mouseEntered(java.awt.event.MouseEvent e) {
         requestFocusInWindow();
       }
-    }
-  });
-  addMouseListener(new java.awt.event.MouseAdapter() {
-    @Override
-    public void mouseEntered(java.awt.event.MouseEvent e) {
-      requestFocusInWindow();
-    }
-  });
-  // macOS 대응: 생성 시점에 포커스 강제 요청
-  requestFocusInWindow();
+    });
+    // macOS 대응: 생성 시점에 포커스 강제 요청
+    requestFocusInWindow();
     // 화면에 추가될 때마다 포커스 강제 요청 (윈도우/패널 전환 시)
     addComponentListener(new java.awt.event.ComponentAdapter() {
       @Override
       public void componentShown(java.awt.event.ComponentEvent e) {
         requestFocusInWindow();
       }
+
       @Override
       public void componentResized(java.awt.event.ComponentEvent e) {
         requestFocusInWindow();
@@ -184,13 +186,15 @@ public class game extends JPanel implements KeyListener {
     // 게임 보드 (왼쪽)
     gameBoard = new GameBoard();
 
-    // Create a layered pane so we can draw a semi-transparent overlay above the game board
+    // Create a layered pane so we can draw a semi-transparent overlay above the
+    // game board
     boardLayeredPane = new javax.swing.JLayeredPane();
     boardLayeredPane.setLayout(null); // we'll manage child bounds on resize
     // add the gameBoard at the default layer
     boardLayeredPane.add(gameBoard, Integer.valueOf(0));
 
-    // overlay panel (initially hidden) - semi-transparent dark background with large centered label
+    // overlay panel (initially hidden) - semi-transparent dark background with
+    // large centered label
     timeStopOverlay = new javax.swing.JPanel(null) {
       @Override
       protected void paintComponent(java.awt.Graphics g) {
@@ -205,7 +209,8 @@ public class game extends JPanel implements KeyListener {
     timeStopOverlay.setOpaque(false);
     timeStopOverlay.setVisible(false);
 
-    // center panel holds three labels (icon, big number, subtext) to avoid HTML renderer clipping
+    // center panel holds three labels (icon, big number, subtext) to avoid HTML
+    // renderer clipping
     timeStopCenterPanel = new javax.swing.JPanel();
     timeStopCenterPanel.setOpaque(false);
     timeStopCenterPanel.setLayout(new java.awt.GridBagLayout());
@@ -222,18 +227,22 @@ public class game extends JPanel implements KeyListener {
     timeStopSubLabel.setForeground(new java.awt.Color(200, 230, 220));
     timeStopSubLabel.setOpaque(false);
 
-  java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
-  gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = java.awt.GridBagConstraints.CENTER;
-  gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
-  gbc.weightx = 1.0;
-  gbc.weighty = 0.0;
-  timeStopCenterPanel.add(timeStopIconLabel, gbc);
-  gbc.gridy = 1; gbc.insets = new java.awt.Insets(6,0,6,0);
-  gbc.weighty = 1.0; // let the number take the vertical space so it's centered
-  timeStopCenterPanel.add(timeStopNumberLabel, gbc);
-  gbc.gridy = 2; gbc.insets = new java.awt.Insets(0,0,0,0);
-  gbc.weighty = 0.0;
-  timeStopCenterPanel.add(timeStopSubLabel, gbc);
+    java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.anchor = java.awt.GridBagConstraints.CENTER;
+    gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 1.0;
+    gbc.weighty = 0.0;
+    timeStopCenterPanel.add(timeStopIconLabel, gbc);
+    gbc.gridy = 1;
+    gbc.insets = new java.awt.Insets(6, 0, 6, 0);
+    gbc.weighty = 1.0; // let the number take the vertical space so it's centered
+    timeStopCenterPanel.add(timeStopNumberLabel, gbc);
+    gbc.gridy = 2;
+    gbc.insets = new java.awt.Insets(0, 0, 0, 0);
+    gbc.weighty = 0.0;
+    timeStopCenterPanel.add(timeStopSubLabel, gbc);
 
     timeStopOverlay.add(timeStopCenterPanel);
 
@@ -246,27 +255,31 @@ public class game extends JPanel implements KeyListener {
         java.awt.Dimension s = boardLayeredPane.getSize();
         gameBoard.setBounds(0, 0, s.width, s.height);
         timeStopOverlay.setBounds(0, 0, s.width, s.height);
-  // position center panel roughly centered and large, add vertical padding so glyph tops aren't clipped
-  int lblW = Math.max(200, s.width / 2);
-  int lblH = Math.max(120, s.height / 4);
-  int padTop = Math.max(12, lblH / 8);
-  // give extra vertical room to avoid the top of the number being clipped; center the whole block
-  int totalH = lblH + padTop;
-  timeStopCenterPanel.setBounds((s.width - lblW) / 2, (s.height - totalH) / 2, lblW, totalH);
-  // choose font sizes proportional to available height
-  int numberFontSize = Math.max(40, (lblH - padTop) * 3 / 4);
-  int iconFontSize = Math.max(24, (lblH - padTop) / 6);
-  int subFontSize = Math.max(12, (lblH - padTop) / 8);
-  timeStopNumberLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, numberFontSize));
-  timeStopIconLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, iconFontSize));
-  timeStopSubLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, subFontSize));
+        // position center panel roughly centered and large, add vertical padding so
+        // glyph tops aren't clipped
+        int lblW = Math.max(200, s.width / 2);
+        int lblH = Math.max(120, s.height / 4);
+        int padTop = Math.max(12, lblH / 8);
+        // give extra vertical room to avoid the top of the number being clipped; center
+        // the whole block
+        int totalH = lblH + padTop;
+        timeStopCenterPanel.setBounds((s.width - lblW) / 2, (s.height - totalH) / 2, lblW, totalH);
+        // choose font sizes proportional to available height
+        int numberFontSize = Math.max(40, (lblH - padTop) * 3 / 4);
+        int iconFontSize = Math.max(24, (lblH - padTop) / 6);
+        int subFontSize = Math.max(12, (lblH - padTop) / 8);
+        timeStopNumberLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, numberFontSize));
+        timeStopIconLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, iconFontSize));
+        timeStopSubLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, subFontSize));
       }
     });
 
     add(boardLayeredPane, BorderLayout.CENTER);
 
-    // Ensure Shift works even when strict focus is lost: register a WHEN_IN_FOCUSED_WINDOW binding
-    this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_SHIFT, 0, false), "useTimeStop");
+    // Ensure Shift works even when strict focus is lost: register a
+    // WHEN_IN_FOCUSED_WINDOW binding
+    this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_SHIFT, 0, false),
+        "useTimeStop");
     this.getActionMap().put("useTimeStop", new AbstractAction() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -276,8 +289,10 @@ public class game extends JPanel implements KeyListener {
       }
     });
 
-    // DEBUG: Force multi-row clear animation test (press 'A') — triggers explosion on bottom rows so
-    // you can visually confirm multi-row animations regardless of actual game clears.
+    // DEBUG: Force multi-row clear animation test (press 'A') — triggers explosion
+    // on bottom rows so
+    // you can visually confirm multi-row animations regardless of actual game
+    // clears.
     this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke('A'), "forceClearAnim");
     this.getActionMap().put("forceClearAnim", new AbstractAction() {
       @Override
@@ -287,7 +302,8 @@ public class game extends JPanel implements KeyListener {
           java.util.List<Integer> demo = new java.util.ArrayList<>();
           int h = gameBoard.getBoardHeight();
           // last 4 rows (if available)
-          for (int r = Math.max(0, h - 4); r < h; r++) demo.add(r);
+          for (int r = Math.max(0, h - 4); r < h; r++)
+            demo.add(r);
           System.out.println("[DEBUG] force clear anim rows=" + demo);
           gameBoard.triggerClearAnimation(demo);
         } catch (Exception ex) {
@@ -297,324 +313,200 @@ public class game extends JPanel implements KeyListener {
     });
 
     // 오른쪽 패널 (다음 블록 + 점수)
-  JPanel rightPanel = new JPanel();
-  rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-  rightPanel.setBackground(new Color(18, 18, 24));
-  rightPanel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4)); // 여백 축소 12→4
-  // Limit the overall right column width (the dark panel) so it stays visibly narrower than the game area
-  // 가로 크기 추가 축소: 220→190, 180→160
-  rightPanel.setPreferredSize(new java.awt.Dimension(190, 0));
-  rightPanel.setMinimumSize(new java.awt.Dimension(160, 0));
+    JPanel rightPanel = new JPanel();
+    rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+    rightPanel.setBackground(new Color(18, 18, 24));
+    rightPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+    // Limit the overall right column width (the dark panel) so it stays visibly
+    // narrower than the game area
+    // restore right panel width to original comfortable size
+    rightPanel.setPreferredSize(new java.awt.Dimension(260, 0));
+    rightPanel.setMinimumSize(new java.awt.Dimension(220, 0));
 
     // Next block panel (titled box) - use a graphic preview for modern look
-  nextBlockBoard = new NextBlockBoard();
-  nextVisualPanel = new JPanel() {
-    @Override
-    protected void paintComponent(java.awt.Graphics g) {
-      super.paintComponent(g);
-      java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-      g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-      int w = getWidth();
-      int h = getHeight();
-      // 여백을 최소화하고 셀 크기를 키움 (w/6 -> w/4.5, h/6 -> h/4.5)
-      int cellSize = Math.min((w - 8) / 4, (h - 8) / 4); // 상하좌우 각 4px 여백만 남김
-      int gridSize = cellSize * 4;
-      int startX = (w - gridSize) / 2;
-      int startY = (h - gridSize) / 2;
-      Block next = null;
-      if (gameEngine != null) next = gameEngine.getNextBlock();
-      if (next != null) System.out.println("[UI DEBUG] nextVisualPanel.paintComponent next=" + next.getClass().getSimpleName());
-      
-      // 배경 그리기
-      g2.setColor(new Color(18, 18, 24));
-      g2.fillRoundRect(0, 0, w, h, 10, 10);
-      
-      // 빈 셀 배경 그리기 (GameBoard 스타일)
-      for (int r = 0; r < 4; r++) {
-        for (int c = 0; c < 4; c++) {
-          int x = startX + c * cellSize;
-          int y = startY + r * cellSize;
-          g2.setColor(new Color(28, 28, 36)); // GameBoard와 동일한 색상
-          g2.fillRoundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 6, 6);
-        }
-      }
-      
-      // 다음 블록 그리기 (GameBoard의 drawBlockWithPattern 스타일)
-      if (next != null) {
+    nextBlockBoard = new NextBlockBoard();
+    nextVisualPanel = new JPanel() {
+      @Override
+      protected void paintComponent(java.awt.Graphics g) {
+        super.paintComponent(g);
+        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        int w = getWidth();
+        int h = getHeight();
+        int cellSize = Math.min(w / 6, h / 6);
+        int gridSize = cellSize * 4;
+        int startX = (w - gridSize) / 2;
+        int startY = (h - gridSize) / 2;
+        Block next = null;
+        if (gameEngine != null)
+          next = gameEngine.getNextBlock();
+        g2.setColor(new Color(18, 18, 24));
+        g2.fillRoundRect(0, 0, w, h, 10, 10);
         for (int r = 0; r < 4; r++) {
           for (int c = 0; c < 4; c++) {
-            if (r < next.height() && c < next.width() && next.getShape(c, r) == 1) {
-              int x = startX + c * cellSize;
-              int y = startY + r * cellSize;
+            int x = startX + c * cellSize;
+            int y = startY + r * cellSize;
+            g2.setColor(new Color(40, 40, 48));
+            g2.fillRoundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 6, 6);
+            if (next != null && r < next.height() && c < next.width() && next.getShape(c, r) == 1) {
               Color col = next.getColor();
-              if (col == null) col = Color.CYAN;
-              String blockType = next.getBlockType();
-              
-              // GameBoard와 동일한 방식으로 블록 그리기
-              drawBlockCellWithPattern(g2, x, y, cellSize, col, blockType);
-              
-              // 아이템 표시
+              if (col == null)
+                col = Color.CYAN;
+              g2.setColor(col);
+              g2.fillRoundRect(x + 4, y + 4, cellSize - 8, cellSize - 8, 6, 6);
+              g2.setColor(new Color(255, 255, 255, 40));
+              g2.fillRoundRect(x + 4, y + 4, (cellSize - 8) / 2, (cellSize - 8) / 2, 4, 4);
+
+              // Draw item indicator if this cell contains an item
               se.tetris.team5.items.Item cellItem = next.getItem(c, r);
               if (cellItem != null) {
-                drawItemIndicator(g2, x, y, cellSize, cellItem);
+                drawItemIndicator(g2, x + 4, y + 4, cellSize - 8, cellItem);
               }
             }
           }
         }
+        g2.dispose();
       }
-      g2.dispose();
-    }
-    
-    // GameBoard의 drawBlockWithPattern과 동일한 로직
-    private void drawBlockCellWithPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, Color color, String blockType) {
-      // 기본 블록 배경 그리기
-      g2.setColor(color);
-      g2.fillRoundRect(x+3, y+3, cellSize-6, cellSize-6, 6, 6);
-      
-      // 색맹 모드일 때만 패턴 추가
-      se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-      if (settings.isColorblindMode()) {
-        drawBlockPattern(g2, x, y, cellSize, blockType);
+
+      /*
+       * Draw item indicator overlay on a block cell
+       */
+      private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int size, se.tetris.team5.items.Item item) {
+        // Semi-transparent golden circle overlay
+        g2.setColor(new Color(255, 215, 0, 200)); // Gold with transparency
+        int ovalSize = Math.max(size / 2, 10);
+        int ovalX = x + (size - ovalSize) / 2;
+        int ovalY = y + (size - ovalSize) / 2;
+        g2.fillOval(ovalX, ovalY, ovalSize, ovalSize);
+
+        // Draw item icon/letter in the center
+        g2.setColor(Color.BLACK);
+        Font iconFont = new Font("Arial", Font.BOLD, Math.max(ovalSize / 2, 8));
+        g2.setFont(iconFont);
+        String icon = getItemIcon(item);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        int textX = ovalX + (ovalSize - fm.stringWidth(icon)) / 2;
+        int textY = ovalY + (ovalSize + fm.getAscent()) / 2 - fm.getDescent();
+        g2.drawString(icon, textX, textY);
       }
-      
-      // 기본 하이라이트
-      g2.setColor(new Color(255,255,255,40));
-      g2.fillRoundRect(x+4, y+4, (cellSize-6)/2, (cellSize-6)/2, 4, 4);
-    }
-    
-    // 블록 타입별 패턴 그리기
-    private void drawBlockPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, String blockType) {
-      g2.setColor(new Color(0, 0, 0, 120));
-      int innerSize = cellSize - 10;
-      int patX = x + 5;
-      int patY = y + 5;
-      
-      java.awt.Stroke oldStroke = g2.getStroke();
-      g2.setStroke(new java.awt.BasicStroke(2.0f));
-      
-      switch (blockType) {
-        case "I": // 수직선
-          g2.drawLine(patX + innerSize/2, patY + 2, patX + innerSize/2, patY + innerSize - 2);
-          break;
-        case "O": // 사각형
-          int rectSize = innerSize/3;
-          g2.drawRect(patX + (innerSize-rectSize)/2, patY + (innerSize-rectSize)/2, rectSize, rectSize);
-          break;
-        case "T": // T자
-          g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
-          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + innerSize - 2);
-          break;
-        case "L": // L자
-          g2.drawLine(patX + innerSize/3, patY + 2, patX + innerSize/3, patY + innerSize - 2);
-          g2.drawLine(patX + innerSize/3, patY + innerSize - 2, patX + innerSize - 2, patY + innerSize - 2);
-          break;
-        case "J": // J자
-          g2.drawLine(patX + 2*innerSize/3, patY + 2, patX + 2*innerSize/3, patY + innerSize - 2);
-          g2.drawLine(patX + 2, patY + innerSize - 2, patX + 2*innerSize/3, patY + innerSize - 2);
-          break;
-        case "S": // S자
-          g2.drawLine(patX + 2, patY + 2*innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
-          g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize/2, patY + innerSize/3);
-          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
-          break;
-        case "Z": // Z자
-          g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize/2, patY + innerSize/3);
-          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
-          g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize - 2, patY + 2*innerSize/3);
-          break;
-        case "W": // 무게추 - X 패턴
-          g2.drawLine(patX + 2, patY + 2, patX + innerSize - 2, patY + innerSize - 2);
-          g2.drawLine(patX + innerSize - 2, patY + 2, patX + 2, patY + innerSize - 2);
-          break;
+
+      /**
+       * Get display icon for item type
+       */
+      private String getItemIcon(se.tetris.team5.items.Item item) {
+        if (item instanceof se.tetris.team5.items.LineClearItem)
+          return "L";
+        if (item instanceof se.tetris.team5.items.TimeStopItem)
+          return "⏱";
+        if (item instanceof se.tetris.team5.items.DoubleScoreItem)
+          return "×2";
+        if (item instanceof se.tetris.team5.items.BombItem)
+          return "💣";
+        if (item instanceof se.tetris.team5.items.WeightBlockItem)
+          return "W";
+        if (item instanceof se.tetris.team5.items.ScoreItem)
+          return "S";
+        return "?";
       }
-      
-      g2.setStroke(oldStroke);
-    }
-    
-    // GameBoard의 drawItemGlyph와 유사한 스타일로 아이템 표시
-    private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int cellSize, se.tetris.team5.items.Item item) {
-      int cx = x + cellSize/2;
-      int cy = y + cellSize/2;
-      int r = Math.max(6, cellSize/3);
+    };
+    nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
+    JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
+    nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
+    rightPanel.add(nextWrapper);
+    rightPanel.add(javax.swing.Box.createVerticalStrut(8));
 
-      // 배경 링
-      g2.setColor(new Color(0,0,0,120));
-      g2.fillOval(cx - r - 1, cy - r - 1, r*2 + 2, r*2 + 2);
+    // Item description panel (shows description when next block contains an item)
+    // 아이템 모드일 때만 표시 (가시성은 reset()에서 제어)
+    itemDescPane = new javax.swing.JTextPane();
+    itemDescPane.setEditable(false);
+    itemDescPane.setOpaque(false);
+    itemDescPane.setFont(createKoreanFont(Font.PLAIN, 13));
+    itemDescPane.setForeground(new Color(220, 220, 220));
+    itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
+    itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255, 180, 0));
+    itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
+    rightPanel.add(itemDescWrapper);
+    rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-      if (item instanceof se.tetris.team5.items.TimeStopItem) {
-        // 시계 아이콘
-        g2.setColor(new Color(60, 180, 170));
-        g2.fillOval(cx - r, cy - r, r*2, r*2);
-        g2.setColor(Color.WHITE);
-        int hw = Math.max(2, r/4);
-        g2.fillOval(cx - hw, cy - hw, hw*2, hw*2);
-        g2.setColor(new Color(255,255,255,200));
-        g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r/6)));
-        g2.drawLine(cx, cy, cx + r/2, cy - r/3);
-      } else if (item instanceof se.tetris.team5.items.BombItem) {
-        // 폭탄 아이콘
-        g2.setColor(new Color(30, 10, 10));
-        g2.fillOval(cx - r, cy - r, r*2, r*2);
-        g2.setColor(new Color(255, 90, 90));
-        g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r/6)));
-        g2.drawOval(cx - r + 1, cy - r + 1, r*2 - 2, r*2 - 2);
-        g2.setColor(new Color(255, 200, 80));
-        g2.fillOval(cx + r - Math.max(4, r/4), cy - r - Math.max(2, r/6), Math.max(4, r/3), Math.max(4, r/3));
-      } else if (item instanceof se.tetris.team5.items.LineClearItem) {
-        // 라인 클리어 아이콘
-        g2.setColor(new Color(255, 200, 70));
-        int badgeSize = Math.max(r, 12);
-        int arc = Math.max(6, badgeSize / 3);
-        g2.fillRoundRect(cx - badgeSize, cy - badgeSize, badgeSize * 2, badgeSize * 2, arc, arc);
-        g2.setColor(new Color(255,255,255,220));
-        Font prev = g2.getFont();
-        Font glyphFont = prev.deriveFont((float) Math.max(10, badgeSize));
-        g2.setFont(glyphFont);
-        java.awt.FontMetrics fm = g2.getFontMetrics();
-        String text = "L";
-        int sx = cx - fm.stringWidth(text) / 2;
-        int sy = cy + fm.getAscent() / 2 - 2;
-        g2.drawString(text, sx, sy);
-        g2.setFont(prev);
-      } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
-        // 더블 스코어 아이콘
-        g2.setColor(new Color(255, 215, 0));
-        g2.fillOval(cx - r, cy - r, r*2, r*2);
-        g2.setColor(Color.WHITE);
-        Font prev = g2.getFont();
-        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
-        g2.setFont(glyphFont);
-        java.awt.FontMetrics fm = g2.getFontMetrics();
-        String text = "×2";
-        int sx = cx - fm.stringWidth(text) / 2;
-        int sy = cy + fm.getAscent() / 2 - 2;
-        g2.drawString(text, sx, sy);
-        g2.setFont(prev);
-      } else if (item instanceof se.tetris.team5.items.WeightBlockItem) {
-        // 무게추 아이콘
-        g2.setColor(new Color(80, 80, 80));
-        g2.fillOval(cx - r, cy - r, r*2, r*2);
-        g2.setColor(Color.WHITE);
-        Font prev = g2.getFont();
-        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
-        g2.setFont(glyphFont);
-        java.awt.FontMetrics fm = g2.getFontMetrics();
-        String text = "W";
-        int sx = cx - fm.stringWidth(text) / 2;
-        int sy = cy + fm.getAscent() / 2 - 2;
-        g2.drawString(text, sx, sy);
-        g2.setFont(prev);
-      } else if (item instanceof se.tetris.team5.items.ScoreItem) {
-        // 스코어 아이콘
-        g2.setColor(new Color(100, 200, 255));
-        g2.fillOval(cx - r, cy - r, r*2, r*2);
-        g2.setColor(Color.WHITE);
-        Font prev = g2.getFont();
-        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
-        g2.setFont(glyphFont);
-        java.awt.FontMetrics fm = g2.getFontMetrics();
-        String text = "S";
-        int sx = cx - fm.stringWidth(text) / 2;
-        int sy = cy + fm.getAscent() / 2 - 2;
-        g2.drawString(text, sx, sy);
-        g2.setFont(prev);
-      }
-    }
-  };
-  nextVisualPanel.setPreferredSize(new java.awt.Dimension(190, 130)); // 높이 증가 100->130
-  JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
-  nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
-  rightPanel.add(nextWrapper);
-  rightPanel.add(javax.swing.Box.createVerticalStrut(8));
+    // Score / Info panel (titled box) - modern cards for score, level, lines
+    scoreBoard = new ScoreBoard();
+    JPanel scoreInfo = new JPanel();
+    scoreInfo.setOpaque(false);
+    scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
+    scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
+    scoreValueLabel.setFont(createKoreanFont(Font.BOLD, 28));
+    scoreValueLabel.setForeground(new Color(255, 220, 100));
+    scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    scoreInfo.add(scoreValueLabel);
+    scoreInfo.add(javax.swing.Box.createVerticalStrut(4));
+    doubleScoreBadge = new DoubleScoreBadge();
+    doubleScoreBadge.setVisible(false);
+    doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    scoreInfo.add(doubleScoreBadge);
+    scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
+    JPanel smallRow = new JPanel();
+    smallRow.setOpaque(false);
+    smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
+    levelLabel = new JLabel("레벨: 1");
+    levelLabel.setFont(createKoreanFont(Font.BOLD, 14));
+    levelLabel.setForeground(new Color(200, 200, 200));
+    levelLabel.setBorder(new EmptyBorder(0, 8, 0, 8));
+    linesLabel = new JLabel("줄: 0");
+    linesLabel.setFont(createKoreanFont(Font.BOLD, 14));
+    linesLabel.setForeground(new Color(200, 200, 200));
+    linesLabel.setBorder(new EmptyBorder(0, 8, 0, 8));
+    smallRow.add(levelLabel);
+    smallRow.add(javax.swing.Box.createHorizontalGlue());
+    smallRow.add(linesLabel);
+    scoreInfo.add(smallRow);
+    scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
 
-  // Item description panel (shows description when next block contains an item)
-  // 아이템 모드일 때만 표시 (가시성은 reset()에서 제어)
-  itemDescPane = new javax.swing.JTextPane();
-  itemDescPane.setEditable(false);
-  itemDescPane.setOpaque(false);
-  itemDescPane.setFont(createKoreanFont(Font.PLAIN, 13));
-  itemDescPane.setForeground(new Color(220, 220, 220));
-  itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
-  itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
-  itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
-  rightPanel.add(itemDescWrapper);
-  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
+    // 게임 모드 라벨 추가
+    gameModeLabel = new JLabel("모드: 아이템 모드", javax.swing.SwingConstants.CENTER);
+    gameModeLabel.setFont(createKoreanFont(Font.BOLD, 13));
+    gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
+    gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    scoreInfo.add(gameModeLabel);
 
-  // Score / Info panel (titled box) - modern cards for score, level, lines
-  scoreBoard = new ScoreBoard();
-  JPanel scoreInfo = new JPanel();
-  scoreInfo.setOpaque(false);
-  scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
-  scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
-  scoreValueLabel.setFont(createKoreanFont(Font.BOLD, 28));
-  scoreValueLabel.setForeground(new Color(255, 220, 100));
-  scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  scoreInfo.add(scoreValueLabel);
-  doubleScoreBadge = new DoubleScoreBadge();
-  doubleScoreBadge.setVisible(false);
-  doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  scoreInfo.add(doubleScoreBadge);
-  scoreInfo.add(javax.swing.Box.createVerticalStrut(8));
-  JPanel smallRow = new JPanel(); smallRow.setOpaque(false);
-  smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
-  levelLabel = new JLabel("레벨: 1");
-  levelLabel.setFont(createKoreanFont(Font.BOLD, 14));
-  levelLabel.setForeground(new Color(200, 200, 200));
-  levelLabel.setBorder(new EmptyBorder(0,4,0,4)); // 여백 축소 8→4
-  linesLabel = new JLabel("줄: 0");
-  linesLabel.setFont(createKoreanFont(Font.BOLD, 14));
-  linesLabel.setForeground(new Color(200, 200, 200));
-  linesLabel.setBorder(new EmptyBorder(0,4,0,4)); // 여백 축소 8→4
-  smallRow.add(levelLabel);
-  smallRow.add(javax.swing.Box.createHorizontalStrut(12)); // Glue 대신 고정 간격 12px
-  smallRow.add(linesLabel);
-  scoreInfo.add(smallRow);
-  scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
-  
-  // 게임 모드 라벨 추가
-  gameModeLabel = new JLabel("모드: 아이템 모드", javax.swing.SwingConstants.CENTER);
-  gameModeLabel.setFont(createKoreanFont(Font.BOLD, 13));
-  gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
-  gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  scoreInfo.add(gameModeLabel);
-  
-  scoreInfo.setPreferredSize(new java.awt.Dimension(170, 220)); // 가로 크기 추가 축소 200→170
+    scoreInfo.setPreferredSize(new java.awt.Dimension(280, 220));
 
-  JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
-  infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  infoWrapper.setMaximumSize(new java.awt.Dimension(240, 200));
-  rightPanel.add(infoWrapper);
-  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
+    JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
+    infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    infoWrapper.setMaximumSize(new java.awt.Dimension(240, 200));
+    rightPanel.add(infoWrapper);
+    rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-  // Controls panel (titled box) — re-add at the bottom per user request
-  JPanel controlsBox = new JPanel(new BorderLayout());
-  controlsBox.setOpaque(false);
-  JTextPane controlsPane = new JTextPane();
-  controlsPane.setEditable(false);
-  controlsPane.setOpaque(false);
-  controlsPane.setFont(createKoreanFont(Font.PLAIN, 14));
-  controlsPane.setForeground(Color.WHITE);
-  StringBuilder ctrl = new StringBuilder();
-  ctrl.append("조작키 안내\n\n");
-  ctrl.append("↑ : 회전\n");
-  ctrl.append("↓ : 소프트 드롭\n");
-  ctrl.append("← → : 이동\n");
-  ctrl.append("Space : 하드 드롭\n");
-  ctrl.append("ESC : 나가기\n");
-  controlsPane.setText(ctrl.toString());
-  controlsBox.add(controlsPane, BorderLayout.CENTER);
-  JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
-  controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
-  rightPanel.add(controlsWrapper);
+    // Controls panel (titled box) — re-add at the bottom per user request
+    JPanel controlsBox = new JPanel(new BorderLayout());
+    controlsBox.setOpaque(false);
+    JTextPane controlsPane = new JTextPane();
+    controlsPane.setEditable(false);
+    controlsPane.setOpaque(false);
+    controlsPane.setFont(createKoreanFont(Font.PLAIN, 14));
+    controlsPane.setForeground(Color.WHITE);
+    StringBuilder ctrl = new StringBuilder();
+    ctrl.append("조작키 안내\n\n");
+    ctrl.append("↑ : 회전\n");
+    ctrl.append("↓ : 소프트 드롭\n");
+    ctrl.append("← → : 이동\n");
+    ctrl.append("Space : 하드 드롭\n");
+    ctrl.append("ESC : 나가기\n");
+    controlsPane.setText(ctrl.toString());
+    controlsBox.add(controlsPane, BorderLayout.CENTER);
+    JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
+    controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
+    rightPanel.add(controlsWrapper);
 
-  // Controls panel (titled box) — re-use scoreBoard's text pane styling by creating a simple info pane
-  // We remove the controls text from the 게임 정보 panel as requested.
-  // If a separate controls panel is desired later, we can add a compact icon-based hint.
+    // Controls panel (titled box) — re-use scoreBoard's text pane styling by
+    // creating a simple info pane
+    // We remove the controls text from the 게임 정보 panel as requested.
+    // If a separate controls panel is desired later, we can add a compact
+    // icon-based hint.
 
-  add(rightPanel, BorderLayout.EAST);
+    add(rightPanel, BorderLayout.EAST);
 
     // Document default style.
     styleSet = new SimpleAttributeSet();
@@ -626,6 +518,17 @@ public class game extends JPanel implements KeyListener {
 
     // Initialize GameEngine
     gameEngine = new GameEngine(HEIGHT, WIDTH);
+    // 모드에 따라 GameMode 설정
+    String mode = System.getProperty("tetris.game.mode", "NORMAL");
+    if ("ITEM".equals(mode)) {
+      gameEngine.setGameMode(se.tetris.team5.gamelogic.GameMode.ITEM);
+      if (gameModeLabel != null)
+        gameModeLabel.setText("모드: 아이템 모드");
+    } else {
+      gameEngine.setGameMode(se.tetris.team5.gamelogic.GameMode.NORMAL);
+      if (gameModeLabel != null)
+        gameModeLabel.setText("모드: 일반 모드");
+    }
     // ensure UI updates immediately when engine spawns next block
     gameEngine.addStateChangeListener(new Runnable() {
       @Override
@@ -687,7 +590,7 @@ public class game extends JPanel implements KeyListener {
         // colored border
         g2.setColor(borderColor);
         g2.setStroke(new java.awt.BasicStroke(2f));
-        g2.drawRoundRect(1, 1, Math.max(0, getWidth()-2), Math.max(0, getHeight()-2), arc, arc);
+        g2.drawRoundRect(1, 1, Math.max(0, getWidth() - 2), Math.max(0, getHeight() - 2), arc, arc);
         g2.dispose();
         super.paintComponent(g);
       }
@@ -703,8 +606,9 @@ public class game extends JPanel implements KeyListener {
     wrapper.add(titleLabel, BorderLayout.NORTH);
     wrapper.add(inner, BorderLayout.CENTER);
 
-    // Preferred sizing - 가로 크기 추가 축소 220→190
-    wrapper.setPreferredSize(new java.awt.Dimension(190, Math.max(120, content != null ? content.getPreferredSize().height + 48 : 140)));
+    // Preferred sizing
+    wrapper.setPreferredSize(
+        new java.awt.Dimension(320, Math.max(120, content != null ? content.getPreferredSize().height + 48 : 140)));
     return wrapper;
   }
 
@@ -712,10 +616,10 @@ public class game extends JPanel implements KeyListener {
     // GameEngine의 moveBlockDown()만 호출하여 상태 변경
     gameEngine.moveBlockDown();
     syncWithGameEngine();
-    
+
     // 레벨 변경 시 타이머 속도 업데이트
     updateTimerSpeed();
-    
+
     if (gameEngine.isGameOver()) {
       gameOver();
       return;
@@ -752,10 +656,10 @@ public class game extends JPanel implements KeyListener {
   protected void hardDrop() {
     gameEngine.hardDrop();
     syncWithGameEngine();
-    
+
     // 레벨 변경 시 타이머 속도 업데이트
     updateTimerSpeed();
-    
+
     if (gameEngine.isGameOver()) {
       gameOver();
       return;
@@ -863,7 +767,7 @@ public class game extends JPanel implements KeyListener {
       sb.append(BORDER_CHAR);
     }
 
-  gameBoard.setText(sb.toString());
+    gameBoard.setText(sb.toString());
     StyledDocument doc = gameBoard.getStyledDocument();
 
     // 기본 스타일 적용 (테두리 색상을 하얀색으로 고정)
@@ -909,8 +813,10 @@ public class game extends JPanel implements KeyListener {
       textOffset += WIDTH + 3;
     }
 
-    // In addition to updating the text (for compatibility), push the raw board data and
-    // any items on cells to the graphical renderer so the visual blocks and items are painted.
+    // In addition to updating the text (for compatibility), push the raw board data
+    // and
+    // any items on cells to the graphical renderer so the visual blocks and items
+    // are painted.
     se.tetris.team5.items.Item[][] items = new se.tetris.team5.items.Item[board.length][board[0].length];
     for (int i = 0; i < board.length; i++) {
       for (int j = 0; j < board[i].length; j++) {
@@ -918,7 +824,8 @@ public class game extends JPanel implements KeyListener {
       }
     }
     gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY);
-    // If the engine recorded cleared rows during the last move, consume them and trigger animations.
+    // If the engine recorded cleared rows during the last move, consume them and
+    // trigger animations.
     try {
       java.util.List<Integer> clearedRows = gameEngine.consumeLastClearedRows();
       if (clearedRows != null && !clearedRows.isEmpty()) {
@@ -942,34 +849,34 @@ public class game extends JPanel implements KeyListener {
     scoreValueLabel.setText(String.format("%,d", currentScore));
     levelLabel.setText("레벨: " + level);
     linesLabel.setText("줄: " + linesCleared);
-    
+
     // 게임 모드 라벨 업데이트
     String gameMode = System.getProperty("tetris.game.mode", "ITEM");
     String gameDiff = System.getProperty("tetris.game.difficulty", "NORMAL");
     if ("ITEM".equals(gameMode)) {
-        gameModeLabel.setText("모드: 아이템 모드");
-        gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
+      gameModeLabel.setText("모드: 아이템 모드");
+      gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
     } else {
-        String modeText = "모드: 일반 모드";
-        switch (gameDiff) {
-            case "EASY": 
-                modeText += " (이지)";
-                gameModeLabel.setForeground(new Color(144, 238, 144)); // 라이트 그린
-                break;
-            case "NORMAL": 
-                modeText += " (노말)";
-                gameModeLabel.setForeground(new Color(173, 216, 230)); // 라이트 블루
-                break;
-            case "HARD": 
-                modeText += " (하드)";
-                gameModeLabel.setForeground(new Color(255, 99, 99)); // 라이트 레드
-                break;
-            default: 
-                modeText += " (노말)";
-                gameModeLabel.setForeground(new Color(173, 216, 230)); // 라이트 블루
-                break;
-        }
-        gameModeLabel.setText(modeText);
+      String modeText = "모드: 일반 모드";
+      switch (gameDiff) {
+        case "EASY":
+          modeText += " (이지)";
+          gameModeLabel.setForeground(new Color(144, 238, 144)); // 라이트 그린
+          break;
+        case "NORMAL":
+          modeText += " (노말)";
+          gameModeLabel.setForeground(new Color(173, 216, 230)); // 라이트 블루
+          break;
+        case "HARD":
+          modeText += " (하드)";
+          gameModeLabel.setForeground(new Color(255, 99, 99)); // 라이트 레드
+          break;
+        default:
+          modeText += " (노말)";
+          gameModeLabel.setForeground(new Color(173, 216, 230)); // 라이트 블루
+          break;
+      }
+      gameModeLabel.setText(modeText);
     }
 
     // Keep the text pane (compat/backwards) updated but don't show it over graphics
@@ -979,21 +886,29 @@ public class game extends JPanel implements KeyListener {
     sb.append("레벨: ").append(level).append("\n");
     sb.append("줄: ").append(linesCleared).append("\n");
     sb.append("\n");
-    
+
     // 게임 모드 표시
     String mode = System.getProperty("tetris.game.mode", "ITEM");
     String diff = System.getProperty("tetris.game.difficulty", "NORMAL");
     if ("ITEM".equals(mode)) {
-        sb.append("모드: 아이템 모드\n");
+      sb.append("모드: 아이템 모드\n");
     } else {
-        sb.append("모드: 일반 모드");
-        switch (diff) {
-            case "EASY": sb.append(" (이지)"); break;
-            case "NORMAL": sb.append(" (노말)"); break;
-            case "HARD": sb.append(" (하드)"); break;
-            default: sb.append(" (노말)"); break;
-        }
-        sb.append("\n");
+      sb.append("모드: 일반 모드");
+      switch (diff) {
+        case "EASY":
+          sb.append(" (이지)");
+          break;
+        case "NORMAL":
+          sb.append(" (노말)");
+          break;
+        case "HARD":
+          sb.append(" (하드)");
+          break;
+        default:
+          sb.append(" (노말)");
+          break;
+      }
+      sb.append("\n");
     }
     sb.append("\n");
 
@@ -1034,7 +949,6 @@ public class game extends JPanel implements KeyListener {
     StringBuilder sb = new StringBuilder();
 
     Block nextBlock = gameEngine.getNextBlock();
-    if (nextBlock != null) System.out.println("[UI DEBUG] updateNextBlockBoard next=" + nextBlock.getClass().getSimpleName());
     if (nextBlock != null) {
       // 4x4 크기의 블록 표시 영역
       for (int row = 0; row < 4; row++) {
@@ -1096,7 +1010,7 @@ public class game extends JPanel implements KeyListener {
 
     // 아이템 설명 업데이트 - 다음 블록에 포함된 아이템만 설명
     String itemDesc = "다음 블록에 포함된 아이템이 없습니다.";
-    
+
     if (nextBlock != null) {
       se.tetris.team5.items.Item found = null;
       outer: for (int r = 0; r < nextBlock.height(); r++) {
@@ -1116,12 +1030,14 @@ public class game extends JPanel implements KeyListener {
     if (itemDescPane != null) {
       itemDescPane.setText(itemDesc);
       try {
-        itemDescPane.getStyledDocument().setCharacterAttributes(0, itemDescPane.getDocument().getLength(), new SimpleAttributeSet(), false);
+        itemDescPane.getStyledDocument().setCharacterAttributes(0, itemDescPane.getDocument().getLength(),
+            new SimpleAttributeSet(), false);
       } catch (Exception ex) {
         // ignore styling errors
       }
     }
-    // Ensure the graphical preview repaints immediately so the UI stays in sync with engine state
+    // Ensure the graphical preview repaints immediately so the UI stays in sync
+    // with engine state
     if (nextVisualPanel != null) {
       nextVisualPanel.repaint();
     }
@@ -1134,31 +1050,32 @@ public class game extends JPanel implements KeyListener {
    * Return a user-facing description for an item.
    */
   private String describeItem(se.tetris.team5.items.Item it, boolean held) {
-    if (it == null) return "다음 블록에 포함된 아이템이 없습니다.";
-    
+    if (it == null)
+      return "다음 블록에 포함된 아이템이 없습니다.";
+
     String name = it.getName();
-    
+
     // 다음 블록에 포함된 아이템 설명
     if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
       return "⏱ 타임스톱\n이 블록을 줄 삭제하면 Shift 키로 5초간 게임을 멈출 수 있습니다!";
-    
+
     if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
       return "� 폭탄\n블록 고정 시 폭발로 주변 블록을 제거합니다.";
-    
+
     if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
       return "L 줄삭제\n블록 고정 시 해당 줄을 즉시 삭제합니다.";
-    
+
     if (it instanceof se.tetris.team5.items.DoubleScoreItem || "DoubleScoreItem".equals(name))
       return "×2 점수 2배\n블록 고정 시 20초간 모든 점수가 2배가 됩니다!";
-    
+
     if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
       se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
       return "S 점수 아이템\n블록 고정 시 즉시 +" + si.getScoreAmount() + "점을 획득합니다.";
     }
-    
+
     if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
       return "W 무게추\n다음 블록이 무게추 블록(WBlock)으로 생성됩니다.";
-    
+
     return "특수 아이템: " + name;
   }
 
@@ -1184,14 +1101,15 @@ public class game extends JPanel implements KeyListener {
   private void showPauseConfirmDialog() {
     // Stop timer and mark paused
     isPaused = true;
-    if (timer != null) timer.stop();
+    if (timer != null)
+      timer.stop();
 
     String[] options = { "계속", "메뉴로 나가기", "게임 종료" };
     int choice = javax.swing.JOptionPane.showOptionDialog(this,
         "게임을 일시중단했습니다.\n\n" +
-        "• 계속: 현재 게임을 이어서 진행합니다.\n" +
-        "• 메뉴로 나가기: 현재 게임을 취소하고 메인 메뉴로 이동합니다.\n" +
-        "• 게임 종료: 테트리스 프로그램을 완전히 종료합니다.",
+            "• 계속: 현재 게임을 이어서 진행합니다.\n" +
+            "• 메뉴로 나가기: 현재 게임을 취소하고 메인 메뉴로 이동합니다.\n" +
+            "• 게임 종료: 테트리스 프로그램을 완전히 종료합니다.",
         "일시정지",
         javax.swing.JOptionPane.DEFAULT_OPTION,
         javax.swing.JOptionPane.QUESTION_MESSAGE,
@@ -1208,13 +1126,15 @@ public class game extends JPanel implements KeyListener {
         gameEngine.getBoardManager().eraseBlock(currBlock, x, y);
       }
       isPaused = false;
-      if (timer != null) timer.stop();
+      if (timer != null)
+        timer.stop();
       screenController.showScreen("home");
       return;
     } else if (choice == 2) {
       // 게임 종료 선택: 테트리스 프로그램 완전 종료
       isPaused = false;
-      if (timer != null) timer.stop();
+      if (timer != null)
+        timer.stop();
       System.exit(0); // 프로그램 완전 종료
       return;
     }
@@ -1252,7 +1172,7 @@ public class game extends JPanel implements KeyListener {
         sb.append("  ");
       }
       sb.append(pauseMenuOptions[i]);
-      
+
       // 각 옵션에 대한 간단한 설명 추가
       switch (i) {
         case 0:
@@ -1272,9 +1192,10 @@ public class game extends JPanel implements KeyListener {
     sb.append("     ↑↓: 선택    Enter: 확인    ESC: 계속\n");
 
     // 게임 보드에 일시정지 메뉴 표시
-  // Enable text overlay so the pause menu (text) is visible over the graphical board
-  gameBoard.setShowTextOverlay(true);
-  gameBoard.setText(sb.toString());
+    // Enable text overlay so the pause menu (text) is visible over the graphical
+    // board
+    gameBoard.setShowTextOverlay(true);
+    gameBoard.setText(sb.toString());
     StyledDocument doc = gameBoard.getStyledDocument();
 
     // 기본 스타일 적용
@@ -1304,7 +1225,7 @@ public class game extends JPanel implements KeyListener {
     if (timer != null) {
       timer.stop();
     }
-    
+
     // 타임스톱 타이머 정지 및 초기화
     if (timeStopCountdownTimer != null) {
       timeStopCountdownTimer.stop();
@@ -1319,10 +1240,19 @@ public class game extends JPanel implements KeyListener {
     }
     isTimeStopped = false;
 
-    // 게임 모드에 따라 아이템 설명 패널 가시성 제어
-    String gameMode = System.getProperty("tetris.game.mode", "ITEM");
+    // 게임 모드에 따라 아이템 설명 패널 가시성 및 엔진 모드 설정
+    String mode = System.getProperty("tetris.game.mode", "NORMAL");
     if (itemDescWrapper != null) {
-      itemDescWrapper.setVisible("ITEM".equals(gameMode));
+      itemDescWrapper.setVisible("ITEM".equals(mode));
+    }
+    if ("ITEM".equals(mode)) {
+      gameEngine.setGameMode(se.tetris.team5.gamelogic.GameMode.ITEM);
+      if (gameModeLabel != null)
+        gameModeLabel.setText("모드: 아이템 모드");
+    } else {
+      gameEngine.setGameMode(se.tetris.team5.gamelogic.GameMode.NORMAL);
+      if (gameModeLabel != null)
+        gameModeLabel.setText("모드: 일반 모드");
     }
 
     // GameEngine을 통해 게임 리셋
@@ -1359,19 +1289,29 @@ public class game extends JPanel implements KeyListener {
     String gameDiff = System.getProperty("tetris.game.difficulty", "NORMAL");
     String modeDisplayName;
     String modeString;
-    
+
     if ("ITEM".equals(gameMode)) {
-        modeDisplayName = "아이템 모드";
-        modeString = "ITEM";
+      modeDisplayName = "아이템 모드";
+      modeString = "ITEM";
     } else {
-        modeString = "NORMAL_" + gameDiff;
-        switch (gameDiff) {
-            case "EASY": modeDisplayName = "일반 모드 - 쉬움"; break;
-            case "NORMAL": modeDisplayName = "일반 모드 - 보통"; break;
-            case "HARD": modeDisplayName = "일반 모드 - 어려움"; break;
-            case "EXPERT": modeDisplayName = "일반 모드 - 전문가"; break;
-            default: modeDisplayName = "일반 모드 - 보통"; break;
-        }
+      modeString = "NORMAL_" + gameDiff;
+      switch (gameDiff) {
+        case "EASY":
+          modeDisplayName = "일반 모드 - 쉬움";
+          break;
+        case "NORMAL":
+          modeDisplayName = "일반 모드 - 보통";
+          break;
+        case "HARD":
+          modeDisplayName = "일반 모드 - 어려움";
+          break;
+        case "EXPERT":
+          modeDisplayName = "일반 모드 - 전문가";
+          break;
+        default:
+          modeDisplayName = "일반 모드 - 보통";
+          break;
+      }
     }
 
     // Prompt the user for their name using a modal dialog with score and mode info.
@@ -1379,16 +1319,15 @@ public class game extends JPanel implements KeyListener {
     int currentScore = gameEngine.getGameScoring().getCurrentScore();
     int level = gameEngine.getGameScoring().getLevel();
     int linesCleared = gameEngine.getGameScoring().getLinesCleared();
-    
+
     String message = String.format(
         "게임이 끝났습니다!\n\n" +
-        "게임 모드: %s\n" +
-        "최종 점수: %,d점\n" +
-        "달성 레벨: %d\n" +
-        "제거한 줄: %d\n\n" +
-        "플레이어 이름을 입력하세요:",
-        modeDisplayName, currentScore, level, linesCleared
-    );
+            "게임 모드: %s\n" +
+            "최종 점수: %,d점\n" +
+            "달성 레벨: %d\n" +
+            "제거한 줄: %d\n\n" +
+            "플레이어 이름을 입력하세요:",
+        modeDisplayName, currentScore, level, linesCleared);
 
     // 테스트 모드일 때는 다이얼로그 표시하지 않음
     String inputName;
@@ -1409,18 +1348,19 @@ public class game extends JPanel implements KeyListener {
         return;
       }
       inputName = inputName.trim();
-      if (inputName.isEmpty()) inputName = "Player";
+      if (inputName.isEmpty())
+        inputName = "Player";
     }
 
     // Save the score with mode information and navigate to the scoreboard
     scoreManager.addScore(inputName, currentScore, level, linesCleared, playTime, modeString);
-    
+
     // 방금 추가된 점수 정보를 시스템 프로퍼티로 저장 (스코어보드에서 강조용)
     System.setProperty("tetris.highlight.playerName", inputName);
     System.setProperty("tetris.highlight.score", String.valueOf(currentScore));
     System.setProperty("tetris.highlight.mode", modeString);
     System.setProperty("tetris.highlight.playTime", String.valueOf(playTime));
-    
+
     screenController.showScreen("score");
   }
 
@@ -1526,10 +1466,10 @@ public class game extends JPanel implements KeyListener {
     isTimeStopped = true;
     gameEngine.useTimeStop(); // 충전 소모
     timer.stop(); // 게임 타이머 정지
-    
+
     // 화면 업데이트 (타임스톱 상태 표시 제거)
     updateAllBoards();
-    
+
     // Start a 5-second visible countdown (tick every 1s) and show overlay
     timeStopRemaining = 5;
     showTimeStopMessage(timeStopRemaining);
@@ -1566,7 +1506,7 @@ public class game extends JPanel implements KeyListener {
    */
   private void deactivateTimeStop() {
     isTimeStopped = false;
-    
+
     // 타임스톱 타이머 정리
     if (timeStopCountdownTimer != null) {
       timeStopCountdownTimer.stop();
@@ -1586,7 +1526,7 @@ public class game extends JPanel implements KeyListener {
     if (timeStopSubLabel != null) {
       timeStopSubLabel.setText("");
     }
-    
+
     // 게임 타이머 재시작
     if (!isPaused && !gameEngine.isGameOver()) {
       // 타임스톱 중 레벨이 변경되었을 수 있으므로 속도 업데이트 후 시작
@@ -1594,7 +1534,7 @@ public class game extends JPanel implements KeyListener {
       timer.setDelay(currentInterval);
       timer.start();
     }
-    
+
     // 화면 복원
     updateAllBoards();
   }
@@ -1604,6 +1544,7 @@ public class game extends JPanel implements KeyListener {
    */
   /**
    * Show a time-stop overlay message with remaining seconds visible.
+   * 
    * @param seconds remaining seconds to display (e.g. 5..1)
    */
   private void showTimeStopMessage(int seconds) {
@@ -1612,7 +1553,8 @@ public class game extends JPanel implements KeyListener {
     // center the message with a prominent countdown
     // We now use a graphical semi-transparent overlay with a large countdown label.
     if (timeStopOverlay != null && timeStopNumberLabel != null) {
-      // Update the three labels instead of HTML to avoid clipping and give precise control
+      // Update the three labels instead of HTML to avoid clipping and give precise
+      // control
       timeStopIconLabel.setText("⏱");
       timeStopNumberLabel.setText(String.valueOf(seconds));
       timeStopSubLabel.setText("초 남음");
@@ -1684,8 +1626,8 @@ public class game extends JPanel implements KeyListener {
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
 
     // BoardManager를 통해 보드와 색상 정보 접근
-  int[][] board = gameEngine.getBoardManager().getBoard();
-  Color[][] boardColors = gameEngine.getBoardManager().getBoardColors();
+    int[][] board = gameEngine.getBoardManager().getBoard();
+    Color[][] boardColors = gameEngine.getBoardManager().getBoardColors();
 
     for (int i = 0; i < HEIGHT; i++) {
       for (int j = 0; j < WIDTH; j++) {
@@ -1719,26 +1661,26 @@ public class game extends JPanel implements KeyListener {
       return "W";
 
     // 색맹 모드 색상들도 체크 (8색 명확한 팔레트)
-    if (color.equals(new Color(135, 206, 250)))   // sky blue (하늘색)
+    if (color.equals(new Color(135, 206, 250))) // sky blue (하늘색)
       return "I";
-    if (color.equals(new Color(255, 255, 0)))     // yellow (노란색)
+    if (color.equals(new Color(255, 255, 0))) // yellow (노란색)
       return "O";
-    if (color.equals(new Color(199, 21, 133)))    // reddish purple (적자색)
+    if (color.equals(new Color(199, 21, 133))) // reddish purple (적자색)
       return "T";
-    if (color.equals(new Color(255, 165, 0)))     // orange (주황색)
+    if (color.equals(new Color(255, 165, 0))) // orange (주황색)
       return "L";
-    if (color.equals(new Color(0, 0, 255)))       // blue (파란색)
+    if (color.equals(new Color(0, 0, 255))) // blue (파란색)
       return "J";
-    if (color.equals(new Color(0, 158, 115)))     // bluish green (청록색)
+    if (color.equals(new Color(0, 158, 115))) // bluish green (청록색)
       return "S";
-    if (color.equals(new Color(213, 94, 0)))      // vermilion (주홍색)
+    if (color.equals(new Color(213, 94, 0))) // vermilion (주홍색)
       return "Z";
-    if (color.equals(new Color(85, 85, 85)))      // 밝은 검정색
+    if (color.equals(new Color(85, 85, 85))) // 밝은 검정색
       return "W";
 
     // 현재 설정의 색상과도 비교
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-    String[] blockTypes = {"I", "O", "T", "L", "J", "S", "Z", "W"};
+    String[] blockTypes = { "I", "O", "T", "L", "J", "S", "Z", "W" };
     for (String type : blockTypes) {
       if (color.equals(settings.getColorForBlock(type))) {
         return type;

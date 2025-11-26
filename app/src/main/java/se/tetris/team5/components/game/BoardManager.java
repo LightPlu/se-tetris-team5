@@ -135,6 +135,20 @@ public class BoardManager {
    * @return 줄삭제 아이템으로 지워진 블럭 수 (점수 계산에 사용)
    */
   public int fixBlock(Block block, int x, int y, java.util.List<se.tetris.team5.items.Item> removedItems) {
+    // 고정되는 블럭의 위치 저장 (대전모드 공격 블럭 계산용)
+    lastFixedBlockPositions.clear();
+    for (int i = 0; i < block.width(); i++) {
+      for (int j = 0; j < block.height(); j++) {
+        if (block.getShape(i, j) == 1) {
+          int boardX = x + i;
+          int boardY = y + j;
+          if (boardX >= 0 && boardX < WIDTH && boardY >= 0 && boardY < HEIGHT) {
+            lastFixedBlockPositions.add(boardX + "," + boardY);
+          }
+        }
+      }
+    }
+    
     // 무게추 블록 특수 처리: WBlock인 경우, 해당 블록이 차지하는 열들의 고정 블록들을 모두 제거
     // 그리고 블록을 가장 아래에 고정시킨다.
     if (block instanceof se.tetris.team5.blocks.WBlock) {
@@ -321,6 +335,10 @@ public class BoardManager {
   private boolean timeStopItemCleared = false;
   // last cleared rows from the most recent clear operation (0..HEIGHT-1)
   private java.util.List<Integer> lastClearedRows = new java.util.ArrayList<>();
+  // 마지막으로 고정된 블럭의 위치들 (대전모드 공격 블럭 계산용)
+  private java.util.Set<String> lastFixedBlockPositions = new java.util.HashSet<>();
+  // 마지막 줄 삭제로 생성된 공격 블럭 데이터 (대전모드용)
+  private java.util.List<Color[]> lastAttackBlocksData = new java.util.ArrayList<>();
 
   /**
    * 마지막 줄 삭제 시 타임스톱 아이템이 있었는지 반환하고 플래그 초기화
@@ -346,6 +364,7 @@ public class BoardManager {
     // reset state
     timeStopItemCleared = false;
     lastClearedRows.clear();
+    lastAttackBlocksData.clear();
 
     // collect full rows (fixed blocks only)
     for (int row = 0; row < HEIGHT; row++) {
@@ -373,6 +392,11 @@ public class BoardManager {
     }
 
     if (lastClearedRows.isEmpty()) return 0;
+
+    // 대전모드: 2줄 이상 삭제 시 공격 블럭 데이터 계산
+    if (lastClearedRows.size() >= 2) {
+      calculateAttackBlocks();
+    }
 
     // remove cleared rows by compressing into new arrays (bottom-up)
     java.util.Set<Integer> clearedSet = new java.util.HashSet<>(lastClearedRows);
@@ -418,6 +442,97 @@ public class BoardManager {
    */
   public java.util.List<Integer> getLastClearedRows() {
     return new java.util.ArrayList<>(lastClearedRows);
+  }
+
+  /**
+   * 대전모드: 삭제된 줄들의 블럭 데이터를 계산합니다 (방금 고정된 블럭 제외)
+   * 2줄 이상 삭제 시에만 호출됩니다.
+   */
+  private void calculateAttackBlocks() {
+    for (int row : lastClearedRows) {
+      Color[] rowColors = new Color[WIDTH];
+      for (int col = 0; col < WIDTH; col++) {
+        String posKey = col + "," + row;
+        // 방금 고정된 블럭의 위치가 아닌 경우만 공격 블럭으로 카운트
+        if (!lastFixedBlockPositions.contains(posKey) && board[row][col] == 1) {
+          rowColors[col] = boardColors[row][col];
+        } else {
+          rowColors[col] = null; // 고정된 블럭이거나 빈 칸
+        }
+      }
+      lastAttackBlocksData.add(rowColors);
+    }
+    System.out.println("[대전모드 공격] " + lastClearedRows.size() + "줄 삭제, 공격 블럭 계산 완료");
+  }
+
+  /**
+   * 대전모드: 마지막으로 계산된 공격 블럭 데이터를 반환합니다.
+   * 각 줄은 Color[] 배열로 표현되며, null은 빈 칸을 의미합니다.
+   * 
+   * @return 공격 블럭 데이터 리스트 (각 요소는 한 줄의 블럭 색상 배열)
+   */
+  public java.util.List<Color[]> getAttackBlocksData() {
+    return new java.util.ArrayList<>(lastAttackBlocksData);
+  }
+
+  /**
+   * 대전모드: 공격 블럭을 보드 맨 밑에 추가합니다.
+   * 기존 블럭들은 위로 밀려나고, 위로 밀려난 블럭이 화면 밖으로 나가면 게임 오버 가능성이 있습니다.
+   * 
+   * @param attackRows 추가할 공격 블럭 데이터 (각 Color[] 배열이 한 줄)
+   * @return 추가 성공 여부 (false면 게임 오버 상황)
+   */
+  public boolean addAttackBlocksToBottom(java.util.List<Color[]> attackRows) {
+    if (attackRows == null || attackRows.isEmpty()) {
+      return true;
+    }
+
+    int numRowsToAdd = attackRows.size();
+    
+    // 기존 블럭들을 위로 밀어올림
+    for (int row = 0; row < HEIGHT - numRowsToAdd; row++) {
+      for (int col = 0; col < WIDTH; col++) {
+        board[row][col] = board[row + numRowsToAdd][col];
+        boardColors[row][col] = boardColors[row + numRowsToAdd][col];
+        boardItems[row][col] = boardItems[row + numRowsToAdd][col];
+      }
+    }
+    
+    // 맨 밑에 공격 블럭 추가 (회색으로)
+    Color attackColor = new Color(85, 85, 85); // 무게추 블럭과 동일한 색상
+    for (int i = 0; i < numRowsToAdd; i++) {
+      int rowIndex = HEIGHT - numRowsToAdd + i;
+      Color[] rowData = attackRows.get(i);
+      
+      for (int col = 0; col < WIDTH; col++) {
+        if (rowData[col] != null) {
+          board[rowIndex][col] = 1; // 고정된 블럭
+          boardColors[rowIndex][col] = attackColor;
+          boardItems[rowIndex][col] = null; // 아이템 없음
+        } else {
+          board[rowIndex][col] = 0;
+          boardColors[rowIndex][col] = null;
+          boardItems[rowIndex][col] = null;
+        }
+      }
+    }
+    
+    System.out.println("[공격 블럭 추가] " + numRowsToAdd + "줄이 맨 밑에 추가됨");
+    
+    // 맨 위 줄에 블럭이 있으면 게임 오버 위험 (하지만 즉시 게임 오버는 아님)
+    boolean topRowHasBlock = false;
+    for (int col = 0; col < WIDTH; col++) {
+      if (board[0][col] == 1) {
+        topRowHasBlock = true;
+        break;
+      }
+    }
+    
+    if (topRowHasBlock) {
+      System.out.println("[경고] 공격 블럭 추가로 인해 맨 위까지 블럭이 쌓임");
+    }
+    
+    return true;
   }
 
 
