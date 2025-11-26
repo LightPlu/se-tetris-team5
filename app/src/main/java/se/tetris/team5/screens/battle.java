@@ -171,6 +171,10 @@ public class battle extends JPanel implements KeyListener {
     player1Panel.setCountdownTimerEnabled(isTimeLimitMode);
     player2Panel.setCountdownTimerEnabled(isTimeLimitMode);
 
+    // 대전모드: 상대방 패널 서로 연결 (공격 블럭 전송용)
+    player1Panel.setOpponentPanel(player2Panel);
+    player2Panel.setOpponentPanel(player1Panel);
+
     // 게임 모드 설정 (NORMAL, ITEM, TIMELIMIT)
     if ("ITEM".equals(battleMode)) {
       player1Panel.getGameEngine().setGameMode(GameMode.ITEM);
