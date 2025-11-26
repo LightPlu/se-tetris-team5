@@ -167,12 +167,15 @@ public class battle extends JPanel implements KeyListener {
     // 플레이어 패널 생성
     player1Panel = new PlayerGamePanel();
     player2Panel = new PlayerGamePanel();
+    boolean isTimeLimitMode = "TIMELIMIT".equals(battleMode);
+    player1Panel.setCountdownTimerEnabled(isTimeLimitMode);
+    player2Panel.setCountdownTimerEnabled(isTimeLimitMode);
 
     // 게임 모드 설정 (NORMAL, ITEM, TIMELIMIT)
     if ("ITEM".equals(battleMode)) {
       player1Panel.getGameEngine().setGameMode(GameMode.ITEM);
       player2Panel.getGameEngine().setGameMode(GameMode.ITEM);
-    } else if ("TIMELIMIT".equals(battleMode)) {
+    } else if (isTimeLimitMode) {
       // 시간제한 모드는 일반 모드 기반 (아이템 없음)
       player1Panel.getGameEngine().setGameMode(GameMode.NORMAL);
       player2Panel.getGameEngine().setGameMode(GameMode.NORMAL);

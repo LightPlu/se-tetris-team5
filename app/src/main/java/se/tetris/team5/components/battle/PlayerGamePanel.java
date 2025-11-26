@@ -13,8 +13,7 @@ import javax.swing.Timer;
 import se.tetris.team5.blocks.Block;
 import se.tetris.team5.gamelogic.GameEngine;
 import se.tetris.team5.components.game.GameBoard;
-import se.tetris.team5.components.game.NextBlockBoard;
-import se.tetris.team5.components.game.ScoreBoard;
+import se.tetris.team5.components.game.DoubleScoreBadge;
 
 /**
  * 단일 플레이어의 게임 패널 (UI + GameEngine 캡슐화)
@@ -30,10 +29,9 @@ public class PlayerGamePanel extends JPanel {
 
   // UI 컴포넌트
   private GameBoard gameBoard;
-  private NextBlockBoard nextBlockBoard;
-  private ScoreBoard scoreBoard;
   private JPanel nextVisualPanel;
   private JLabel scoreValueLabel;
+  private DoubleScoreBadge doubleScoreBadge;
   private JLabel levelLabel;
   private JLabel linesLabel;
   private JLabel timerLabel;
@@ -44,6 +42,7 @@ public class PlayerGamePanel extends JPanel {
   private Timer gameTimer;
   private Timer uiTimer; // UI 업데이트용 별도 타이머
   private long gameStartTime;
+  private boolean countdownTimerEnabled = false;
 
   /**
    * 플레이어 게임 패널 생성 (기본값)
@@ -248,7 +247,13 @@ public class PlayerGamePanel extends JPanel {
     scoreValueLabel.setForeground(new Color(255, 220, 100));
     scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     panel.add(scoreValueLabel);
-    panel.add(javax.swing.Box.createVerticalStrut(8));
+    panel.add(javax.swing.Box.createVerticalStrut(4));
+
+    doubleScoreBadge = new DoubleScoreBadge();
+    doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    doubleScoreBadge.setVisible(false);
+    panel.add(doubleScoreBadge);
+    panel.add(javax.swing.Box.createVerticalStrut(6));
 
     JPanel smallRow = new JPanel();
     smallRow.setOpaque(false);
@@ -464,11 +469,28 @@ public class PlayerGamePanel extends JPanel {
     }
 
     // 타이머 업데이트
-    if (timerLabel != null) {
+    if (timerLabel != null && !countdownTimerEnabled) {
       long elapsed = System.currentTimeMillis() - gameStartTime;
       int minutes = (int) (elapsed / 60000);
       int seconds = (int) ((elapsed % 60000) / 1000);
       timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+    }
+
+    // 점수 2배 뱃지 업데이트 (아이템 모드)
+    if (doubleScoreBadge != null) {
+      try {
+        long rem = gameEngine.getDoubleScoreRemainingMillis();
+        if (rem > 0) {
+          doubleScoreBadge.setTotalMillis(20_000);
+          doubleScoreBadge.setRemainingMillis(rem);
+          doubleScoreBadge.setVisible(true);
+        } else if (doubleScoreBadge.isVisible()) {
+          doubleScoreBadge.setRemainingMillis(0);
+          doubleScoreBadge.setVisible(false);
+        }
+      } catch (Exception ex) {
+        // UI 업데이트 실패는 무시
+      }
     }
 
     // 타이머 속도 조정
@@ -487,6 +509,13 @@ public class PlayerGamePanel extends JPanel {
     if (timerLabel != null) {
       timerLabel.setText(timeString);
     }
+  }
+
+  /**
+   * 외부(시간제한 모드)에서 타이머를 제어할지 여부를 설정
+   */
+  public void setCountdownTimerEnabled(boolean enabled) {
+    this.countdownTimerEnabled = enabled;
   }
 
   // Getters

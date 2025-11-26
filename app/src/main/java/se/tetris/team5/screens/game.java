@@ -440,11 +440,12 @@ public class game extends JPanel implements KeyListener {
     scoreValueLabel.setForeground(new Color(255, 220, 100));
     scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     scoreInfo.add(scoreValueLabel);
+    scoreInfo.add(javax.swing.Box.createVerticalStrut(4));
     doubleScoreBadge = new DoubleScoreBadge();
     doubleScoreBadge.setVisible(false);
     doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     scoreInfo.add(doubleScoreBadge);
-    scoreInfo.add(javax.swing.Box.createVerticalStrut(8));
+    scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
     JPanel smallRow = new JPanel();
     smallRow.setOpaque(false);
     smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
