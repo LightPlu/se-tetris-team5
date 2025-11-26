@@ -38,6 +38,8 @@ public class GameBoard extends JTextPane {
     private Item[][] overlayItems;
     private Block currentBlock;
     private int currentX, currentY;
+    // Ghost block (착지 예상 위치)
+    private int ghostY = -1;
     // When true, the underlying JTextPane text will be painted on top of graphics.
     // Used for pause/menu messages and other text-only overlays.
     private boolean showTextOverlay = false;
@@ -81,7 +83,8 @@ public class GameBoard extends JTextPane {
      * 업데이트: 게임 엔진으로부터 보드 데이터를 받아 그래픽으로 렌더하도록 저장합니다.
      * (game logic callers should invoke this after updating engine state)
      */
-    public void renderBoard(int[][] board, Color[][] colors, Item[][] items, Block currBlock, int currX, int currY) {
+    public void renderBoard(int[][] board, Color[][] colors, Item[][] items, Block currBlock, int currX, int currY, int ghostY) {
+        this.ghostY = ghostY;
         if (board != null) {
             // Debug logging disabled for performance
             // NOTE: previous-board diff based detection of cleared rows has been
@@ -170,6 +173,30 @@ public class GameBoard extends JTextPane {
                         if (overlayItems != null && overlayItems[r][c] != null) {
                             Item it = overlayItems[r][c];
                             drawItemGlyph(g2, it, x, y, cellSize);
+                        }
+                    }
+                }
+            }
+        }
+
+    // draw ghost block (착지 예상 위치) - 반투명
+        if (currentBlock != null && ghostY >= 0 && ghostY != currentY) {
+            for (int ry = 0; ry < currentBlock.height(); ry++) {
+                for (int rx = 0; rx < currentBlock.width(); rx++) {
+                    if (currentBlock.getShape(rx, ry) == 1) {
+                        int boardX = currentX + rx;
+                        int boardY = ghostY + ry;
+                        if (boardX >= 0 && boardX < WIDTH && boardY >= 0 && boardY < HEIGHT) {
+                            int x = startX + boardX * cellSize;
+                            int y = startY + boardY * cellSize;
+                            Color col = currentBlock.getColor();
+                            if (col == null) col = Color.CYAN;
+                            
+                            // 고스트 블럭은 반투명 테두리만 표시
+                            Color ghostCol = new Color(col.getRed(), col.getGreen(), col.getBlue(), 80);
+                            g2.setColor(ghostCol);
+                            g2.drawRoundRect(x+4, y+4, cellSize-8, cellSize-8, 4, 4);
+                            g2.drawRoundRect(x+5, y+5, cellSize-10, cellSize-10, 4, 4);
                         }
                     }
                 }

@@ -59,9 +59,8 @@ public class BlockFactory {
 
   public Block createRandomBlock() {
     // 테스트용: 항상 I블록만 생성
-    return new IBlock();
+    // return new IBlock();
     
-    /* 원래 코드 (필요시 복원)
     int[] weights;
     // 블럭 순서: I, J, L, Z, S, T, O
     switch (difficulty) {
@@ -85,7 +84,7 @@ public class BlockFactory {
       idx++;
     }
     return createBlock(idx);
-    */
+  
   }
 
   /**

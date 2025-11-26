@@ -579,6 +579,16 @@ public class GameEngine {
     return y;
   }
 
+  /**
+   * 현재 블럭이 착지할 Y 위치를 계산하여 반환합니다 (고스트 블럭용)
+   */
+  public int getGhostY() {
+    if (currentBlock == null || gameOver) {
+      return -1;
+    }
+    return movementManager.getDropPosition(currentBlock, x, y);
+  }
+
   public boolean isGameOver() {
     return gameOver;
   }
