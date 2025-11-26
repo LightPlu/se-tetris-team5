@@ -97,7 +97,7 @@ public class GameScoring {
 
   /**
    * 하드 드롭 점수 추가
-   * 레벨에 따라 점수가 증가합니다
+   * 레벨에 따라 점수가 증가
    */
   public void addHardDropPoints(int distance) {
     currentScore += distance * HARD_DROP_MULTIPLIER * level;

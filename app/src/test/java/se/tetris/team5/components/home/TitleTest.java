@@ -93,22 +93,6 @@ public class TitleTest {
     }
 
     @Test
-    public void testGUITitleForXLargeSize() {
-        // Given
-        title = new Title(Title.WindowSize.XLARGE);
-
-        // When
-        String guiTitle = title.getGUITitle();
-
-        // Then
-        assertNotNull(guiTitle);
-        assertTrue(guiTitle.contains("<html>"));
-        assertTrue(guiTitle.contains("TETRIS"));
-        assertTrue(guiTitle.contains("XLARGE"));
-        assertTrue(guiTitle.contains("</html>"));
-    }
-
-    @Test
     public void testHTMLFormatForAllSizes() {
         // Given & When & Then
         for (Title.WindowSize size : Title.WindowSize.values()) {
@@ -163,36 +147,20 @@ public class TitleTest {
     }
 
     @Test
-    public void testFontSizeForXLargeSize() {
-        // Given
-        title = new Title(Title.WindowSize.XLARGE);
-
-        // When
-        int fontSize = title.getTitleFontSize();
-
-        // Then
-        assertTrue("Font size should be positive", fontSize > 0);
-        assertTrue("XLARGE font size should be >= 28", fontSize >= 28);
-    }
-
-    @Test
     public void testFontSizeIncreasesByWindowSize() {
         // Given
         Title smallTitle = new Title(Title.WindowSize.SMALL);
         Title mediumTitle = new Title(Title.WindowSize.MEDIUM);
         Title largeTitle = new Title(Title.WindowSize.LARGE);
-        Title xlargeTitle = new Title(Title.WindowSize.XLARGE);
 
         // When
         int smallFont = smallTitle.getTitleFontSize();
         int mediumFont = mediumTitle.getTitleFontSize();
         int largeFont = largeTitle.getTitleFontSize();
-        int xlargeFont = xlargeTitle.getTitleFontSize();
 
         // Then
         assertTrue("Font sizes should increase", smallFont <= mediumFont);
         assertTrue("Font sizes should increase", mediumFont <= largeFont);
-        assertTrue("Font sizes should increase", largeFont <= xlargeFont);
     }
 
     // WindowSize enum 테스트
@@ -202,15 +170,14 @@ public class TitleTest {
         Title.WindowSize[] expectedSizes = {
             Title.WindowSize.SMALL,
             Title.WindowSize.MEDIUM,
-            Title.WindowSize.LARGE,
-            Title.WindowSize.XLARGE
+            Title.WindowSize.LARGE
         };
 
         // When
         Title.WindowSize[] actualSizes = Title.WindowSize.values();
 
         // Then
-        assertEquals("WindowSize should have 4 values", expectedSizes.length, actualSizes.length);
+        assertEquals("WindowSize should have 3 values", expectedSizes.length, actualSizes.length);
         for (Title.WindowSize expected : expectedSizes) {
             boolean found = false;
             for (Title.WindowSize actual : actualSizes) {
@@ -229,7 +196,6 @@ public class TitleTest {
         assertEquals(Title.WindowSize.SMALL, Title.WindowSize.valueOf("SMALL"));
         assertEquals(Title.WindowSize.MEDIUM, Title.WindowSize.valueOf("MEDIUM"));
         assertEquals(Title.WindowSize.LARGE, Title.WindowSize.valueOf("LARGE"));
-        assertEquals(Title.WindowSize.XLARGE, Title.WindowSize.valueOf("XLARGE"));
     }
 
     // 엣지 케이스 테스트
@@ -288,7 +254,6 @@ public class TitleTest {
         assertEquals("SMALL", Title.WindowSize.SMALL.toString());
         assertEquals("MEDIUM", Title.WindowSize.MEDIUM.toString());
         assertEquals("LARGE", Title.WindowSize.LARGE.toString());
-        assertEquals("XLARGE", Title.WindowSize.XLARGE.toString());
     }
 
     @Test
@@ -398,13 +363,6 @@ public class TitleTest {
         assertTrue("LARGE title should contain h1", largeTitle.contains("<h1>"));
         assertTrue("LARGE title should contain h3", largeTitle.contains("<h3>"));
         assertTrue("LARGE title should contain description", largeTitle.contains("클래식 퍼즐 게임"));
-        
-        title = new Title(Title.WindowSize.XLARGE);
-        String xlargeTitle = title.getGUITitle();
-        assertTrue("XLARGE title should contain h1", xlargeTitle.contains("<h1>"));
-        assertTrue("XLARGE title should contain h2", xlargeTitle.contains("<h2>"));
-        assertTrue("XLARGE title should contain description", xlargeTitle.contains("클래식 퍼즐 게임"));
-        assertTrue("XLARGE title should contain instructions", xlargeTitle.contains("블록을 맞춰 라인을 완성하세요!"));
     }
 
     @Test
@@ -438,12 +396,12 @@ public class TitleTest {
         String smallTitle = title.getGUITitle();
         int smallTagCount = countHTMLTags(smallTitle);
         
-        title = new Title(Title.WindowSize.XLARGE);
-        String xlargeTitle = title.getGUITitle();
-        int xlargeTagCount = countHTMLTags(xlargeTitle);
+        title = new Title(Title.WindowSize.LARGE);
+        String largeTitle = title.getGUITitle();
+        int largeTagCount = countHTMLTags(largeTitle);
         
-        assertTrue("XLARGE should have more HTML tags than SMALL", 
-                  xlargeTagCount > smallTagCount);
+        assertTrue("LARGE should have more HTML tags than SMALL", 
+                  largeTagCount > smallTagCount);
     }
 
     private int countHTMLTags(String html) {
@@ -475,19 +433,16 @@ public class TitleTest {
             int fontSize = testTitle.getTitleFontSize();
             assertTrue("Font size should be positive for " + size, fontSize > 0);
             
-            // Verify expected font sizes
+            // Verify expected font sizes (3가지 크기로 변경)
             switch (size) {
                 case SMALL:
-                    assertEquals("SMALL should have font size 16", 16, fontSize);
+                    assertEquals("SMALL should have font size 30", 30, fontSize);
                     break;
                 case MEDIUM:
-                    assertEquals("MEDIUM should have font size 20", 20, fontSize);
+                    assertEquals("MEDIUM should have font size 36", 36, fontSize);
                     break;
                 case LARGE:
-                    assertEquals("LARGE should have font size 24", 24, fontSize);
-                    break;
-                case XLARGE:
-                    assertEquals("XLARGE should have font size 28", 28, fontSize);
+                    assertEquals("LARGE should have font size 44", 44, fontSize);
                     break;
             }
         }
@@ -495,20 +450,18 @@ public class TitleTest {
 
     @Test
     public void testEnumOrdinalValues() {
-        // Test enum ordinal values for completeness
+        // Test enum ordinal values for completeness (3가지 크기)
         assertEquals("SMALL should be ordinal 0", 0, Title.WindowSize.SMALL.ordinal());
         assertEquals("MEDIUM should be ordinal 1", 1, Title.WindowSize.MEDIUM.ordinal());
         assertEquals("LARGE should be ordinal 2", 2, Title.WindowSize.LARGE.ordinal());
-        assertEquals("XLARGE should be ordinal 3", 3, Title.WindowSize.XLARGE.ordinal());
     }
 
     @Test 
     public void testEnumValueOfMethod() {
-        // Test enum valueOf method
+        // Test enum valueOf method (3가지 크기)
         assertEquals("valueOf SMALL should work", Title.WindowSize.SMALL, Title.WindowSize.valueOf("SMALL"));
         assertEquals("valueOf MEDIUM should work", Title.WindowSize.MEDIUM, Title.WindowSize.valueOf("MEDIUM"));
         assertEquals("valueOf LARGE should work", Title.WindowSize.LARGE, Title.WindowSize.valueOf("LARGE"));
-        assertEquals("valueOf XLARGE should work", Title.WindowSize.XLARGE, Title.WindowSize.valueOf("XLARGE"));
         
         // Test invalid valueOf
         try {
@@ -521,11 +474,10 @@ public class TitleTest {
 
     @Test
     public void testEnumToStringMethod() {
-        // Test enum toString method
+        // Test enum toString method (3가지 크기)
         assertEquals("SMALL toString should work", "SMALL", Title.WindowSize.SMALL.toString());
         assertEquals("MEDIUM toString should work", "MEDIUM", Title.WindowSize.MEDIUM.toString());
         assertEquals("LARGE toString should work", "LARGE", Title.WindowSize.LARGE.toString());
-        assertEquals("XLARGE toString should work", "XLARGE", Title.WindowSize.XLARGE.toString());
     }
 
     @Test
@@ -545,7 +497,7 @@ public class TitleTest {
             assertNotNull("GUI title should not be null for " + size, guiResult);
             assertTrue("Font size should be positive for " + size, fontResult > 0);
             
-            // Verify size-specific content
+            // Verify size-specific content (3가지 크기)
             switch (size) {
                 case SMALL:
                     assertTrue("SMALL title should contain SMALL", guiResult.contains("SMALL"));
@@ -556,11 +508,6 @@ public class TitleTest {
                 case LARGE:
                     assertTrue("LARGE title should contain LARGE", guiResult.contains("LARGE"));
                     assertTrue("LARGE title should contain description", guiResult.contains("클래식 퍼즐 게임"));
-                    break;
-                case XLARGE:
-                    assertTrue("XLARGE title should contain XLARGE", guiResult.contains("XLARGE"));
-                    assertTrue("XLARGE title should contain description", guiResult.contains("클래식 퍼즐 게임"));
-                    assertTrue("XLARGE title should contain instruction", guiResult.contains("블록을 맞춰 라인을 완성하세요"));
                     break;
             }
         }

@@ -54,16 +54,16 @@ public class GameSettingsTest {
     
     @Test
     public void testWindowSizeSettings() {
-        // 창 크기 설정 테스트
+        // 창 크기 설정 테스트 (3가지 크기)
         gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_SMALL);
         assertEquals("Window size should be SMALL", GameSettings.WINDOW_SIZE_SMALL, gameSettings.getWindowSize());
-        assertEquals("Small window width should be 350", 350, gameSettings.getWindowWidth());
-        assertEquals("Small window height should be 500", 500, gameSettings.getWindowHeight());
+        assertEquals("Small window width should be 450", 450, gameSettings.getWindowWidth());
+        assertEquals("Small window height should be 600", 600, gameSettings.getWindowHeight());
         
-        gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_XLARGE);
-        assertEquals("Window size should be XLARGE", GameSettings.WINDOW_SIZE_XLARGE, gameSettings.getWindowSize());
-        assertEquals("XLarge window width should be 650", 650, gameSettings.getWindowWidth());
-        assertEquals("XLarge window height should be 800", 800, gameSettings.getWindowHeight());
+        gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_LARGE);
+        assertEquals("Window size should be LARGE", GameSettings.WINDOW_SIZE_LARGE, gameSettings.getWindowSize());
+        assertEquals("Large window width should be 650", 650, gameSettings.getWindowWidth());
+        assertEquals("Large window height should be 800", 800, gameSettings.getWindowHeight());
     }
     
     @Test
@@ -293,11 +293,10 @@ public class GameSettingsTest {
     
     @Test
     public void testAllWindowSizesConstants() {
-        // 모든 창 크기 상수가 올바른 형식인지 테스트
+        // 모든 창 크기 상수가 올바른 형식인지 테스트 (3가지 크기)
         testWindowSizeFormat(GameSettings.WINDOW_SIZE_SMALL);
         testWindowSizeFormat(GameSettings.WINDOW_SIZE_MEDIUM);
         testWindowSizeFormat(GameSettings.WINDOW_SIZE_LARGE);
-        testWindowSizeFormat(GameSettings.WINDOW_SIZE_XLARGE);
     }
     
     private void testWindowSizeFormat(String windowSize) {

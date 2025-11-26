@@ -576,7 +576,7 @@ public class game extends JPanel implements KeyListener {
     JLabel titleLabel = new JLabel(title, javax.swing.SwingConstants.LEFT);
     titleLabel.setFont(createKoreanFont(Font.BOLD, 16));
     titleLabel.setForeground(titleColor);
-    titleLabel.setBorder(new EmptyBorder(0, 6, 8, 6));
+    titleLabel.setBorder(new EmptyBorder(0, 4, 6, 4)); // 여백 축소 (좌우 6→4, 하단 8→6)
 
     // Inner panel with rounded border and dark background
     JPanel inner = new JPanel(new BorderLayout()) {
@@ -596,7 +596,7 @@ public class game extends JPanel implements KeyListener {
       }
     };
     inner.setOpaque(false);
-    inner.setBorder(new EmptyBorder(10, 10, 10, 10));
+    inner.setBorder(new EmptyBorder(6, 6, 6, 6)); // 여백 축소 10→6
     // ensure content uses inner background when appropriate
     if (content != null) {
       content.setOpaque(false);

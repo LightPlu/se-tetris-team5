@@ -242,8 +242,7 @@ public class HomeTest {
         assertTrue("Current window size should be valid", 
                    currentWindowSize == Title.WindowSize.SMALL ||
                    currentWindowSize == Title.WindowSize.MEDIUM ||
-                   currentWindowSize == Title.WindowSize.LARGE ||
-                   currentWindowSize == Title.WindowSize.XLARGE);
+                   currentWindowSize == Title.WindowSize.LARGE);
     }
 
     // 타이틀 라벨 테스트
