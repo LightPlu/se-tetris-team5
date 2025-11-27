@@ -260,6 +260,17 @@ public class ScreenController extends JFrame {
     // 로딩 배경 설정
     setupLoadingBackground();
 
+    // 키 입력 리스너 추가 (아무 키나 눌러서 스킵 가능)
+    KeyListener skipListener = new java.awt.event.KeyAdapter() {
+      @Override
+      public void keyPressed(java.awt.event.KeyEvent e) {
+        skipLoadingScreen();
+      }
+    };
+    addKeyListener(skipListener);
+    setFocusable(true);
+    requestFocusInWindow();
+
     // 5초 후 페이드아웃 시작 (4초 GIF + 1초 페이드아웃)
     loadingTimer = new Timer(4000, e -> {
       ((Timer) e.getSource()).stop();
@@ -270,6 +281,29 @@ public class ScreenController extends JFrame {
 
     revalidate();
     repaint();
+  }
+
+  /**
+   * 로딩 화면을 스킵하고 바로 홈으로 전환
+   */
+  private void skipLoadingScreen() {
+    // 타이머 정지
+    if (loadingTimer != null && loadingTimer.isRunning()) {
+      loadingTimer.stop();
+    }
+    if (fadeTimer != null && fadeTimer.isRunning()) {
+      fadeTimer.stop();
+    }
+
+    // 키 리스너 제거
+    for (KeyListener kl : getKeyListeners()) {
+      removeKeyListener(kl);
+    }
+
+    // 즉시 홈 화면으로 전환
+    SwingUtilities.invokeLater(() -> {
+      showScreen("home");
+    });
   }
 
   /**
@@ -291,7 +325,39 @@ public class ScreenController extends JFrame {
         loadingBackgroundLabel.setHorizontalAlignment(SwingConstants.CENTER);
         loadingBackgroundLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-        getContentPane().add(loadingBackgroundLabel, BorderLayout.CENTER);
+        // 배경을 담을 패널 (LayeredPane 역할)
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension(getWidth(), getHeight()));
+        
+        // 배경 레이블 추가
+        loadingBackgroundLabel.setBounds(0, 0, getWidth(), getHeight());
+        layeredPane.add(loadingBackgroundLabel, Integer.valueOf(0));
+
+        // 스킵 안내 텍스트 추가 (위 레이어)
+        JLabel skipLabel = new JLabel("아무 키나 누르면 SKIP...");
+        skipLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        skipLabel.setForeground(Color.WHITE);
+        skipLabel.setOpaque(true);
+        skipLabel.setBackground(new Color(0, 0, 0, 150)); // 반투명 검은색 배경
+        skipLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        skipLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        
+        // 컴포넌트가 표시될 때 올바른 위치 계산
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+          @Override
+          public void componentResized(java.awt.event.ComponentEvent e) {
+            int width = 230;
+            int height = 30;
+            skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+          }
+        });
+        
+        int width = 230;
+        int height = 30;
+        skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+        layeredPane.add(skipLabel, Integer.valueOf(1));
+
+        getContentPane().add(layeredPane, BorderLayout.CENTER);
         System.out.println("Loading screen background (background1.gif) loaded successfully");
       } else {
         // 기본 배경 설정
@@ -307,15 +373,59 @@ public class ScreenController extends JFrame {
             g2d.fillRect(0, 0, getWidth(), getHeight());
           }
         };
-        getContentPane().add(gradientPanel, BorderLayout.CENTER);
+
+        // LayeredPane 사용
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension(getWidth(), getHeight()));
+        
+        gradientPanel.setBounds(0, 0, getWidth(), getHeight());
+        layeredPane.add(gradientPanel, Integer.valueOf(0));
+
+        // 스킵 안내 텍스트 추가
+        JLabel skipLabel = new JLabel("아무 키나 누르면 SKIP...");
+        skipLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        skipLabel.setForeground(Color.WHITE);
+        skipLabel.setOpaque(true);
+        skipLabel.setBackground(new Color(0, 0, 0, 150)); // 반투명 검은색 배경
+        skipLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        skipLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        
+        int width = 230;
+        int height = 30;
+        skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+        layeredPane.add(skipLabel, Integer.valueOf(1));
+
+        getContentPane().add(layeredPane, BorderLayout.CENTER);
         System.out.println("background1.gif not found, using default gradient background");
       }
     } catch (Exception e) {
-      System.out.println("Error loading background1.gif: " + e.getMessage());
-      // 기본 검정 배경
+      System.err.println("배경 이미지를 불러올 수 없습니다: " + e.getMessage());
+      // 기본 배경 (검은색)
       JPanel blackPanel = new JPanel();
       blackPanel.setBackground(Color.BLACK);
-      getContentPane().add(blackPanel, BorderLayout.CENTER);
+
+      // LayeredPane 사용
+      JLayeredPane layeredPane = new JLayeredPane();
+      layeredPane.setPreferredSize(new Dimension(getWidth(), getHeight()));
+      
+      blackPanel.setBounds(0, 0, getWidth(), getHeight());
+      layeredPane.add(blackPanel, Integer.valueOf(0));
+
+      // 스킵 안내 텍스트 추가
+      JLabel skipLabel = new JLabel("아무 키나 누르면 SKIP...");
+      skipLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+      skipLabel.setForeground(Color.WHITE);
+      skipLabel.setOpaque(true);
+      skipLabel.setBackground(new Color(50, 50, 50, 180)); // 반투명 회색 배경
+      skipLabel.setHorizontalAlignment(SwingConstants.CENTER);
+      skipLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+      
+      int width = 230;
+      int height = 30;
+      skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+      layeredPane.add(skipLabel, Integer.valueOf(1));
+
+      getContentPane().add(layeredPane, BorderLayout.CENTER);
     }
   }
 
