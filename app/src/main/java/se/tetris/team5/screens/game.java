@@ -210,7 +210,8 @@ public class game extends JPanel implements KeyListener {
     timeStopCenterPanel.setOpaque(false);
     timeStopCenterPanel.setLayout(new java.awt.GridBagLayout());
 
-    timeStopIconLabel = new javax.swing.JLabel("⏱", javax.swing.SwingConstants.CENTER);
+    // 이모지 대신 텍스트로 변경 (크로스 플랫폼 호환성)
+    timeStopIconLabel = new javax.swing.JLabel("TIME STOP", javax.swing.SwingConstants.CENTER);
     timeStopIconLabel.setForeground(new java.awt.Color(191, 255, 230));
     timeStopIconLabel.setOpaque(false);
 
@@ -257,9 +258,10 @@ public class game extends JPanel implements KeyListener {
   int numberFontSize = Math.max(40, (lblH - padTop) * 3 / 4);
   int iconFontSize = Math.max(24, (lblH - padTop) / 6);
   int subFontSize = Math.max(12, (lblH - padTop) / 8);
-  timeStopNumberLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, numberFontSize));
-  timeStopIconLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, iconFontSize));
-  timeStopSubLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, subFontSize));
+  // macOS/Windows 크로스 플랫폼 한글 지원 폰트 사용
+  timeStopNumberLabel.setFont(createKoreanFont(java.awt.Font.BOLD, numberFontSize));
+  timeStopIconLabel.setFont(createKoreanFont(java.awt.Font.PLAIN, iconFontSize));
+  timeStopSubLabel.setFont(createKoreanFont(java.awt.Font.PLAIN, subFontSize));
       }
     });
 
@@ -316,8 +318,8 @@ public class game extends JPanel implements KeyListener {
       g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
       int w = getWidth();
       int h = getHeight();
-      // 여백을 최소화하고 셀 크기를 키움 (w/6 -> w/4.5, h/6 -> h/4.5)
-      int cellSize = Math.min((w - 8) / 4, (h - 8) / 4); // 상하좌우 각 4px 여백만 남김
+      // Math.floor를 명시적으로 사용하여 항상 내림으로 통일 (깜빡임 방지)
+      int cellSize = (int) Math.floor(Math.min((w - 8) / 4.0, (h - 8) / 4.0));
       int gridSize = cellSize * 4;
       int startX = (w - gridSize) / 2;
       int startY = (h - gridSize) / 2;
@@ -435,7 +437,8 @@ public class game extends JPanel implements KeyListener {
     private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int cellSize, se.tetris.team5.items.Item item) {
       int cx = x + cellSize/2;
       int cy = y + cellSize/2;
-      int r = Math.max(6, cellSize/3);
+      // 아이템 아이콘 크기를 블록보다 작게 조정 (cellSize/3 -> cellSize/4)
+      int r = Math.max(5, cellSize/4);
 
       // 배경 링
       g2.setColor(new Color(0,0,0,120));
@@ -461,14 +464,14 @@ public class game extends JPanel implements KeyListener {
         g2.setColor(new Color(255, 200, 80));
         g2.fillOval(cx + r - Math.max(4, r/4), cy - r - Math.max(2, r/6), Math.max(4, r/3), Math.max(4, r/3));
       } else if (item instanceof se.tetris.team5.items.LineClearItem) {
-        // 라인 클리어 아이콘
+        // 라인 클리어 아이콘 (다른 아이템과 동일한 크기로 조정)
         g2.setColor(new Color(255, 200, 70));
-        int badgeSize = Math.max(r, 12);
-        int arc = Math.max(6, badgeSize / 3);
-        g2.fillRoundRect(cx - badgeSize, cy - badgeSize, badgeSize * 2, badgeSize * 2, arc, arc);
+        int arc = Math.max(4, r / 2);
+        g2.fillRoundRect(cx - r, cy - r, r * 2, r * 2, arc, arc);
         g2.setColor(new Color(255,255,255,220));
         Font prev = g2.getFont();
-        Font glyphFont = prev.deriveFont((float) Math.max(10, badgeSize));
+        // 폰트 크기를 더 줄여서 다른 아이템과 균형 맞춤 (1.2 -> 0.9)
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(6, r * 0.9));
         g2.setFont(glyphFont);
         java.awt.FontMetrics fm = g2.getFontMetrics();
         String text = "L";
@@ -580,39 +583,55 @@ public class game extends JPanel implements KeyListener {
   gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   scoreInfo.add(gameModeLabel);
   
-  scoreInfo.setPreferredSize(new java.awt.Dimension(170, 220)); // 가로 크기 추가 축소 200→170
+  scoreInfo.setPreferredSize(new java.awt.Dimension(170, 160)); // 아이템 모드 UI 최적화: 220→160
 
   JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
   infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-  infoWrapper.setMaximumSize(new java.awt.Dimension(240, 200));
+  infoWrapper.setMaximumSize(new java.awt.Dimension(240, 150)); // 아이템 모드 UI 최적화: 200→150
   rightPanel.add(infoWrapper);
   rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-  // Controls panel (titled box) — re-add at the bottom per user request
-  JPanel controlsBox = new JPanel(new BorderLayout());
+  // Controls panel (titled box) — 소형 화면(450x600)에서는 숨김, 중형/대형에서만 표시
+  // 프레임의 실제 크기로 판단 (450 이하는 소형으로 간주)
+  final JPanel controlsBox = new JPanel(new BorderLayout());
   controlsBox.setOpaque(false);
-  JTextPane controlsPane = new JTextPane();
+  final JTextPane controlsPane = new JTextPane();
   controlsPane.setEditable(false);
   controlsPane.setOpaque(false);
   controlsPane.setFont(createKoreanFont(Font.PLAIN, 14));
   controlsPane.setForeground(Color.WHITE);
   StringBuilder ctrl = new StringBuilder();
-  ctrl.append("조작키 안내\n\n");
   ctrl.append("↑ : 회전\n");
   ctrl.append("↓ : 소프트 드롭\n");
   ctrl.append("← → : 이동\n");
   ctrl.append("Space : 하드 드롭\n");
-  ctrl.append("ESC : 나가기\n");
+  ctrl.append("ESC : 나가기");
   controlsPane.setText(ctrl.toString());
   controlsBox.add(controlsPane, BorderLayout.CENTER);
-  JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
+  final JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
   controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
   controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
+  
+  // 컴포넌트가 화면에 표시될 때 프레임 크기를 확인하여 조작키 안내 표시 여부 결정
+  addComponentListener(new java.awt.event.ComponentAdapter() {
+    @Override
+    public void componentShown(java.awt.event.ComponentEvent e) {
+      javax.swing.SwingUtilities.invokeLater(new Runnable() {
+        @Override
+        public void run() {
+          java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(game.this);
+          if (window != null) {
+            int width = window.getWidth();
+            boolean shouldShowControls = width > 450; // 450보다 크면 중형/대형
+            System.out.println("[DEBUG] 창 너비: " + width + ", 조작키 안내 표시: " + shouldShowControls);
+            controlsWrapper.setVisible(shouldShowControls);
+          }
+        }
+      });
+    }
+  });
+  
   rightPanel.add(controlsWrapper);
-
-  // Controls panel (titled box) — re-use scoreBoard's text pane styling by creating a simple info pane
-  // We remove the controls text from the 게임 정보 panel as requested.
-  // If a separate controls panel is desired later, we can add a compact icon-based hint.
 
   add(rightPanel, BorderLayout.EAST);
 
@@ -1140,24 +1159,24 @@ public class game extends JPanel implements KeyListener {
     
     // 다음 블록에 포함된 아이템 설명
     if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
-      return "⏱ 타임스톱\n이 블록을 줄 삭제하면 Shift 키로 5초간 게임을 멈출 수 있습니다!";
+      return "Shift 키로 5초간 게임을 멈출 수 있습니다!";
     
     if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
-      return "� 폭탄\n블록 고정 시 폭발로 주변 블록을 제거합니다.";
+      return "블록 고정 시 폭발로 주변 블록을 제거합니다.";
     
     if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
-      return "L 줄삭제\n블록 고정 시 해당 줄을 즉시 삭제합니다.";
+      return "블록 고정 시 해당 줄을 즉시 삭제합니다.";
     
     if (it instanceof se.tetris.team5.items.DoubleScoreItem || "DoubleScoreItem".equals(name))
-      return "×2 점수 2배\n블록 고정 시 20초간 모든 점수가 2배가 됩니다!";
+      return "블록 고정 시 20초간 모든 점수가 2배가 됩니다!";
     
     if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
       se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
-      return "S 점수 아이템\n블록 고정 시 즉시 +" + si.getScoreAmount() + "점을 획득합니다.";
+      return "블록 고정 시 즉시 +" + si.getScoreAmount() + "점을 획득합니다.";
     }
     
     if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
-      return "W 무게추\n다음 블록이 무게추 블록(WBlock)으로 생성됩니다.";
+      return "다음 블록이 무게추 블록(WBlock)으로 생성됩니다.";
     
     return "특수 아이템: " + name;
   }
@@ -1613,7 +1632,7 @@ public class game extends JPanel implements KeyListener {
     // We now use a graphical semi-transparent overlay with a large countdown label.
     if (timeStopOverlay != null && timeStopNumberLabel != null) {
       // Update the three labels instead of HTML to avoid clipping and give precise control
-      timeStopIconLabel.setText("⏱");
+      timeStopIconLabel.setText("TIME STOP");
       timeStopNumberLabel.setText(String.valueOf(seconds));
       timeStopSubLabel.setText("초 남음");
       timeStopOverlay.setVisible(true);

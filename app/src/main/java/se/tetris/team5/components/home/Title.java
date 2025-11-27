@@ -21,17 +21,18 @@ public class Title {
     
     /**
      * GUI용 HTML 제목을 반환합니다 (3가지 크기로 변경)
+     * macOS 호환성을 위해 크로스 플랫폼 폰트 사용
      */
     public String getGUITitle() {
         switch (currentWindowSize) {
             case SMALL:   // 450x600 (기존 중형 크기)
-                return "<html><center><div style='margin: 35px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 3px 3px 5px #000000; font-size: 30px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
+                return "<html><center><div style='margin: 35px 0; width: 100%;'><h1 style='font-family: Arial, Helvetica, sans-serif; font-weight: 900; color: #FF4500; text-shadow: 3px 3px 5px #000000; font-size: 30px;'>CHAINSAW TETRIS</h1></div></center></html>";
             case MEDIUM:  // 550x700 (기존 대형 크기)
-                return "<html><center><div style='margin: 40px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 4px 4px 7px #000000; font-size: 36px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
+                return "<html><center><div style='margin: 40px 0; width: 100%;'><h1 style='font-family: Arial, Helvetica, sans-serif; font-weight: 900; color: #FF4500; text-shadow: 4px 4px 7px #000000; font-size: 36px;'>CHAINSAW TETRIS</h1></div></center></html>";
             case LARGE:   // 650x800 (기존 특대형 크기)
-                return "<html><center><div style='margin: 45px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 5px 5px 10px #000000; font-size: 44px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
+                return "<html><center><div style='margin: 45px 0; width: 100%;'><h1 style='font-family: Arial, Helvetica, sans-serif; font-weight: 900; color: #FF4500; text-shadow: 5px 5px 10px #000000; font-size: 44px;'>CHAINSAW TETRIS</h1></div></center></html>";
             default:
-                return "<html><center><div style='margin: 40px 0; width: 100%;'><h1 style='font-family: Impact, Arial Black, sans-serif; color: #FF4500; text-shadow: 4px 4px 7px #000000; font-size: 36px;'>⚡ CHAINSAW TETRIS ⚡</h1></div></center></html>";
+                return "<html><center><div style='margin: 40px 0; width: 100%;'><h1 style='font-family: Arial, Helvetica, sans-serif; font-weight: 900; color: #FF4500; text-shadow: 4px 4px 7px #000000; font-size: 36px;'>CHAINSAW TETRIS</h1></div></center></html>";
         }
     }
     
