@@ -71,6 +71,8 @@ public class game extends JPanel implements KeyListener {
   private javax.swing.JLabel timeStopIconLabel;
   private javax.swing.JLabel timeStopNumberLabel;
   private javax.swing.JLabel timeStopSubLabel;
+  // 타임스톱 아이템 획듍 표시 (게임보드 오른쪽 위)
+  private javax.swing.JLabel timeStopIndicator;
 
   private SimpleAttributeSet styleSet; // 텍스트 스타일 설정
   private Timer timer; // 블록 자동 낙하 타이머
@@ -252,6 +254,19 @@ public class game extends JPanel implements KeyListener {
 
     boardLayeredPane.add(timeStopOverlay, Integer.valueOf(100));
 
+    // 타임스톱 아이템 획듍 표시 (오른쪽 위)
+    timeStopIndicator = new javax.swing.JLabel("획득:⌛", javax.swing.SwingConstants.CENTER);
+    timeStopIndicator.setFont(new Font("Dialog", Font.BOLD, 16));
+    timeStopIndicator.setForeground(new Color(60, 180, 170));
+    timeStopIndicator.setOpaque(true);
+    timeStopIndicator.setBackground(new Color(0, 0, 0, 180));
+    timeStopIndicator.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(60, 180, 170), 2),
+        BorderFactory.createEmptyBorder(1, 1, 1, 1)
+    ));
+    timeStopIndicator.setVisible(false);
+    boardLayeredPane.add(timeStopIndicator, Integer.valueOf(200));
+
     // keep child bounds synced when parent resizes
     boardLayeredPane.addComponentListener(new java.awt.event.ComponentAdapter() {
       @Override
@@ -259,6 +274,10 @@ public class game extends JPanel implements KeyListener {
         java.awt.Dimension s = boardLayeredPane.getSize();
         gameBoard.setBounds(0, 0, s.width, s.height);
         timeStopOverlay.setBounds(0, 0, s.width, s.height);
+        // 타임스톱 표시 위치 (오른쪽 위)
+        int indicatorWidth = 60;
+        int indicatorHeight = 45;
+        timeStopIndicator.setBounds(s.width - indicatorWidth - 10, 10, indicatorWidth, indicatorHeight);
   // position center panel roughly centered and large, add vertical padding so glyph tops aren't clipped
   int lblW = Math.max(200, s.width / 2);
   int lblH = Math.max(120, s.height / 4);
@@ -833,6 +852,16 @@ public class game extends JPanel implements KeyListener {
     updateGameBoard();
     updateScoreBoard();
     updateNextBlockBoard();
+    updateTimeStopIndicator();
+  }
+
+  /**
+   * 타임스톱 획득 표시를 업데이트합니다
+   */
+  private void updateTimeStopIndicator() {
+    if (gameEngine != null && timeStopIndicator != null) {
+      timeStopIndicator.setVisible(gameEngine.hasTimeStopCharge());
+    }
   }
 
   /**
