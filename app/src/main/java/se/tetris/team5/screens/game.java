@@ -535,9 +535,11 @@ public class game extends JPanel implements KeyListener {
         Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
         g2.setFont(glyphFont);
         java.awt.FontMetrics fm = g2.getFontMetrics();
-        int textX = ovalX + (ovalSize - fm.stringWidth(icon)) / 2;
-        int textY = ovalY + (ovalSize + fm.getAscent()) / 2 - fm.getDescent();
-        g2.drawString(icon, textX, textY);
+        String text = "S";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
       }
     }
   };
