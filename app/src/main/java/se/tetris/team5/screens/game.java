@@ -556,11 +556,11 @@ public class game extends JPanel implements KeyListener {
     syncWithGameEngine();
     updateAllBoards();
 
-    // 게임 시작 시 타이머 완전 초기화 (0초부터 시작)
+    // 타이머는 생성만 하고 시작하지 않음 (reset()에서 시작)
     int userInterval = getInitialInterval();
     timer.setDelay(userInterval);
-    timer.setInitialDelay(userInterval); // 초기 지연을 설정하여 바로 실행 방지
-    timer.start();
+    timer.setInitialDelay(userInterval);
+    // timer.start(); // 주석 처리 - reset()에서 시작할 것
   }
 
   /**
@@ -1269,6 +1269,20 @@ public class game extends JPanel implements KeyListener {
     timer.start(); // 0초부터 새로 시작
     // macOS 대응: 리셋 시에도 포커스 강제 요청
     requestFocusInWindow();
+  }
+
+  /**
+   * 타이머를 정지합니다 (화면 전환 시 사용)
+   */
+  public void stopTimer() {
+    if (timer != null && timer.isRunning()) {
+      timer.stop();
+      System.out.println("[game.java] 타이머 정지됨");
+    }
+    if (timeStopCountdownTimer != null && timeStopCountdownTimer.isRunning()) {
+      timeStopCountdownTimer.stop();
+      timeStopCountdownTimer = null;
+    }
   }
 
   private void gameOver() {
