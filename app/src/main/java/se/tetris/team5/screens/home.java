@@ -83,6 +83,27 @@ public class home extends JPanel implements KeyListener {
         "메인 메뉴로 돌아갑니다"
     };
     
+    // 대전 모드 선택 메뉴
+    private String[] battleModeOptions = {
+        "일반 대전",
+        "아이템 대전",
+        "시간제한 대전",
+        "뒤로 가기"
+    };
+    
+    private String[] battleModeIcons = {
+        "⚔️", "💎⚔️", "⏱️", "↩️"
+    };
+    
+    private String[] battleModeDescriptions = {
+        "기본 대전 모드 - 먼저 게임오버되는 사람이 패배",
+        "아이템이 포함된 대전 모드",
+        "5분 시간제한 - 시간 종료 시 점수가 높은 사람이 승리",
+        "메인 메뉴로 돌아갑니다"
+    };
+    
+    private boolean inBattleModeSelection = false;
+    
     // 배경 관련
     private BufferedImage backgroundImage;
     private ImageIcon backgroundGif;
@@ -107,21 +128,39 @@ public class home extends JPanel implements KeyListener {
      * 현재 상태에 맞는 메뉴 옵션들을 반환합니다
      */
     private String[] getCurrentMenuOptions() {
-        return inDifficultySelection ? difficultyMenuOptions : mainMenuOptions;
+        if (inBattleModeSelection) {
+            return battleModeOptions;
+        } else if (inDifficultySelection) {
+            return difficultyMenuOptions;
+        } else {
+            return mainMenuOptions;
+        }
     }
     
     /**
      * 현재 상태에 맞는 메뉴 아이콘들을 반환합니다
      */
     private String[] getCurrentMenuIcons() {
-        return inDifficultySelection ? difficultyMenuIcons : mainMenuIcons;
+        if (inBattleModeSelection) {
+            return battleModeIcons;
+        } else if (inDifficultySelection) {
+            return difficultyMenuIcons;
+        } else {
+            return mainMenuIcons;
+        }
     }
     
     /**
      * 현재 상태에 맞는 메뉴 설명들을 반환합니다
      */
     private String[] getCurrentMenuDescriptions() {
-        return inDifficultySelection ? difficultyMenuDescriptions : mainMenuDescriptions;
+        if (inBattleModeSelection) {
+            return battleModeDescriptions;
+        } else if (inDifficultySelection) {
+            return difficultyMenuDescriptions;
+        } else {
+            return mainMenuDescriptions;
+        }
     }
     
     /**
@@ -423,7 +462,23 @@ public class home extends JPanel implements KeyListener {
      * 현재 선택된 메뉴를 실행합니다
      */
     private void selectCurrentMenu() {
-        if (inDifficultySelection) {
+        if (inBattleModeSelection) {
+            // 대전 모드 선택 화면
+            switch (selectedMenu) {
+                case 0: // 일반 대전
+                    startBattleMode("NORMAL");
+                    break;
+                case 1: // 아이템 대전
+                    startBattleMode("ITEM");
+                    break;
+                case 2: // 시간제한 대전
+                    startBattleMode("TIMELIMIT");
+                    break;
+                case 3: // 뒤로 가기
+                    backToMainMenu();
+                    break;
+            }
+        } else if (inDifficultySelection) {
             // 난이도 선택 화면
             switch (selectedMenu) {
                 case 0: // 이지
@@ -448,8 +503,8 @@ public class home extends JPanel implements KeyListener {
                 case 1: // 아이템 모드 (바로 시작)
                     startItemMode();
                     break;
-                case 2: // 대전 모드
-                    startBattleMode();
+                case 2: // 대전 모드 (모드 선택으로 이동)
+                    showBattleModeSelection();
                     break;
                 case 3: // 스코어 보기
                     screenController.showScreen("score");
@@ -469,6 +524,7 @@ public class home extends JPanel implements KeyListener {
      */
     private void backToMainMenu() {
         inDifficultySelection = false;
+        inBattleModeSelection = false;
         selectedMenu = 0;
         rebuildMenu();
     }
@@ -479,6 +535,15 @@ public class home extends JPanel implements KeyListener {
     private void showDifficultySelection() {
         inDifficultySelection = true;
         selectedMenu = 1; // 기본값: 노말 선택
+        rebuildMenu();
+    }
+    
+    /**
+     * 대전 모드 선택 화면으로 전환합니다
+     */
+    private void showBattleModeSelection() {
+        inBattleModeSelection = true;
+        selectedMenu = 0; // 기본값: 일반 대전 선택
         rebuildMenu();
     }
     
@@ -538,12 +603,14 @@ public class home extends JPanel implements KeyListener {
     
     /**
      * 대전 모드로 게임을 시작합니다
+     * @param battleMode "NORMAL", "ITEM", "TIMELIMIT"
      */
-    private void startBattleMode() {
-        System.out.println("[게임 시작] 대전 모드");
+    private void startBattleMode(String battleMode) {
+        System.out.println("[게임 시작] 대전 모드 - " + battleMode);
         
-        // 전역 변수로 게임 모드 저장 (game 화면에서 참조)
+        // 전역 변수로 게임 모드 저장 (battle 화면에서 참조)
         System.setProperty("tetris.game.mode", "BATTLE");
+        System.setProperty("tetris.battle.mode", battleMode);
         System.setProperty("tetris.game.difficulty", "NORMAL");
         
         // 대전 모드는 창 크기를 가로로 2배 확장

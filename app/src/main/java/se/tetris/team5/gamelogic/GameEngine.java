@@ -14,7 +14,8 @@ import se.tetris.team5.items.ItemGrantPolicy;
 public class GameEngine {
   // 게임 모드 (NORMAL: 아이템 없음, ITEM: 10줄마다 아이템)
   // Default to ITEM mode to preserve legacy behavior where items are available.
-  // If you want no items, call setGameMode(GameMode.NORMAL) or add a user setting.
+  // If you want no items, call setGameMode(GameMode.NORMAL) or add a user
+  // setting.
   private GameMode gameMode = GameMode.ITEM; // 기본값: 아이템 모드
 
   // 점수 2배 아이템 관련
@@ -38,10 +39,15 @@ public class GameEngine {
   private boolean gameRunning;
   private long gameStartTime;
 
-  // listeners to notify UI or other observers about state changes (e.g., next block spawned)
+  // listeners to notify UI or other observers about state changes (e.g., next
+  // block spawned)
   private List<Runnable> listeners = new ArrayList<>();
+  
+  // 대전모드: 블럭 고정 후 콜백 (공격 블럭 적용용)
+  private Runnable onBlockFixedCallback = null;
 
-  // Last cleared rows (for UI to consume and animate). Cleared row indices are 0..HEIGHT-1
+  // Last cleared rows (for UI to consume and animate). Cleared row indices are
+  // 0..HEIGHT-1
   private java.util.List<Integer> lastClearedRows = new java.util.ArrayList<>();
 
   // 플레이어가 획득한 아이템 (1개만 보유, 큐로 확장 가능)
@@ -61,6 +67,17 @@ public class GameEngine {
   private boolean penaltyApplied = false; // 패널티가 적용되었는지 여부
 
   public GameEngine(int height, int width) {
+    this(height, width, true); // 기본적으로 자동 시작
+  }
+
+  /**
+   * GameEngine 생성자 (자동 시작 여부 선택 가능)
+   * 
+   * @param height    보드 높이
+   * @param width     보드 너비
+   * @param autoStart true면 자동으로 startNewGame() 호출, false면 수동 호출 필요
+   */
+  public GameEngine(int height, int width, boolean autoStart) {
     boardManager = new BoardManager();
     movementManager = new MovementManager(boardManager);
     rotationManager = new BlockRotationManager();
@@ -69,7 +86,9 @@ public class GameEngine {
     itemFactory = new se.tetris.team5.items.ItemFactory();
     itemGrantPolicy = new se.tetris.team5.items.Every10LinesItemGrantPolicy();
 
-    startNewGame();
+    if (autoStart) {
+      startNewGame();
+    }
   }
 
   public void startNewGame() {
@@ -90,15 +109,16 @@ public class GameEngine {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
     }
 
-  currentBlock = blockFactory.createRandomBlock();
-  nextBlock = blockFactory.createRandomBlock();
-  // debug: log initial blocks
-  System.out.println("[GameEngine DEBUG] startNewGame current=" + currentBlock.getClass().getSimpleName()
-    + " next=" + nextBlock.getClass().getSimpleName());
+    currentBlock = blockFactory.createRandomBlock();
+    nextBlock = blockFactory.createRandomBlock();
+    // debug: log initial blocks
+    System.out.println("[GameEngine DEBUG] startNewGame current=" + currentBlock.getClass().getSimpleName()
+        + " next=" + nextBlock.getClass().getSimpleName());
     x = START_X;
     y = START_Y;
 
-    boardManager.placeBlock(currentBlock, x, y);
+    // 블록을 보드에 배치하지 않음 - renderBoard에서 동적으로 그려짐
+    // boardManager.placeBlock(currentBlock, x, y);
   }
 
   /**
@@ -144,7 +164,8 @@ public class GameEngine {
       // capture cleared rows for UI animation and notify listeners before we continue
       try {
         lastClearedRows = boardManager.getLastClearedRows();
-        // notify UI immediately so it can start animations before we spawn the next block
+        // notify UI immediately so it can start animations before we spawn the next
+        // block
         notifyListenersImmediate();
       } catch (Exception ex) {
         // swallow - non-fatal
@@ -167,19 +188,34 @@ public class GameEngine {
       }
 
       gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
-      
+
       handleItemSpawnAndCollect(clearedLines);
-      
+
       // 블록 높이 패널티 체크
       checkHeightPenalty();
-      
+
+      // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
+      System.out.println("[GameEngine] moveBlockDown - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
+      if (onBlockFixedCallback != null) {
+        System.out.println("[GameEngine] 블럭 고정 완료 - 콜백 호출 시작");
+        try {
+          onBlockFixedCallback.run();
+          System.out.println("[GameEngine] 콜백 실행 완료");
+        } catch (Exception e) {
+          System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
+          e.printStackTrace();
+        }
+      } else {
+        System.out.println("[GameEngine] 콜백이 null입니다!");
+      }
+
       spawnNextBlock();
       return false;
     }
   }
 
   public boolean moveBlockLeft() {
-    if (gameOver)
+    if (gameOver || currentBlock == null)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -194,7 +230,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockRight() {
-    if (gameOver)
+    if (gameOver || currentBlock == null)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -236,7 +272,7 @@ public class GameEngine {
     boardManager.eraseBlock(currentBlock, x, y);
     int dropDistance = movementManager.hardDrop(currentBlock, x, y);
     y = movementManager.getDropPosition(currentBlock, x, y);
-    
+
     // 무게추 블록(WBlock)일 때는 하드드롭 점수를 부여하지 않음
     if (!(currentBlock instanceof se.tetris.team5.blocks.WBlock)) {
       gameScoring.addHardDropPoints(applyDoubleScore(dropDistance));
@@ -274,12 +310,27 @@ public class GameEngine {
     }
 
     gameScoring.addLinesCleared(applyDoubleScoreToLines(clearedLines));
-    
+
     handleItemSpawnAndCollect(clearedLines);
-    
+
     // 블록 높이 패널티 체크
     checkHeightPenalty();
-    
+
+    // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
+    System.out.println("[GameEngine] hardDrop - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
+    if (onBlockFixedCallback != null) {
+      System.out.println("[GameEngine] 하드드롭 블럭 고정 완료 - 콜백 호출 시작");
+      try {
+        onBlockFixedCallback.run();
+        System.out.println("[GameEngine] 콜백 실행 완료");
+      } catch (Exception e) {
+        System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
+        e.printStackTrace();
+      }
+    } else {
+      System.out.println("[GameEngine] 콜백이 null입니다!");
+    }
+
     spawnNextBlock();
     return true;
   }
@@ -315,7 +366,8 @@ public class GameEngine {
    * Returns remaining milliseconds for double-score effect, or 0 if not active.
    */
   public long getDoubleScoreRemainingMillis() {
-    if (!doubleScoreActive) return 0L;
+    if (!doubleScoreActive)
+      return 0L;
     long rem = doubleScoreEndTime - System.currentTimeMillis();
     return rem > 0 ? rem : 0L;
   }
@@ -393,7 +445,7 @@ public class GameEngine {
    */
   private void checkHeightPenalty() {
     int highestRow = boardManager.getHighestBlockRow();
-    
+
     if (highestRow > PENALTY_HEIGHT) {
       // 10줄 초과 && 아직 패널티가 적용되지 않았다면
       if (!penaltyApplied) {
@@ -446,26 +498,27 @@ public class GameEngine {
       } else {
         // 일반 블록 + 아이템 (LineClearItem, TimeStopItem 등)
         nextBlock = blockFactory.createRandomBlock();
-        
+
         // 블록의 모든 유효한 칸을 수집한 후 랜덤하게 선택
         java.util.List<int[]> validPositions = new java.util.ArrayList<>();
         for (int j = 0; j < nextBlock.height(); j++) {
           for (int i = 0; i < nextBlock.width(); i++) {
             if (nextBlock.getShape(i, j) == 1) {
-              validPositions.add(new int[]{i, j});
+              validPositions.add(new int[] { i, j });
             }
           }
         }
-        
+
         // 유효한 위치가 있으면 랜덤하게 선택하여 아이템 설정
         if (!validPositions.isEmpty()) {
           java.util.Random rand = new java.util.Random();
           int[] chosen = validPositions.get(rand.nextInt(validPositions.size()));
           nextBlock.setItem(chosen[0], chosen[1], pendingItem);
-          System.out.println("[특수 블록] " + pendingItem.getName() + " 아이템 블록 생성! (위치: " + chosen[0] + ", " + chosen[1] + ")");
+          System.out
+              .println("[특수 블록] " + pendingItem.getName() + " 아이템 블록 생성! (위치: " + chosen[0] + ", " + chosen[1] + ")");
         }
       }
-      
+
       // 아이템 획득 처리 (타임스톱 제외 - 타임스톱은 줄 삭제 시 충전)
       for (int j = 0; j < nextBlock.height(); j++) {
         for (int i = 0; i < nextBlock.width(); i++) {
@@ -483,7 +536,7 @@ public class GameEngine {
           }
         }
       }
-      
+
       pendingItem = null; // 펜딩 아이템 소비
     } else {
       // 펜딩 아이템이 없으면 일반 블록 생성
@@ -536,11 +589,13 @@ public class GameEngine {
 
   /**
    * Consume and return the last cleared rows recorded by the engine.
-   * Returns an empty list if none. This method clears the stored list so subsequent
+   * Returns an empty list if none. This method clears the stored list so
+   * subsequent
    * calls won't return the same event again.
    */
   public java.util.List<Integer> consumeLastClearedRows() {
-    if (lastClearedRows == null || lastClearedRows.isEmpty()) return new java.util.ArrayList<>();
+    if (lastClearedRows == null || lastClearedRows.isEmpty())
+      return new java.util.ArrayList<>();
     java.util.List<Integer> out = new java.util.ArrayList<>(lastClearedRows);
     lastClearedRows.clear();
     return out;
@@ -576,21 +631,26 @@ public class GameEngine {
   }
 
   /**
-   * Register a listener to be notified when engine state changes (e.g., next block spawned).
+   * Register a listener to be notified when engine state changes (e.g., next
+   * block spawned).
    * Listener will be invoked on the EDT.
    */
   public void addStateChangeListener(Runnable r) {
-    if (r == null) return;
+    if (r == null)
+      return;
     listeners.add(r);
   }
 
   /**
    * Invoke registered listeners immediately on the current thread.
-   * Used to notify UI to update right after important state changes (like line clears)
-   * so the UI can render the cleared rows before the engine continues mutating the board.
+   * Used to notify UI to update right after important state changes (like line
+   * clears)
+   * so the UI can render the cleared rows before the engine continues mutating
+   * the board.
    */
   private void notifyListenersImmediate() {
-    if (listeners == null || listeners.isEmpty()) return;
+    if (listeners == null || listeners.isEmpty())
+      return;
     // Ensure listeners run on the Swing EDT so UI updates are safe and consistent.
     for (Runnable r : listeners) {
       try {
@@ -606,6 +666,17 @@ public class GameEngine {
    */
   public long getGameStartTime() {
     return gameStartTime;
+  }
+
+  /**
+   * 대전모드: 블럭 고정 후 콜백 설정
+   * 
+   * @param callback 블럭이 고정된 직후 호출될 콜백
+   */
+  public void setOnBlockFixedCallback(Runnable callback) {
+    System.out.println("[GameEngine] setOnBlockFixedCallback 호출됨 - callback null 여부: " + (callback == null));
+    this.onBlockFixedCallback = callback;
+    System.out.println("[GameEngine] 콜백 저장 완료");
   }
 
   /**

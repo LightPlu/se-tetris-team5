@@ -29,16 +29,6 @@ jobs:
           java-version: ${{ matrix.java-version }}
           cache: "gradle"
 
-      - name: Cache gradle wrapper & caches
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties') }}-${{ env.GRADLE_CACHE_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
       - name: Ensure Gradle wrapper is executable (UNIX)
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
