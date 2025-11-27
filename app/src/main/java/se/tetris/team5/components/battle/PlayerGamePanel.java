@@ -488,7 +488,8 @@ public class PlayerGamePanel extends JPanel {
         items[i][j] = gameEngine.getBoardManager().getBoardItem(j, i);
       }
     }
-    gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY);
+    int ghostY = gameEngine.getGhostY();
+    gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY, ghostY);
 
     // 줄 삭제 애니메이션 처리
     try {
