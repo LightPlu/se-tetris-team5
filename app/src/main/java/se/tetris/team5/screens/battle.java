@@ -362,33 +362,31 @@ public class battle extends JPanel implements KeyListener {
       return;
 
     int keyCode = e.getKeyCode();
-
-    // 플레이어1: WASD + Z
-    if (keyCode == KeyEvent.VK_A) {
-      player1Input.handleMoveLeft();
-    } else if (keyCode == KeyEvent.VK_D) {
-      player1Input.handleMoveRight();
-    } else if (keyCode == KeyEvent.VK_S) {
-      player1Input.handleSoftDrop();
-    } else if (keyCode == KeyEvent.VK_W) {
-      player1Input.handleRotate();
-    } else if (keyCode == KeyEvent.VK_Z) {
-      player1Input.handleHardDrop();
+    
+    // GameSettings에서 키 코드 가져오기
+    se.tetris.team5.utils.setting.GameSettings settings = 
+        se.tetris.team5.utils.setting.GameSettings.getInstance();
+    
+    int player1ItemKey = settings.getPlayerKeyCode(1, "item");
+    int player2ItemKey = settings.getPlayerKeyCode(2, "item");
+    
+    // 아이템 키 체크 (타이머 멈춤 효과)
+    if (keyCode == player1ItemKey) {
+      player1Panel.useItem();
+      return;
+    } else if (keyCode == player2ItemKey) {
+      player2Panel.useItem();
+      return;
     }
-    // 플레이어2: 화살표 + RShift
-    else if (keyCode == KeyEvent.VK_LEFT) {
-      player2Input.handleMoveLeft();
-    } else if (keyCode == KeyEvent.VK_RIGHT) {
-      player2Input.handleMoveRight();
-    } else if (keyCode == KeyEvent.VK_DOWN) {
-      player2Input.handleSoftDrop();
-    } else if (keyCode == KeyEvent.VK_UP) {
-      player2Input.handleRotate();
-    } else if (keyCode == KeyEvent.VK_SHIFT && e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
-      player2Input.handleHardDrop();
-    }
-    // 공통
-    else if (keyCode == KeyEvent.VK_P) {
+    
+    // Player1 키 처리
+    player1Input.handleKeyPress(keyCode);
+    
+    // Player2 키 처리
+    player2Input.handleKeyPress(keyCode);
+    
+    // 공통 키 처리
+    if (keyCode == KeyEvent.VK_P) {
       togglePause();
     } else if (keyCode == KeyEvent.VK_ESCAPE) {
       isPaused = true; // ESC 입력 시 명확히 일시정지

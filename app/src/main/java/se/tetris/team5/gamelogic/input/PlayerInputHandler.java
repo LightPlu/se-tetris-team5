@@ -33,6 +33,11 @@ public interface PlayerInputHandler {
     void handleSoftDrop();
     
     /**
+     * 아이템 사용
+     */
+    void handleUseItem();
+    
+    /**
      * GameEngine 설정
      */
     void setGameEngine(GameEngine gameEngine);

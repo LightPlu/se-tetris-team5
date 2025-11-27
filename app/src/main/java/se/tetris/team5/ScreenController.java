@@ -166,6 +166,11 @@ public class ScreenController extends JFrame {
         // 대전 모드 체크
         String gameMode = System.getProperty("tetris.game.mode", "NORMAL");
         if ("BATTLE".equals(gameMode)) {
+          // 대전 모드로 전환 시 gameScreen의 타이머 정지 (중요!)
+          if (gameScreen != null) {
+            gameScreen.stopTimer();
+          }
+          
           // 대전 모드는 매번 새로 생성 (상태 초기화)
           battleScreen = new battle(this);
           getContentPane().add(battleScreen);

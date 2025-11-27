@@ -57,6 +57,15 @@ public class PlayerGamePanel extends JPanel {
 
   // 대전모드: 상대방 패널 참조 (공격 블럭 전송용)
   private PlayerGamePanel opponentPanel;
+  
+  // 타임스톱 관련
+  private boolean isTimeStopped = false;
+  private Timer timeStopCountdownTimer;
+  private int timeStopRemaining = 0;
+  private JPanel timeStopOverlay;
+  private JLabel timeStopIconLabel;
+  private JLabel timeStopNumberLabel;
+  private JLabel timeStopSubLabel;
 
   /**
    * 플레이어 게임 패널 생성 (기본값)
@@ -113,6 +122,47 @@ public class PlayerGamePanel extends JPanel {
     timerLabel.setBackground(new Color(0, 0, 0, 180));
     timerLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
     boardContainer.add(timerLabel, Integer.valueOf(100));
+    
+    // 타임스톱 오버레이 패널 (처음에는 숨김)
+    timeStopOverlay = new JPanel() {
+      @Override
+      protected void paintComponent(java.awt.Graphics g) {
+        java.awt.Graphics2D g2d = (java.awt.Graphics2D) g.create();
+        // 반투명 검정 배경
+        g2d.setColor(new Color(0, 0, 0, 100));
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+        g2d.dispose();
+        super.paintComponent(g);
+      }
+    };
+    timeStopOverlay.setLayout(new BoxLayout(timeStopOverlay, BoxLayout.Y_AXIS));
+    timeStopOverlay.setOpaque(false); // 투명도 적용을 위해 필수
+    timeStopOverlay.setVisible(false);
+    
+    timeStopIconLabel = new JLabel("⏱", javax.swing.SwingConstants.CENTER);
+    timeStopIconLabel.setFont(new Font("Dialog", Font.BOLD, 48));
+    timeStopIconLabel.setForeground(Color.CYAN);
+    timeStopIconLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    
+    timeStopNumberLabel = new JLabel("5", javax.swing.SwingConstants.CENTER);
+    timeStopNumberLabel.setFont(new Font("Dialog", Font.BOLD, 72));
+    timeStopNumberLabel.setForeground(Color.YELLOW);
+    timeStopNumberLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    
+    timeStopSubLabel = new JLabel("초 남음", javax.swing.SwingConstants.CENTER);
+    timeStopSubLabel.setFont(new Font("Dialog", Font.BOLD, 24));
+    timeStopSubLabel.setForeground(Color.WHITE);
+    timeStopSubLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    
+    timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
+    timeStopOverlay.add(timeStopIconLabel);
+    timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
+    timeStopOverlay.add(timeStopNumberLabel);
+    timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
+    timeStopOverlay.add(timeStopSubLabel);
+    timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
+    
+    boardContainer.add(timeStopOverlay, Integer.valueOf(200));
 
     // 보드와 타이머 위치 설정
     boardContainer.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -121,6 +171,7 @@ public class PlayerGamePanel extends JPanel {
         java.awt.Dimension size = boardContainer.getSize();
         gameBoard.setBounds(0, 0, size.width, size.height);
         timerLabel.setBounds(10, 10, 80, 30);
+        timeStopOverlay.setBounds(0, 0, size.width, size.height);
       }
     });
 
@@ -711,5 +762,92 @@ public class PlayerGamePanel extends JPanel {
    */
   public void setOpponentPanel(PlayerGamePanel opponent) {
     this.opponentPanel = opponent;
+  }
+  
+  /**
+   * 아이템 사용 - 타임스톱 활성화
+   * @return 아이템 사용 성공 여부
+   */
+  public boolean useItem() {
+    if (gameEngine != null && gameEngine.hasTimeStopCharge() && !isTimeStopped) {
+      isTimeStopped = true;
+      gameEngine.useTimeStop(); // 충전 소모
+      
+      // 타이머 정지
+      if (gameTimer != null) {
+        gameTimer.stop();
+      }
+      
+      // 타임스톱 오버레이 표시 및 카운트다운 시작
+      timeStopRemaining = 5;
+      showTimeStopOverlay();
+      
+      // 기존 카운트다운 타이머 정리
+      if (timeStopCountdownTimer != null) {
+        timeStopCountdownTimer.stop();
+        timeStopCountdownTimer = null;
+      }
+      
+      // 1초마다 카운트다운
+      timeStopCountdownTimer = new Timer(1000, e -> {
+        timeStopRemaining--;
+        if (timeStopRemaining > 0) {
+          updateTimeStopOverlay();
+        } else {
+          // 타임스톱 종료
+          if (timeStopCountdownTimer != null) {
+            timeStopCountdownTimer.stop();
+            timeStopCountdownTimer = null;
+          }
+          deactivateTimeStop();
+        }
+      });
+      timeStopCountdownTimer.setRepeats(true);
+      timeStopCountdownTimer.start();
+      
+      System.out.println("[" + playerName + "] 타임스톱 아이템 사용!");
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * 타임스톱 오버레이 표시
+   */
+  private void showTimeStopOverlay() {
+    if (timeStopOverlay != null && timeStopNumberLabel != null) {
+      timeStopIconLabel.setText("⏱");
+      timeStopNumberLabel.setText(String.valueOf(timeStopRemaining));
+      timeStopSubLabel.setText("초 남음");
+      timeStopOverlay.setVisible(true);
+    }
+  }
+  
+  /**
+   * 타임스톱 오버레이 업데이트
+   */
+  private void updateTimeStopOverlay() {
+    if (timeStopNumberLabel != null) {
+      timeStopNumberLabel.setText(String.valueOf(timeStopRemaining));
+    }
+  }
+  
+  /**
+   * 타임스톱 해제
+   */
+  private void deactivateTimeStop() {
+    isTimeStopped = false;
+    
+    // 오버레이 숨기기
+    if (timeStopOverlay != null) {
+      timeStopOverlay.setVisible(false);
+    }
+    
+    // 타이머 재시작
+    if (gameTimer != null && !isGameOver()) {
+      gameTimer.start();
+    }
+    
+    System.out.println("[" + playerName + "] 타임스톱 종료");
   }
 }
