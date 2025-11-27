@@ -192,10 +192,29 @@ public class GameBoard extends JTextPane {
                             Color col = currentBlock.getColor();
                             if (col == null) col = Color.CYAN;
                             
-                            // 고스트 블럭은 반투명 테두리만 표시
-                            Color ghostCol = new Color(col.getRed(), col.getGreen(), col.getBlue(), 80);
-                            g2.setColor(ghostCol);
+                            // 고스트 블럭: 밝은 색상 + 흰색 외곽선으로 가시성 향상
+                            // 1. 반투명 채우기 (밝은 색상)
+                            Color ghostFill = new Color(
+                                Math.min(255, col.getRed() + 100),
+                                Math.min(255, col.getGreen() + 100),
+                                Math.min(255, col.getBlue() + 100),
+                                60
+                            );
+                            g2.setColor(ghostFill);
+                            g2.fillRoundRect(x+4, y+4, cellSize-8, cellSize-8, 4, 4);
+                            
+                            // 2. 흰색 외곽선 (가시성 향상)
+                            g2.setColor(new Color(255, 255, 255, 180));
                             g2.drawRoundRect(x+4, y+4, cellSize-8, cellSize-8, 4, 4);
+                            
+                            // 3. 원래 색상의 밝은 테두리
+                            Color ghostBorder = new Color(
+                                Math.min(255, col.getRed() + 80),
+                                Math.min(255, col.getGreen() + 80),
+                                Math.min(255, col.getBlue() + 80),
+                                150
+                            );
+                            g2.setColor(ghostBorder);
                             g2.drawRoundRect(x+5, y+5, cellSize-10, cellSize-10, 4, 4);
                         }
                     }
