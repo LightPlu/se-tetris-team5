@@ -51,12 +51,28 @@ public class GameSettings {
         properties.setProperty("game.speed", "3");
         properties.setProperty("sound.enabled", "true");
         properties.setProperty("colorblind.mode", "false");
+        // 싱글 플레이 키 설정
         properties.setProperty("key.down", "40"); // VK_DOWN
         properties.setProperty("key.left", "37"); // VK_LEFT
         properties.setProperty("key.right", "39"); // VK_RIGHT
         properties.setProperty("key.rotate", "38"); // VK_UP
         properties.setProperty("key.drop", "32"); // VK_SPACE
         properties.setProperty("key.pause", "80"); // VK_P
+        properties.setProperty("key.item", "16"); // VK_SHIFT
+        // Player1 대전모드 키 설정 (WASD + Z, X)
+        properties.setProperty("key.player1.down", "83"); // VK_S
+        properties.setProperty("key.player1.left", "65"); // VK_A
+        properties.setProperty("key.player1.right", "68"); // VK_D
+        properties.setProperty("key.player1.rotate", "87"); // VK_W
+        properties.setProperty("key.player1.drop", "90"); // VK_Z
+        properties.setProperty("key.player1.item", "88"); // VK_X
+        // Player2 대전모드 키 설정 (방향키 + Shift, Ctrl)
+        properties.setProperty("key.player2.down", "40"); // VK_DOWN
+        properties.setProperty("key.player2.left", "37"); // VK_LEFT
+        properties.setProperty("key.player2.right", "39"); // VK_RIGHT
+        properties.setProperty("key.player2.rotate", "38"); // VK_UP
+        properties.setProperty("key.player2.drop", "16"); // VK_SHIFT
+        properties.setProperty("key.player2.item", "17"); // VK_CONTROL
         saveSettings();
     }
     
@@ -137,8 +153,44 @@ public class GameSettings {
             case "rotate": return Integer.parseInt(properties.getProperty("key.rotate", "38"));
             case "drop": return Integer.parseInt(properties.getProperty("key.drop", "32"));
             case "pause": return Integer.parseInt(properties.getProperty("key.pause", "80"));
+            case "item": return Integer.parseInt(properties.getProperty("key.item", "16"));
             default: return -1;
         }
+    }
+    
+    /**
+     * 대전모드 플레이어별 키 코드 가져오기
+     */
+    public int getPlayerKeyCode(int playerNum, String action) {
+        if (action == null || (playerNum != 1 && playerNum != 2)) {
+            return -1;
+        }
+        String key = "key.player" + playerNum + "." + action;
+        String defaultValue;
+        
+        if (playerNum == 1) {
+            switch (action) {
+                case "down": defaultValue = "83"; break; // S
+                case "left": defaultValue = "65"; break; // A
+                case "right": defaultValue = "68"; break; // D
+                case "rotate": defaultValue = "87"; break; // W
+                case "drop": defaultValue = "90"; break; // Z
+                case "item": defaultValue = "88"; break; // X
+                default: return -1;
+            }
+        } else {
+            switch (action) {
+                case "down": defaultValue = "40"; break; // DOWN
+                case "left": defaultValue = "37"; break; // LEFT
+                case "right": defaultValue = "39"; break; // RIGHT
+                case "rotate": defaultValue = "38"; break; // UP
+                case "drop": defaultValue = "16"; break; // SHIFT
+                case "item": defaultValue = "17"; break; // CTRL
+                default: return -1;
+            }
+        }
+        
+        return Integer.parseInt(properties.getProperty(key, defaultValue));
     }
     
     public void setKeyCode(String action, int keyCode) {
@@ -149,15 +201,44 @@ public class GameSettings {
         saveSettings();
     }
     
+    /**
+     * 대전모드 플레이어별 키 코드 설정
+     */
+    public void setPlayerKeyCode(int playerNum, String action, int keyCode) {
+        if (playerNum != 1 && playerNum != 2) {
+            return;
+        }
+        // 해당 플레이어 내에서 키 중복 제거
+        removePlayerKeyIfExists(playerNum, keyCode, action);
+        
+        String key = "key.player" + playerNum + "." + action;
+        properties.setProperty(key, String.valueOf(keyCode));
+        saveSettings();
+    }
+    
     // 다른 액션에서 같은 키를 사용하고 있다면 제거하는 메소드
     private void removeKeyIfExists(int keyCode, String currentAction) {
-        String[] actions = {"down", "left", "right", "rotate", "drop", "pause"};
+        String[] actions = {"down", "left", "right", "rotate", "drop", "pause", "item"};
         for (String action : actions) {
             if (!action.equals(currentAction)) {
                 int existingKeyCode = getKeyCode(action);
                 if (existingKeyCode == keyCode) {
                     // 기존 키를 -1로 설정 (비활성화)
                     properties.setProperty("key." + action, "-1");
+                }
+            }
+        }
+    }
+    
+    // 대전모드 플레이어별 키 중복 제거
+    private void removePlayerKeyIfExists(int playerNum, int keyCode, String currentAction) {
+        String[] actions = {"down", "left", "right", "rotate", "drop", "item"};
+        for (String action : actions) {
+            if (!action.equals(currentAction)) {
+                int existingKeyCode = getPlayerKeyCode(playerNum, action);
+                if (existingKeyCode == keyCode) {
+                    // 기존 키를 -1로 설정 (비활성화)
+                    properties.setProperty("key.player" + playerNum + "." + action, "-1");
                 }
             }
         }

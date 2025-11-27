@@ -1389,6 +1389,7 @@ public class game extends JPanel implements KeyListener {
     int rotateKey = settings.getKeyCode("rotate");
     int dropKey = settings.getKeyCode("drop");
     int pauseKey = settings.getKeyCode("pause");
+    int itemKey = settings.getKeyCode("item");
 
     // 일시정지 상태일 때의 키 처리
     if (isPaused) {
@@ -1464,8 +1465,8 @@ public class game extends JPanel implements KeyListener {
     } else if (keyCode == dropKey) {
       hardDrop();
       drawBoard();
-    } else if (keyCode == KeyEvent.VK_SHIFT) {
-      // shift 키로 타임스톱 사용
+    } else if (itemKey != -1 && keyCode == itemKey) {
+      // 설정된 아이템 키로 타임스톱 사용
       if (gameEngine.hasTimeStopCharge() && !isTimeStopped) {
         activateTimeStop();
       }
