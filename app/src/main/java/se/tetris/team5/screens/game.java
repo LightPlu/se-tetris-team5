@@ -823,7 +823,8 @@ public class game extends JPanel implements KeyListener {
         items[i][j] = gameEngine.getBoardManager().getBoardItem(j, i);
       }
     }
-    gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY);
+    int ghostY = gameEngine.getGhostY();
+    gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY, ghostY);
     // If the engine recorded cleared rows during the last move, consume them and
     // trigger animations.
     try {
