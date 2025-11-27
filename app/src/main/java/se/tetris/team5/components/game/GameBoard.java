@@ -484,15 +484,14 @@ public class GameBoard extends JTextPane {
                 g2.setFont(prev);
             }
         } else if (it instanceof se.tetris.team5.items.LineClearItem) {
-            // line-clear: bright yellow badge with centered 'L' for clarity
+            // line-clear: bright yellow badge with centered 'L' - 다른 아이템과 동일한 크기로 조정
             g2.setColor(new Color(255, 200, 70));
-            int badgeSize = Math.max(r, 12);
-            int arc = Math.max(6, badgeSize / 3);
-            g2.fillRoundRect(cx - badgeSize, cy - badgeSize, badgeSize * 2, badgeSize * 2, arc, arc);
+            int arc = Math.max(4, r / 2);
+            g2.fillRoundRect(cx - r, cy - r, r * 2, r * 2, arc, arc);
             // draw a clear 'L' glyph centered
             g2.setColor(new Color(255,255,255,220));
             java.awt.Font prev = g2.getFont();
-            java.awt.Font glyphFont = prev.deriveFont((float) Math.max(12, badgeSize));
+            java.awt.Font glyphFont = prev.deriveFont(java.awt.Font.BOLD, (float) Math.max(8, r * 1.1));
             g2.setFont(glyphFont);
             java.awt.FontMetrics fm = g2.getFontMetrics();
             String glyph = "L";

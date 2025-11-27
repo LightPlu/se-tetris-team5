@@ -215,7 +215,8 @@ public class game extends JPanel implements KeyListener {
     timeStopCenterPanel.setOpaque(false);
     timeStopCenterPanel.setLayout(new java.awt.GridBagLayout());
 
-    timeStopIconLabel = new javax.swing.JLabel("⏱", javax.swing.SwingConstants.CENTER);
+    // 이모지 대신 텍스트로 변경 (크로스 플랫폼 호환성)
+    timeStopIconLabel = new javax.swing.JLabel("TIME STOP", javax.swing.SwingConstants.CENTER);
     timeStopIconLabel.setForeground(new java.awt.Color(191, 255, 230));
     timeStopIconLabel.setOpaque(false);
 
@@ -255,22 +256,21 @@ public class game extends JPanel implements KeyListener {
         java.awt.Dimension s = boardLayeredPane.getSize();
         gameBoard.setBounds(0, 0, s.width, s.height);
         timeStopOverlay.setBounds(0, 0, s.width, s.height);
-        // position center panel roughly centered and large, add vertical padding so
-        // glyph tops aren't clipped
-        int lblW = Math.max(200, s.width / 2);
-        int lblH = Math.max(120, s.height / 4);
-        int padTop = Math.max(12, lblH / 8);
-        // give extra vertical room to avoid the top of the number being clipped; center
-        // the whole block
-        int totalH = lblH + padTop;
-        timeStopCenterPanel.setBounds((s.width - lblW) / 2, (s.height - totalH) / 2, lblW, totalH);
-        // choose font sizes proportional to available height
-        int numberFontSize = Math.max(40, (lblH - padTop) * 3 / 4);
-        int iconFontSize = Math.max(24, (lblH - padTop) / 6);
-        int subFontSize = Math.max(12, (lblH - padTop) / 8);
-        timeStopNumberLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, numberFontSize));
-        timeStopIconLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, iconFontSize));
-        timeStopSubLabel.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, subFontSize));
+  // position center panel roughly centered and large, add vertical padding so glyph tops aren't clipped
+  int lblW = Math.max(200, s.width / 2);
+  int lblH = Math.max(120, s.height / 4);
+  int padTop = Math.max(12, lblH / 8);
+  // give extra vertical room to avoid the top of the number being clipped; center the whole block
+  int totalH = lblH + padTop;
+  timeStopCenterPanel.setBounds((s.width - lblW) / 2, (s.height - totalH) / 2, lblW, totalH);
+  // choose font sizes proportional to available height
+  int numberFontSize = Math.max(40, (lblH - padTop) * 3 / 4);
+  int iconFontSize = Math.max(24, (lblH - padTop) / 6);
+  int subFontSize = Math.max(12, (lblH - padTop) / 8);
+  // macOS/Windows 크로스 플랫폼 한글 지원 폰트 사용
+  timeStopNumberLabel.setFont(createKoreanFont(java.awt.Font.BOLD, numberFontSize));
+  timeStopIconLabel.setFont(createKoreanFont(java.awt.Font.PLAIN, iconFontSize));
+  timeStopSubLabel.setFont(createKoreanFont(java.awt.Font.PLAIN, subFontSize));
       }
     });
 
@@ -324,24 +324,40 @@ public class game extends JPanel implements KeyListener {
     rightPanel.setMinimumSize(new java.awt.Dimension(220, 0));
 
     // Next block panel (titled box) - use a graphic preview for modern look
-    nextBlockBoard = new NextBlockBoard();
-    nextVisualPanel = new JPanel() {
-      @Override
-      protected void paintComponent(java.awt.Graphics g) {
-        super.paintComponent(g);
-        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-        int w = getWidth();
-        int h = getHeight();
-        int cellSize = Math.min(w / 6, h / 6);
-        int gridSize = cellSize * 4;
-        int startX = (w - gridSize) / 2;
-        int startY = (h - gridSize) / 2;
-        Block next = null;
-        if (gameEngine != null)
-          next = gameEngine.getNextBlock();
-        g2.setColor(new Color(18, 18, 24));
-        g2.fillRoundRect(0, 0, w, h, 10, 10);
+  nextBlockBoard = new NextBlockBoard();
+  nextVisualPanel = new JPanel() {
+    @Override
+    protected void paintComponent(java.awt.Graphics g) {
+      super.paintComponent(g);
+      java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+      g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+      int w = getWidth();
+      int h = getHeight();
+      // Math.floor를 명시적으로 사용하여 항상 내림으로 통일 (깜빡임 방지)
+      int cellSize = (int) Math.floor(Math.min((w - 8) / 4.0, (h - 8) / 4.0));
+      int gridSize = cellSize * 4;
+      int startX = (w - gridSize) / 2;
+      int startY = (h - gridSize) / 2;
+      Block next = null;
+      if (gameEngine != null) next = gameEngine.getNextBlock();
+      if (next != null) System.out.println("[UI DEBUG] nextVisualPanel.paintComponent next=" + next.getClass().getSimpleName());
+      
+      // 배경 그리기
+      g2.setColor(new Color(18, 18, 24));
+      g2.fillRoundRect(0, 0, w, h, 10, 10);
+      
+      // 빈 셀 배경 그리기 (GameBoard 스타일)
+      for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+          int x = startX + c * cellSize;
+          int y = startY + r * cellSize;
+          g2.setColor(new Color(28, 28, 36)); // GameBoard와 동일한 색상
+          g2.fillRoundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 6, 6);
+        }
+      }
+      
+      // 다음 블록 그리기 (GameBoard의 drawBlockWithPattern 스타일)
+      if (next != null) {
         for (int r = 0; r < 4; r++) {
           for (int c = 0; c < 4; c++) {
             int x = startX + c * cellSize;
@@ -367,146 +383,276 @@ public class game extends JPanel implements KeyListener {
         }
         g2.dispose();
       }
+      g2.dispose();
+    }
+    
+    // GameBoard의 drawBlockWithPattern과 동일한 로직
+    private void drawBlockCellWithPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, Color color, String blockType) {
+      // 기본 블록 배경 그리기
+      g2.setColor(color);
+      g2.fillRoundRect(x+3, y+3, cellSize-6, cellSize-6, 6, 6);
+      
+      // 색맹 모드일 때만 패턴 추가
+      se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
+      if (settings.isColorblindMode()) {
+        drawBlockPattern(g2, x, y, cellSize, blockType);
+      }
+      
+      // 기본 하이라이트
+      g2.setColor(new Color(255,255,255,40));
+      g2.fillRoundRect(x+4, y+4, (cellSize-6)/2, (cellSize-6)/2, 4, 4);
+    }
+    
+    // 블록 타입별 패턴 그리기
+    private void drawBlockPattern(java.awt.Graphics2D g2, int x, int y, int cellSize, String blockType) {
+      g2.setColor(new Color(0, 0, 0, 120));
+      int innerSize = cellSize - 10;
+      int patX = x + 5;
+      int patY = y + 5;
+      
+      java.awt.Stroke oldStroke = g2.getStroke();
+      g2.setStroke(new java.awt.BasicStroke(2.0f));
+      
+      switch (blockType) {
+        case "I": // 수직선
+          g2.drawLine(patX + innerSize/2, patY + 2, patX + innerSize/2, patY + innerSize - 2);
+          break;
+        case "O": // 사각형
+          int rectSize = innerSize/3;
+          g2.drawRect(patX + (innerSize-rectSize)/2, patY + (innerSize-rectSize)/2, rectSize, rectSize);
+          break;
+        case "T": // T자
+          g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + innerSize - 2);
+          break;
+        case "L": // L자
+          g2.drawLine(patX + innerSize/3, patY + 2, patX + innerSize/3, patY + innerSize - 2);
+          g2.drawLine(patX + innerSize/3, patY + innerSize - 2, patX + innerSize - 2, patY + innerSize - 2);
+          break;
+        case "J": // J자
+          g2.drawLine(patX + 2*innerSize/3, patY + 2, patX + 2*innerSize/3, patY + innerSize - 2);
+          g2.drawLine(patX + 2, patY + innerSize - 2, patX + 2*innerSize/3, patY + innerSize - 2);
+          break;
+        case "S": // S자
+          g2.drawLine(patX + 2, patY + 2*innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize/2, patY + innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize - 2, patY + innerSize/3);
+          break;
+        case "Z": // Z자
+          g2.drawLine(patX + 2, patY + innerSize/3, patX + innerSize/2, patY + innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + innerSize/3, patX + innerSize/2, patY + 2*innerSize/3);
+          g2.drawLine(patX + innerSize/2, patY + 2*innerSize/3, patX + innerSize - 2, patY + 2*innerSize/3);
+          break;
+        case "W": // 무게추 - X 패턴
+          g2.drawLine(patX + 2, patY + 2, patX + innerSize - 2, patY + innerSize - 2);
+          g2.drawLine(patX + innerSize - 2, patY + 2, patX + 2, patY + innerSize - 2);
+          break;
+      }
+      
+      g2.setStroke(oldStroke);
+    }
+    
+    // GameBoard의 drawItemGlyph와 유사한 스타일로 아이템 표시
+    private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int cellSize, se.tetris.team5.items.Item item) {
+      int cx = x + cellSize/2;
+      int cy = y + cellSize/2;
+      // 아이템 아이콘 크기를 블록보다 작게 조정 (cellSize/3 -> cellSize/4)
+      int r = Math.max(5, cellSize/4);
 
-      /*
-       * Draw item indicator overlay on a block cell
-       */
-      private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int size, se.tetris.team5.items.Item item) {
-        // Semi-transparent golden circle overlay
-        g2.setColor(new Color(255, 215, 0, 200)); // Gold with transparency
-        int ovalSize = Math.max(size / 2, 10);
-        int ovalX = x + (size - ovalSize) / 2;
-        int ovalY = y + (size - ovalSize) / 2;
-        g2.fillOval(ovalX, ovalY, ovalSize, ovalSize);
+      // 배경 링
+      g2.setColor(new Color(0,0,0,120));
+      g2.fillOval(cx - r - 1, cy - r - 1, r*2 + 2, r*2 + 2);
 
-        // Draw item icon/letter in the center
-        g2.setColor(Color.BLACK);
-        Font iconFont = new Font("Arial", Font.BOLD, Math.max(ovalSize / 2, 8));
-        g2.setFont(iconFont);
-        String icon = getItemIcon(item);
+      if (item instanceof se.tetris.team5.items.TimeStopItem) {
+        // 시계 아이콘
+        g2.setColor(new Color(60, 180, 170));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        int hw = Math.max(2, r/4);
+        g2.fillOval(cx - hw, cy - hw, hw*2, hw*2);
+        g2.setColor(new Color(255,255,255,200));
+        g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r/6)));
+        g2.drawLine(cx, cy, cx + r/2, cy - r/3);
+      } else if (item instanceof se.tetris.team5.items.BombItem) {
+        // 폭탄 아이콘
+        g2.setColor(new Color(30, 10, 10));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(new Color(255, 90, 90));
+        g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r/6)));
+        g2.drawOval(cx - r + 1, cy - r + 1, r*2 - 2, r*2 - 2);
+        g2.setColor(new Color(255, 200, 80));
+        g2.fillOval(cx + r - Math.max(4, r/4), cy - r - Math.max(2, r/6), Math.max(4, r/3), Math.max(4, r/3));
+      } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+        // 라인 클리어 아이콘 (다른 아이템과 동일한 크기로 조정)
+        g2.setColor(new Color(255, 200, 70));
+        int arc = Math.max(4, r / 2);
+        g2.fillRoundRect(cx - r, cy - r, r * 2, r * 2, arc, arc);
+        g2.setColor(new Color(255,255,255,220));
+        Font prev = g2.getFont();
+        // 폰트 크기를 더 줄여서 다른 아이템과 균형 맞춤 (1.2 -> 0.9)
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(6, r * 0.9));
+        g2.setFont(glyphFont);
         java.awt.FontMetrics fm = g2.getFontMetrics();
-        int textX = ovalX + (ovalSize - fm.stringWidth(icon)) / 2;
-        int textY = ovalY + (ovalSize + fm.getAscent()) / 2 - fm.getDescent();
-        g2.drawString(icon, textX, textY);
+        String text = "L";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
+        // 더블 스코어 아이콘
+        g2.setColor(new Color(255, 215, 0));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "×2";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      } else if (item instanceof se.tetris.team5.items.WeightBlockItem) {
+        // 무게추 아이콘
+        g2.setColor(new Color(80, 80, 80));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "W";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
+      } else if (item instanceof se.tetris.team5.items.ScoreItem) {
+        // 스코어 아이콘
+        g2.setColor(new Color(100, 200, 255));
+        g2.fillOval(cx - r, cy - r, r*2, r*2);
+        g2.setColor(Color.WHITE);
+        Font prev = g2.getFont();
+        Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+        g2.setFont(glyphFont);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        String text = "S";
+        int sx = cx - fm.stringWidth(text) / 2;
+        int sy = cy + fm.getAscent() / 2 - 2;
+        g2.drawString(text, sx, sy);
+        g2.setFont(prev);
       }
+    }
+  };
+  nextVisualPanel.setPreferredSize(new java.awt.Dimension(190, 130)); // 높이 증가 100->130
+  JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
+  nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
+  rightPanel.add(nextWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(8));
 
-      /**
-       * Get display icon for item type
-       */
-      private String getItemIcon(se.tetris.team5.items.Item item) {
-        if (item instanceof se.tetris.team5.items.LineClearItem)
-          return "L";
-        if (item instanceof se.tetris.team5.items.TimeStopItem)
-          return "⏱";
-        if (item instanceof se.tetris.team5.items.DoubleScoreItem)
-          return "×2";
-        if (item instanceof se.tetris.team5.items.BombItem)
-          return "💣";
-        if (item instanceof se.tetris.team5.items.WeightBlockItem)
-          return "W";
-        if (item instanceof se.tetris.team5.items.ScoreItem)
-          return "S";
-        return "?";
-      }
-    };
-    nextVisualPanel.setPreferredSize(new java.awt.Dimension(220, 100));
-    JPanel nextWrapper = createTitledPanel("다음 블록", nextVisualPanel, new Color(255, 204, 0), new Color(255, 204, 0));
-    nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    nextWrapper.setMaximumSize(nextWrapper.getPreferredSize());
-    rightPanel.add(nextWrapper);
-    rightPanel.add(javax.swing.Box.createVerticalStrut(8));
+  // Item description panel (shows description when next block contains an item)
+  // 아이템 모드일 때만 표시 (가시성은 reset()에서 제어)
+  itemDescPane = new javax.swing.JTextPane();
+  itemDescPane.setEditable(false);
+  itemDescPane.setOpaque(false);
+  itemDescPane.setFont(createKoreanFont(Font.PLAIN, 13));
+  itemDescPane.setForeground(new Color(220, 220, 220));
+  itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
+  itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255,180,0));
+  itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
+  rightPanel.add(itemDescWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-    // Item description panel (shows description when next block contains an item)
-    // 아이템 모드일 때만 표시 (가시성은 reset()에서 제어)
-    itemDescPane = new javax.swing.JTextPane();
-    itemDescPane.setEditable(false);
-    itemDescPane.setOpaque(false);
-    itemDescPane.setFont(createKoreanFont(Font.PLAIN, 13));
-    itemDescPane.setForeground(new Color(220, 220, 220));
-    itemDescPane.setText("다음 블록에 포함된 아이템이 있으면 설명을 표시합니다.");
-    itemDescWrapper = createTitledPanel("아이템 설명", itemDescPane, new Color(255, 180, 0), new Color(255, 180, 0));
-    itemDescWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    itemDescWrapper.setMaximumSize(new java.awt.Dimension(240, 120));
-    rightPanel.add(itemDescWrapper);
-    rightPanel.add(javax.swing.Box.createVerticalStrut(12));
+  // Score / Info panel (titled box) - modern cards for score, level, lines
+  scoreBoard = new ScoreBoard();
+  JPanel scoreInfo = new JPanel();
+  scoreInfo.setOpaque(false);
+  scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
+  scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
+  scoreValueLabel.setFont(createKoreanFont(Font.BOLD, 28));
+  scoreValueLabel.setForeground(new Color(255, 220, 100));
+  scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(scoreValueLabel);
+  doubleScoreBadge = new DoubleScoreBadge();
+  doubleScoreBadge.setVisible(false);
+  doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(doubleScoreBadge);
+  scoreInfo.add(javax.swing.Box.createVerticalStrut(8));
+  JPanel smallRow = new JPanel(); smallRow.setOpaque(false);
+  smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
+  levelLabel = new JLabel("레벨: 1");
+  levelLabel.setFont(createKoreanFont(Font.BOLD, 14));
+  levelLabel.setForeground(new Color(200, 200, 200));
+  levelLabel.setBorder(new EmptyBorder(0,4,0,4)); // 여백 축소 8→4
+  linesLabel = new JLabel("줄: 0");
+  linesLabel.setFont(createKoreanFont(Font.BOLD, 14));
+  linesLabel.setForeground(new Color(200, 200, 200));
+  linesLabel.setBorder(new EmptyBorder(0,4,0,4)); // 여백 축소 8→4
+  smallRow.add(levelLabel);
+  smallRow.add(javax.swing.Box.createHorizontalStrut(12)); // Glue 대신 고정 간격 12px
+  smallRow.add(linesLabel);
+  scoreInfo.add(smallRow);
+  scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
+  
+  // 게임 모드 라벨 추가
+  gameModeLabel = new JLabel("모드: 아이템 모드", javax.swing.SwingConstants.CENTER);
+  gameModeLabel.setFont(createKoreanFont(Font.BOLD, 13));
+  gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
+  gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  scoreInfo.add(gameModeLabel);
+  
+  scoreInfo.setPreferredSize(new java.awt.Dimension(170, 160)); // 아이템 모드 UI 최적화: 220→160
 
-    // Score / Info panel (titled box) - modern cards for score, level, lines
-    scoreBoard = new ScoreBoard();
-    JPanel scoreInfo = new JPanel();
-    scoreInfo.setOpaque(false);
-    scoreInfo.setLayout(new BoxLayout(scoreInfo, BoxLayout.Y_AXIS));
-    scoreValueLabel = new JLabel("0", javax.swing.SwingConstants.CENTER);
-    scoreValueLabel.setFont(createKoreanFont(Font.BOLD, 28));
-    scoreValueLabel.setForeground(new Color(255, 220, 100));
-    scoreValueLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    scoreInfo.add(scoreValueLabel);
-    scoreInfo.add(javax.swing.Box.createVerticalStrut(4));
-    doubleScoreBadge = new DoubleScoreBadge();
-    doubleScoreBadge.setVisible(false);
-    doubleScoreBadge.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    scoreInfo.add(doubleScoreBadge);
-    scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
-    JPanel smallRow = new JPanel();
-    smallRow.setOpaque(false);
-    smallRow.setLayout(new BoxLayout(smallRow, BoxLayout.X_AXIS));
-    levelLabel = new JLabel("레벨: 1");
-    levelLabel.setFont(createKoreanFont(Font.BOLD, 14));
-    levelLabel.setForeground(new Color(200, 200, 200));
-    levelLabel.setBorder(new EmptyBorder(0, 8, 0, 8));
-    linesLabel = new JLabel("줄: 0");
-    linesLabel.setFont(createKoreanFont(Font.BOLD, 14));
-    linesLabel.setForeground(new Color(200, 200, 200));
-    linesLabel.setBorder(new EmptyBorder(0, 8, 0, 8));
-    smallRow.add(levelLabel);
-    smallRow.add(javax.swing.Box.createHorizontalGlue());
-    smallRow.add(linesLabel);
-    scoreInfo.add(smallRow);
-    scoreInfo.add(javax.swing.Box.createVerticalStrut(6));
+  JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
+  infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  infoWrapper.setMaximumSize(new java.awt.Dimension(240, 150)); // 아이템 모드 UI 최적화: 200→150
+  rightPanel.add(infoWrapper);
+  rightPanel.add(javax.swing.Box.createVerticalStrut(12));
 
-    // 게임 모드 라벨 추가
-    gameModeLabel = new JLabel("모드: 아이템 모드", javax.swing.SwingConstants.CENTER);
-    gameModeLabel.setFont(createKoreanFont(Font.BOLD, 13));
-    gameModeLabel.setForeground(new Color(255, 215, 0)); // 골드 색상
-    gameModeLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    scoreInfo.add(gameModeLabel);
+  // Controls panel (titled box) — 소형 화면(450x600)에서는 숨김, 중형/대형에서만 표시
+  // 프레임의 실제 크기로 판단 (450 이하는 소형으로 간주)
+  final JPanel controlsBox = new JPanel(new BorderLayout());
+  controlsBox.setOpaque(false);
+  final JTextPane controlsPane = new JTextPane();
+  controlsPane.setEditable(false);
+  controlsPane.setOpaque(false);
+  controlsPane.setFont(createKoreanFont(Font.PLAIN, 14));
+  controlsPane.setForeground(Color.WHITE);
+  StringBuilder ctrl = new StringBuilder();
+  ctrl.append("↑ : 회전\n");
+  ctrl.append("↓ : 소프트 드롭\n");
+  ctrl.append("← → : 이동\n");
+  ctrl.append("Space : 하드 드롭\n");
+  ctrl.append("ESC : 나가기");
+  controlsPane.setText(ctrl.toString());
+  controlsBox.add(controlsPane, BorderLayout.CENTER);
+  final JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
+  controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+  controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
+  
+  // 컴포넌트가 화면에 표시될 때 프레임 크기를 확인하여 조작키 안내 표시 여부 결정
+  addComponentListener(new java.awt.event.ComponentAdapter() {
+    @Override
+    public void componentShown(java.awt.event.ComponentEvent e) {
+      javax.swing.SwingUtilities.invokeLater(new Runnable() {
+        @Override
+        public void run() {
+          java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(game.this);
+          if (window != null) {
+            int width = window.getWidth();
+            boolean shouldShowControls = width > 450; // 450보다 크면 중형/대형
+            System.out.println("[DEBUG] 창 너비: " + width + ", 조작키 안내 표시: " + shouldShowControls);
+            controlsWrapper.setVisible(shouldShowControls);
+          }
+        }
+      });
+    }
+  });
+  
+  rightPanel.add(controlsWrapper);
 
-    scoreInfo.setPreferredSize(new java.awt.Dimension(280, 220));
-
-    JPanel infoWrapper = createTitledPanel("게임 정보", scoreInfo, new Color(0, 230, 160), new Color(0, 230, 160));
-    infoWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    infoWrapper.setMaximumSize(new java.awt.Dimension(240, 200));
-    rightPanel.add(infoWrapper);
-    rightPanel.add(javax.swing.Box.createVerticalStrut(12));
-
-    // Controls panel (titled box) — re-add at the bottom per user request
-    JPanel controlsBox = new JPanel(new BorderLayout());
-    controlsBox.setOpaque(false);
-    JTextPane controlsPane = new JTextPane();
-    controlsPane.setEditable(false);
-    controlsPane.setOpaque(false);
-    controlsPane.setFont(createKoreanFont(Font.PLAIN, 14));
-    controlsPane.setForeground(Color.WHITE);
-    StringBuilder ctrl = new StringBuilder();
-    ctrl.append("조작키 안내\n\n");
-    ctrl.append("↑ : 회전\n");
-    ctrl.append("↓ : 소프트 드롭\n");
-    ctrl.append("← → : 이동\n");
-    ctrl.append("Space : 하드 드롭\n");
-    ctrl.append("ESC : 나가기\n");
-    controlsPane.setText(ctrl.toString());
-    controlsBox.add(controlsPane, BorderLayout.CENTER);
-    JPanel controlsWrapper = createTitledPanel("조작키 안내", controlsBox, new Color(50, 150, 255), new Color(50, 150, 255));
-    controlsWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    controlsWrapper.setMaximumSize(new java.awt.Dimension(240, 220));
-    rightPanel.add(controlsWrapper);
-
-    // Controls panel (titled box) — re-use scoreBoard's text pane styling by
-    // creating a simple info pane
-    // We remove the controls text from the 게임 정보 panel as requested.
-    // If a separate controls panel is desired later, we can add a compact
-    // icon-based hint.
-
-    add(rightPanel, BorderLayout.EAST);
+  add(rightPanel, BorderLayout.EAST);
 
     // Document default style.
     styleSet = new SimpleAttributeSet();
@@ -1058,25 +1204,25 @@ public class game extends JPanel implements KeyListener {
 
     // 다음 블록에 포함된 아이템 설명
     if (it instanceof se.tetris.team5.items.TimeStopItem || "TimeStopItem".equals(name))
-      return "⏱ 타임스톱\n이 블록을 줄 삭제하면 Shift 키로 5초간 게임을 멈출 수 있습니다!";
-
+      return "Shift 키로 5초간 게임을 멈출 수 있습니다!";
+    
     if (it instanceof se.tetris.team5.items.BombItem || "BombItem".equals(name))
-      return "� 폭탄\n블록 고정 시 폭발로 주변 블록을 제거합니다.";
-
+      return "블록 고정 시 폭발로 주변 블록을 제거합니다.";
+    
     if (it instanceof se.tetris.team5.items.LineClearItem || "LineClearItem".equals(name))
-      return "L 줄삭제\n블록 고정 시 해당 줄을 즉시 삭제합니다.";
-
+      return "블록 고정 시 해당 줄을 즉시 삭제합니다.";
+    
     if (it instanceof se.tetris.team5.items.DoubleScoreItem || "DoubleScoreItem".equals(name))
-      return "×2 점수 2배\n블록 고정 시 20초간 모든 점수가 2배가 됩니다!";
-
+      return "블록 고정 시 20초간 모든 점수가 2배가 됩니다!";
+    
     if (it instanceof se.tetris.team5.items.ScoreItem || "ScoreItem".equals(name)) {
       se.tetris.team5.items.ScoreItem si = (se.tetris.team5.items.ScoreItem) it;
-      return "S 점수 아이템\n블록 고정 시 즉시 +" + si.getScoreAmount() + "점을 획득합니다.";
+      return "블록 고정 시 즉시 +" + si.getScoreAmount() + "점을 획득합니다.";
     }
 
     if (it instanceof se.tetris.team5.items.WeightBlockItem || "WeightBlockItem".equals(name))
-      return "W 무게추\n다음 블록이 무게추 블록(WBlock)으로 생성됩니다.";
-
+      return "다음 블록이 무게추 블록(WBlock)으로 생성됩니다.";
+    
     return "특수 아이템: " + name;
   }
 
@@ -1569,9 +1715,8 @@ public class game extends JPanel implements KeyListener {
     // center the message with a prominent countdown
     // We now use a graphical semi-transparent overlay with a large countdown label.
     if (timeStopOverlay != null && timeStopNumberLabel != null) {
-      // Update the three labels instead of HTML to avoid clipping and give precise
-      // control
-      timeStopIconLabel.setText("⏱");
+      // Update the three labels instead of HTML to avoid clipping and give precise control
+      timeStopIconLabel.setText("TIME STOP");
       timeStopNumberLabel.setText(String.valueOf(seconds));
       timeStopSubLabel.setText("초 남음");
       timeStopOverlay.setVisible(true);

@@ -46,6 +46,25 @@ public class DoubleScoreBadge extends JComponent {
     repaint();
   }
 
+  /**
+   * 윈도우/macOS에서 한글을 제대로 표시하기 위한 폰트 생성 메서드
+   */
+  private Font createKoreanFont(int style, int size) {
+    // 윈도우/macOS에서 한글을 잘 지원하는 폰트들을 우선순위대로 시도
+    String[] koreanFonts = {"맑은 고딕", "Malgun Gothic", "굴림", "Gulim", "Arial Unicode MS", "Dialog"};
+    
+    for (String fontName : koreanFonts) {
+      Font font = new Font(fontName, style, size);
+      // 폰트가 시스템에 있는지 확인
+      if (font.getFamily().equals(fontName) || font.canDisplay('한')) {
+        return font;
+      }
+    }
+    
+    // 모든 한글 폰트가 실패하면 기본 Dialog 폰트 사용
+    return new Font(Font.DIALOG, style, size);
+  }
+
   @Override
   protected void paintComponent(Graphics g) {
     Graphics2D g2 = (Graphics2D) g.create();
@@ -82,9 +101,10 @@ public class DoubleScoreBadge extends JComponent {
       g2.drawArc(ringX + pad, ringY + pad, ringSize - pad * 2, ringSize - pad * 2, 90, -(int) Math.round(sweep));
     }
 
-  // draw text "x2" vertically centered, placed right of ring (컴팩트한 폰트)
-  String text = "×2";
-  Font f = new Font("Segoe UI", Font.BOLD, 11);
+  // draw text "x2" vertically centered, placed right of ring (use smaller font)
+  String text = "x2";
+  // macOS/Windows 크로스 플랫폼 한글 지원 폰트 사용
+  Font f = createKoreanFont(Font.BOLD, Math.max(8, h * 2 / 6));
     g2.setFont(f);
     FontMetrics fm = g2.getFontMetrics();
   // tuck the text closer to the ring so overall width can be smaller
@@ -96,8 +116,9 @@ public class DoubleScoreBadge extends JComponent {
     // 남은 시간을 초 단위로 표시 (x2 오른쪽에, 더 작은 폰트)
     if (remainingMillis > 0) {
       int remainingSecs = (int) Math.ceil(remainingMillis / 1000.0);
-      String timeText = remainingSecs + "s";
-      Font timeFont = new Font("Segoe UI", Font.PLAIN, 10);
+      String timeText = remainingSecs + "초";
+      // macOS/Windows 크로스 플랫폼 한글 지원 폰트 사용
+      Font timeFont = createKoreanFont(Font.BOLD, Math.max(8, h / 3));
       g2.setFont(timeFont);
       FontMetrics timeFm = g2.getFontMetrics();
       int timeTx = tx + fm.stringWidth(text) + 4;
