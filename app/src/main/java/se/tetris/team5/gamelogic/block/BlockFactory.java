@@ -58,8 +58,18 @@ public class BlockFactory {
   }
 
   public Block createRandomBlock() {
-    // 테스트용: 항상 I블록만 생성
-    // return new IBlock();
+    return createRandomBlock(false);
+  }
+  
+  /**
+   * 랜덤 블럭 생성 (아이템 모드 옵션)
+   * @param itemModeOnly true면 I블럭만 생성 (아이템 모드 테스트용)
+   */
+  public Block createRandomBlock(boolean itemModeOnly) {
+    // 아이템 모드일 때는 I블럭만 생성
+    if (itemModeOnly) {
+      return new IBlock();
+    }
     
     int[] weights;
     // 블럭 순서: I, J, L, Z, S, T, O
