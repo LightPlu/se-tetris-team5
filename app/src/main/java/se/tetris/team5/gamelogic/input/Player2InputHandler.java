@@ -1,6 +1,5 @@
 package se.tetris.team5.gamelogic.input;
 
-import java.awt.event.KeyEvent;
 import se.tetris.team5.gamelogic.GameEngine;
 
 /**
@@ -54,26 +53,40 @@ public class Player2InputHandler implements PlayerInputHandler {
         }
     }
     
+    @Override
+    public void handleUseItem() {
+        if (gameEngine != null && gameEngine.hasTimeStopCharge()) {
+            // 아이템 사용 로직은 PlayerGamePanel에서 처리
+            // 여기서는 빈 구현체로 남겨두고 PlayerGamePanel에서 호출
+        }
+    }
+    
     /**
-     * 키 이벤트 처리
+     * 키 이벤트 처리 - GameSettings에서 키 코드를 가져와서 처리
      */
     public void handleKeyPress(int keyCode) {
-        switch (keyCode) {
-            case KeyEvent.VK_LEFT: // 왼쪽
-                handleMoveLeft();
-                break;
-            case KeyEvent.VK_RIGHT: // 오른쪽
-                handleMoveRight();
-                break;
-            case KeyEvent.VK_UP: // 회전
-                handleRotate();
-                break;
-            case KeyEvent.VK_DOWN: // 소프트 드롭
-                handleSoftDrop();
-                break;
-            case KeyEvent.VK_SHIFT: // 하드 드롭 (RShift)
-                handleHardDrop();
-                break;
+        se.tetris.team5.utils.setting.GameSettings settings = 
+            se.tetris.team5.utils.setting.GameSettings.getInstance();
+        
+        int leftKey = settings.getPlayerKeyCode(2, "left");
+        int rightKey = settings.getPlayerKeyCode(2, "right");
+        int rotateKey = settings.getPlayerKeyCode(2, "rotate");
+        int downKey = settings.getPlayerKeyCode(2, "down");
+        int dropKey = settings.getPlayerKeyCode(2, "drop");
+        int itemKey = settings.getPlayerKeyCode(2, "item");
+        
+        if (keyCode == leftKey) {
+            handleMoveLeft();
+        } else if (keyCode == rightKey) {
+            handleMoveRight();
+        } else if (keyCode == rotateKey) {
+            handleRotate();
+        } else if (keyCode == downKey) {
+            handleSoftDrop();
+        } else if (keyCode == dropKey) {
+            handleHardDrop();
+        } else if (keyCode == itemKey) {
+            handleUseItem();
         }
     }
 }

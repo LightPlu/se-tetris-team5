@@ -25,6 +25,7 @@ public class setting {
         "창 크기 설정",
         "게임 속도",
         "키 설정", 
+        "대전모드 키 설정",
         "색맹 모드",
         "음향 효과",
         "스코어 초기화",
@@ -41,9 +42,16 @@ public class setting {
     private int currentSizeIndex = 1;  // 기본값: 중형
     private boolean isKeySettingMode = false;
     private String currentKeyAction = "";
-    private String[] keyActions = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "일시정지"};
-    private String[] keyActionKeys = {"down", "left", "right", "rotate", "drop", "pause"};
+    private String[] keyActions = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "일시정지", "아이템 사용"};
+    private String[] keyActionKeys = {"down", "left", "right", "rotate", "drop", "pause", "item"};
     private int currentKeyIndex = 0;
+    
+    // 대전모드 키 설정
+    private boolean isBattleKeySettingMode = false;
+    private int battleKeyPlayerNum = 1; // 1 or 2
+    private String[] battleKeyActions = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "아이템 사용"};
+    private String[] battleKeyActionKeys = {"down", "left", "right", "rotate", "drop", "item"};
+    private int currentBattleKeyIndex = 0;
     
     public setting(ScreenController screenController) {
         this.screenController = screenController;
@@ -91,6 +99,11 @@ public class setting {
             return;
         }
         
+        if (isBattleKeySettingMode) {
+            drawBattleKeySettingScreen();
+            return;
+        }
+        
         StringBuilder sb = new StringBuilder();
         
         // 제목
@@ -121,10 +134,13 @@ public class setting {
                 case 2: // 키 설정
                     sb.append(" >");
                     break;
-                case 3: // 색맹 모드
+                case 3: // 대전모드 키 설정
+                    sb.append(" >");
+                    break;
+                case 4: // 색맹 모드
                     sb.append(": ").append(gameSettings.isColorblindMode() ? "ON" : "OFF");
                     break;
-                case 4: // 음향 효과
+                case 5: // 음향 효과
                     sb.append(": ").append(gameSettings.isSoundEnabled() ? "ON" : "OFF");
                     break;
             }
@@ -188,6 +204,67 @@ public class setting {
         updateDisplay(sb.toString());
     }
     
+    private void drawBattleKeySettingScreen() {
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append("\n");
+        sb.append("═══════════════════════════════════\n");
+        sb.append("       대전모드 키 설정\n");
+        sb.append("═══════════════════════════════════\n\n");
+        
+        if (currentKeyAction.isEmpty()) {
+            // 플레이어 선택 또는 키 목록 표시
+            if (battleKeyPlayerNum == 0) {
+                // 플레이어 선택 화면
+                sb.append("\n\n");
+                sb.append(currentBattleKeyIndex == 0 ? "  ► " : "    ").append("Player 1 키 설정");
+                sb.append(currentBattleKeyIndex == 0 ? " ◄\n\n" : "\n\n");
+                sb.append(currentBattleKeyIndex == 1 ? "  ► " : "    ").append("Player 2 키 설정");
+                sb.append(currentBattleKeyIndex == 1 ? " ◄\n\n" : "\n\n");
+                sb.append("\n");
+                sb.append("═══════════════════════════════════\n");
+                sb.append("↑↓: 선택  Enter: 진입  ESC: 뒤로\n");
+                sb.append("═══════════════════════════════════\n");
+            } else {
+                // 플레이어별 키 목록 표시
+                sb.append("   Player " + battleKeyPlayerNum + " 키 설정\n\n");
+                
+                for(int i = 0; i < battleKeyActions.length; i++) {
+                    if(i == currentBattleKeyIndex) {
+                        sb.append("  ► ");
+                    } else {
+                        sb.append("    ");
+                    }
+                    
+                    String keyName = gameSettings.getKeyName(
+                        gameSettings.getPlayerKeyCode(battleKeyPlayerNum, battleKeyActionKeys[i]));
+                    sb.append(battleKeyActions[i]).append(": ").append(keyName);
+                    
+                    if(i == currentBattleKeyIndex) {
+                        sb.append(" ◄");
+                    }
+                    sb.append("\n\n");
+                }
+                
+                sb.append("\n");
+                sb.append("═══════════════════════════════════\n");
+                sb.append("↑↓: 선택  Enter: 키 변경  ESC: 뒤로\n");
+                sb.append("═══════════════════════════════════\n");
+            }
+        } else {
+            // 키 입력 대기 상태
+            sb.append("\n\n");
+            sb.append("   Player " + battleKeyPlayerNum + " - ");
+            sb.append(currentKeyAction).append("키를 설정합니다.\n\n");
+            sb.append("   새로운 키를 눌러주세요...\n\n\n");
+            sb.append("═══════════════════════════════════\n");
+            sb.append("ESC: 취소\n");
+            sb.append("═══════════════════════════════════\n");
+        }
+        
+        updateDisplay(sb.toString());
+    }
+    
     private void updateDisplay(String text) {
         if (currentTextPane != null) {
             currentTextPane.setText(text);
@@ -223,28 +300,34 @@ public class setting {
                 currentKeyIndex = 0;
                 drawKeySettingScreen();
                 break;
-            case 3: // 색맹 모드
+            case 3: // 대전모드 키 설정
+                isBattleKeySettingMode = true;
+                battleKeyPlayerNum = 0; // 플레이어 선택 화면
+                currentBattleKeyIndex = 0;
+                drawBattleKeySettingScreen();
+                break;
+            case 4: // 색맹 모드
                 gameSettings.setColorblindMode(!gameSettings.isColorblindMode());
                 // 게임 화면의 색상도 업데이트
                 updateGameColors();
                 drawSettingScreen();
                 break;
-            case 4: // 음향 효과
+            case 5: // 음향 효과
                 gameSettings.setSoundEnabled(!gameSettings.isSoundEnabled());
                 // BGM 제어
                 controlBGM();
                 drawSettingScreen();
                 break;
-            case 5: // 스코어 초기화
+            case 6: // 스코어 초기화
                 gameSettings.resetScores();
                 showConfirmation("스코어가 초기화되었습니다!");
                 break;
-            case 6: // 기본 설정 복원
+            case 7: // 기본 설정 복원
                 gameSettings.setDefaultSettings();
                 initializeCurrentSettings();
                 showConfirmation("기본 설정으로 복원되었습니다!");
                 break;
-            case 7: // 뒤로 가기
+            case 8: // 뒤로 가기
                 // ScreenController를 통해 홈으로 돌아가기
                 screenController.showScreen("home");
                 break;
@@ -434,12 +517,26 @@ public class setting {
     }
     
     private String findConflictingAction(int keyCode, String currentAction) {
-        String[] actions = {"down", "left", "right", "rotate", "drop", "pause"};
-        String[] actionNames = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "일시정지"};
+        String[] actions = {"down", "left", "right", "rotate", "drop", "pause", "item"};
+        String[] actionNames = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "일시정지", "아이템 사용"};
         
         for (int i = 0; i < actions.length; i++) {
             if (!actions[i].equals(currentAction)) {
                 if (gameSettings.getKeyCode(actions[i]) == keyCode) {
+                    return actionNames[i];
+                }
+            }
+        }
+        return null;
+    }
+    
+    private String findBattleConflictingAction(int playerNum, int keyCode, String currentAction) {
+        String[] actions = {"down", "left", "right", "rotate", "drop", "item"};
+        String[] actionNames = {"아래", "왼쪽", "오른쪽", "회전", "빠른낙하", "아이템 사용"};
+        
+        for (int i = 0; i < actions.length; i++) {
+            if (!actions[i].equals(currentAction)) {
+                if (gameSettings.getPlayerKeyCode(playerNum, actions[i]) == keyCode) {
                     return actionNames[i];
                 }
             }
@@ -486,7 +583,16 @@ public class setting {
                 // 일반 메뉴 모드
                 switch(e.getKeyCode()) {
                     case KeyEvent.VK_UP:
-                        if (isKeySettingMode) {
+                        if (isBattleKeySettingMode) {
+                            if (battleKeyPlayerNum == 0) {
+                                // 플레이어 선택 화면
+                                currentBattleKeyIndex = (currentBattleKeyIndex - 1 + 2) % 2;
+                            } else {
+                                // 키 목록 화면
+                                currentBattleKeyIndex = (currentBattleKeyIndex - 1 + battleKeyActions.length) % battleKeyActions.length;
+                            }
+                            drawBattleKeySettingScreen();
+                        } else if (isKeySettingMode) {
                             currentKeyIndex = (currentKeyIndex - 1 + keyActions.length) % keyActions.length;
                             drawKeySettingScreen();
                         } else {
@@ -495,7 +601,16 @@ public class setting {
                         }
                         break;
                     case KeyEvent.VK_DOWN:
-                        if (isKeySettingMode) {
+                        if (isBattleKeySettingMode) {
+                            if (battleKeyPlayerNum == 0) {
+                                // 플레이어 선택 화면
+                                currentBattleKeyIndex = (currentBattleKeyIndex + 1) % 2;
+                            } else {
+                                // 키 목록 화면
+                                currentBattleKeyIndex = (currentBattleKeyIndex + 1) % battleKeyActions.length;
+                            }
+                            drawBattleKeySettingScreen();
+                        } else if (isKeySettingMode) {
                             currentKeyIndex = (currentKeyIndex + 1) % keyActions.length;
                             drawKeySettingScreen();
                         } else {
@@ -504,17 +619,28 @@ public class setting {
                         }
                         break;
                     case KeyEvent.VK_LEFT:
-                        if (!isKeySettingMode) {
+                        if (!isKeySettingMode && !isBattleKeySettingMode) {
                             handleLeftRight(false);
                         }
                         break;
                     case KeyEvent.VK_RIGHT:
-                        if (!isKeySettingMode) {
+                        if (!isKeySettingMode && !isBattleKeySettingMode) {
                             handleLeftRight(true);
                         }
                         break;
                     case KeyEvent.VK_ENTER:
-                        if (isKeySettingMode) {
+                        if (isBattleKeySettingMode) {
+                            if (battleKeyPlayerNum == 0) {
+                                // 플레이어 선택
+                                battleKeyPlayerNum = currentBattleKeyIndex + 1;
+                                currentBattleKeyIndex = 0;
+                                drawBattleKeySettingScreen();
+                            } else {
+                                // 키 입력 대기
+                                currentKeyAction = battleKeyActions[currentBattleKeyIndex];
+                                drawBattleKeySettingScreen();
+                            }
+                        } else if (isKeySettingMode) {
                             currentKeyAction = keyActions[currentKeyIndex];
                             drawKeySettingScreen();
                         } else {
@@ -522,7 +648,18 @@ public class setting {
                         }
                         break;
                     case KeyEvent.VK_ESCAPE:
-                        if (isKeySettingMode) {
+                        if (isBattleKeySettingMode) {
+                            if (battleKeyPlayerNum == 0) {
+                                // 플레이어 선택 화면에서 ESC - 메인 설정으로
+                                isBattleKeySettingMode = false;
+                                drawSettingScreen();
+                            } else {
+                                // 키 목록 화면에서 ESC - 플레이어 선택으로
+                                battleKeyPlayerNum = 0;
+                                currentBattleKeyIndex = 0;
+                                drawBattleKeySettingScreen();
+                            }
+                        } else if (isKeySettingMode) {
                             isKeySettingMode = false;
                             drawSettingScreen();
                         } else {
@@ -535,7 +672,11 @@ public class setting {
                 // 키 입력 대기 모드
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     currentKeyAction = "";
-                    drawKeySettingScreen();
+                    if (isBattleKeySettingMode) {
+                        drawBattleKeySettingScreen();
+                    } else {
+                        drawKeySettingScreen();
+                    }
                 } else {
                     // 새로운 키 설정
                     int newKeyCode = e.getKeyCode();
@@ -547,15 +688,29 @@ public class setting {
                         return;
                     }
                     
-                    // 중복된 키가 있는지 확인하고 사용자에게 알림
-                    String conflictAction = findConflictingAction(newKeyCode, keyActionKeys[currentKeyIndex]);
-                    if (conflictAction != null) {
-                        showKeyConflictWarning(conflictAction, gameSettings.getKeyName(newKeyCode));
+                    if (isBattleKeySettingMode) {
+                        // 대전모드 키 설정
+                        String conflictAction = findBattleConflictingAction(battleKeyPlayerNum, newKeyCode, 
+                            battleKeyActionKeys[currentBattleKeyIndex]);
+                        if (conflictAction != null) {
+                            showKeyConflictWarning(conflictAction, gameSettings.getKeyName(newKeyCode));
+                        }
+                        
+                        gameSettings.setPlayerKeyCode(battleKeyPlayerNum, 
+                            battleKeyActionKeys[currentBattleKeyIndex], newKeyCode);
+                        currentKeyAction = "";
+                        drawBattleKeySettingScreen();
+                    } else {
+                        // 싱글 플레이 키 설정
+                        String conflictAction = findConflictingAction(newKeyCode, keyActionKeys[currentKeyIndex]);
+                        if (conflictAction != null) {
+                            showKeyConflictWarning(conflictAction, gameSettings.getKeyName(newKeyCode));
+                        }
+                        
+                        gameSettings.setKeyCode(keyActionKeys[currentKeyIndex], newKeyCode);
+                        currentKeyAction = "";
+                        drawKeySettingScreen();
                     }
-                    
-                    gameSettings.setKeyCode(keyActionKeys[currentKeyIndex], newKeyCode);
-                    currentKeyAction = "";
-                    drawKeySettingScreen();
                 }
             }
         }
