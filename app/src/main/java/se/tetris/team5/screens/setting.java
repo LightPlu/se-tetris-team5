@@ -1,9 +1,13 @@
 package se.tetris.team5.screens;
 
-import java.awt.Color;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
 import javax.swing.JTextPane;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
@@ -17,14 +21,20 @@ public class setting {
     
     private ScreenController screenController;
     private JTextPane currentTextPane;
+    private JTextPane hostPane;
     private SimpleAttributeSet styleSet;
     private GameSettings gameSettings;
+    private JPanel backgroundPanel;
+    private ImageIcon backgroundGif;
+    private Image backgroundFallbackImage;
     
     private int selectedOption = 0;
-    private String[] menuOptions = {
+    private static final int SELECTOR_ICON_SIZE = 40;
+    private ImageIcon selectorIcon;
+    private final String[] menuOptions = {
         "창 크기 설정",
         "게임 속도",
-        "키 설정", 
+        "키 설정",
         "대전모드 키 설정",
         "색맹 모드",
         "음향 효과",
@@ -58,6 +68,8 @@ public class setting {
         
         gameSettings = GameSettings.getInstance();
         initializeCurrentSettings();
+        loadBackgroundImage();
+        loadSelectorImage();
         
         // 텍스트 스타일 설정
         styleSet = new SimpleAttributeSet();
@@ -69,18 +81,133 @@ public class setting {
     }
     
     public void display(JTextPane textPane) {
-        this.currentTextPane = textPane;
-        // Clear any child components left in the shared textPane and reset background
+        this.hostPane = textPane;
         textPane.removeAll();
-        // 배경색을 명확히 검정색으로 설정
-        textPane.setOpaque(true);
+        textPane.setOpaque(false);
         textPane.setBackground(Color.BLACK);
-        // Remove previous key listeners and add our own to avoid duplicates
+        textPane.setLayout(new BorderLayout());
         for (KeyListener kl : textPane.getKeyListeners()) {
             textPane.removeKeyListener(kl);
         }
-        textPane.addKeyListener(new SettingKeyListener());
+        
+        if (backgroundPanel == null) {
+            backgroundPanel = new SettingBackgroundPanel();
+        }
+        backgroundPanel.removeAll();
+        backgroundPanel.setOpaque(false);
+        backgroundPanel.setLayout(new BorderLayout());
+        
+        JTextPane contentPane = new JTextPane();
+        contentPane.setOpaque(false);
+        contentPane.setFocusable(true);
+        contentPane.setEditable(false);
+        contentPane.setForeground(Color.WHITE);
+        contentPane.setFont(new Font("Source Code Pro", Font.BOLD, 16));
+        // Remove existing key listeners
+        for (KeyListener kl : contentPane.getKeyListeners()) {
+            contentPane.removeKeyListener(kl);
+        }
+        contentPane.addKeyListener(new SettingKeyListener());
+        this.currentTextPane = contentPane;
+        
+        JPanel overlay = new JPanel(new BorderLayout());
+        overlay.setOpaque(false);
+        overlay.setBorder(BorderFactory.createEmptyBorder(30, 40, 40, 40));
+        overlay.add(contentPane, BorderLayout.CENTER);
+        
+        backgroundPanel.add(overlay, BorderLayout.CENTER);
+        textPane.add(backgroundPanel, BorderLayout.CENTER);
+        
         drawSettingScreen();
+        currentTextPane.requestFocusInWindow();
+    }
+    
+    private void loadBackgroundImage() {
+        if (backgroundGif != null || backgroundFallbackImage != null) {
+            return;
+        }
+        try {
+            java.net.URL resource = getClass().getResource("/settingbackground.gif");
+            if (resource != null) {
+                backgroundGif = new ImageIcon(resource);
+                return;
+            }
+        } catch (Exception e) {
+            System.out.println("[Setting] GIF 로드 실패: " + e.getMessage());
+        }
+        
+        String[] fallbackPaths = {
+            "app/src/main/resources/settingbackground.gif",
+            "src/main/resources/settingbackground.gif",
+            "settingbackground.gif"
+        };
+        for (String path : fallbackPaths) {
+            java.io.File file = new java.io.File(path);
+            if (file.exists()) {
+                try {
+                    backgroundGif = new ImageIcon(path);
+                    return;
+                } catch (Exception e) {
+                    System.out.println("[Setting] 경로 로드 실패: " + e.getMessage());
+                }
+            }
+        }
+        
+        String[] fallbackImages = {"/settingbackground.jpg", "/settingbackground.png"};
+        for (String img : fallbackImages) {
+            try {
+                java.net.URL resource = getClass().getResource(img);
+                if (resource != null) {
+                    backgroundFallbackImage = javax.imageio.ImageIO.read(resource);
+                    return;
+                }
+            } catch (Exception e) {
+                System.out.println("[Setting] 배경 이미지 로드 실패: " + e.getMessage());
+            }
+        }
+    }
+    
+    private void loadSelectorImage() {
+        if (selectorIcon != null) return;
+        String[] names = {
+            "/settingSelectorImg.png",
+            "/settingSelectorImg.gif",
+            "/settingSelectorImg.jpg"
+        };
+        for (String name : names) {
+            try {
+                java.net.URL resource = getClass().getResource(name);
+                if (resource != null) {
+                    selectorIcon = scaleSelectorIcon(new ImageIcon(resource));
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+        String[] fallbackPaths = {
+            "app/src/main/resources/settingSelectorImg.png",
+            "app/src/main/resources/settingSelectorImg.gif",
+            "app/src/main/resources/settingSelectorImg.jpg",
+            "src/main/resources/settingSelectorImg.png",
+            "src/main/resources/settingSelectorImg.gif",
+            "src/main/resources/settingSelectorImg.jpg",
+            "settingSelectorImg.png",
+            "settingSelectorImg.gif",
+            "settingSelectorImg.jpg"
+        };
+        for (String path : fallbackPaths) {
+            java.io.File file = new java.io.File(path);
+            if (file.exists()) {
+                selectorIcon = scaleSelectorIcon(new ImageIcon(path));
+                return;
+            }
+        }
+    }
+    
+    private ImageIcon scaleSelectorIcon(ImageIcon original) {
+        if (original == null) return null;
+        Image img = original.getImage().getScaledInstance(
+            SELECTOR_ICON_SIZE, SELECTOR_ICON_SIZE, Image.SCALE_SMOOTH);
+        return new ImageIcon(img);
     }
     
     private void initializeCurrentSettings() {
@@ -115,11 +242,10 @@ public class setting {
         // 메뉴 옵션들
         for(int i = 0; i < menuOptions.length; i++) {
             if(i == selectedOption) {
-                sb.append("  ► ");
+                sb.append("[SEL]");
             } else {
                 sb.append("    ");
             }
-            
             sb.append(menuOptions[i]);
             
             // 현재 설정값 표시
@@ -145,9 +271,6 @@ public class setting {
                     break;
             }
             
-            if(i == selectedOption) {
-                sb.append(" ◄");
-            }
             sb.append("\n\n");
         }
         
@@ -159,6 +282,7 @@ public class setting {
         sb.append("설정은 자동으로 저장됩니다.");
         
         updateDisplay(sb.toString());
+        applySelectorIcons();
     }
     
     private void drawKeySettingScreen() {
@@ -272,20 +396,46 @@ public class setting {
             doc.setCharacterAttributes(0, doc.getLength(), styleSet, false);
             doc.setParagraphAttributes(0, doc.getLength(), styleSet, false);
             
-            // 선택된 항목 색상 변경 (색맹 모드 대응)
-            if (text.contains("►") && text.contains("◄")) {
-                int startIndex = text.indexOf("►");
-                int endIndex = text.indexOf("◄") + 1;
-                if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-                    SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
-                    // 색맹 모드일 때는 모든 색각 이상자가 구분 가능한 밝은 노란색, 일반 모드일 때는 초록색
-                    Color highlightColor = gameSettings.isColorblindMode() ? 
-                        gameSettings.getUIColor("highlight") : Color.GREEN;
-                    StyleConstants.setForeground(selectedStyle, highlightColor);
-                    StyleConstants.setBold(selectedStyle, true);
-                    doc.setCharacterAttributes(startIndex, endIndex - startIndex, selectedStyle, false);
+        }
+    }
+    
+    private void applySelectorIcons() {
+        if (currentTextPane == null) return;
+        StyledDocument doc = currentTextPane.getStyledDocument();
+        String text = currentTextPane.getText();
+        int idx;
+        while ((idx = text.indexOf("[SEL]")) != -1) {
+            try {
+                doc.remove(idx, "[SEL]".length());
+                SimpleAttributeSet iconAttr = new SimpleAttributeSet();
+                ImageIcon icon = selectorIcon;
+                if (icon == null) {
+                    StyleConstants.setIcon(iconAttr, new ImageIcon(new BufferedImage(20, 20, BufferedImage.TYPE_INT_ARGB)));
+                } else {
+                    StyleConstants.setIcon(iconAttr, icon);
                 }
+                doc.insertString(idx, " ", iconAttr);
+            } catch (Exception e) {
+                break;
             }
+            text = currentTextPane.getText();
+        }
+        highlightSelectedLine();
+    }
+    
+    private void highlightSelectedLine() {
+        if (currentTextPane == null) return;
+        String target = menuOptions[selectedOption];
+        String text = currentTextPane.getText();
+        int index = text.indexOf(target);
+        if (index >= 0) {
+            StyledDocument doc = currentTextPane.getStyledDocument();
+            SimpleAttributeSet selectedStyle = new SimpleAttributeSet(styleSet);
+            Color highlightColor = gameSettings.isColorblindMode() ? 
+                gameSettings.getUIColor("highlight") : Color.GREEN;
+            StyleConstants.setForeground(selectedStyle, highlightColor);
+            StyleConstants.setBold(selectedStyle, true);
+            doc.setCharacterAttributes(index, target.length(), selectedStyle, false);
         }
     }
     
@@ -447,7 +597,8 @@ public class setting {
         
         // 배경색은 항상 검정색으로 고정
         if (currentTextPane != null) {
-            currentTextPane.setBackground(Color.BLACK);
+            currentTextPane.setOpaque(false);
+            currentTextPane.setBackground(new Color(0, 0, 0, 0));
         }
     }
     
@@ -718,6 +869,31 @@ public class setting {
         @Override
         public void keyReleased(KeyEvent e) {
             e.consume(); // 이벤트 소비
+        }
+    }
+    
+    private class SettingBackgroundPanel extends JPanel {
+        SettingBackgroundPanel() {
+            setOpaque(true);
+        }
+        
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g.create();
+            if (backgroundGif != null) {
+                g2d.drawImage(backgroundGif.getImage(), 0, 0, getWidth(), getHeight(), this);
+            } else if (backgroundFallbackImage != null) {
+                g2d.drawImage(backgroundFallbackImage, 0, 0, getWidth(), getHeight(), null);
+            } else {
+                GradientPaint gp = new GradientPaint(
+                    0, 0, new Color(20, 20, 40),
+                    getWidth(), getHeight(), new Color(10, 10, 20)
+                );
+                g2d.setPaint(gp);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+            g2d.dispose();
         }
     }
 }

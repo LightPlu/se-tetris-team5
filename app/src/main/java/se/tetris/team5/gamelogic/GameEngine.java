@@ -104,9 +104,9 @@ public class GameEngine {
     // BlockFactory 난이도 반영
     blockFactory.setDifficulty(difficulty);
 
-    // 정책 리셋 (10줄 카운터 초기화)
-    if (itemGrantPolicy instanceof se.tetris.team5.items.Every10LinesItemGrantPolicy) {
-      ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
+    // 정책 리셋 (줄 카운터 초기화)
+    if (itemGrantPolicy != null) {
+      itemGrantPolicy.reset();
     }
 
     currentBlock = blockFactory.createRandomBlock();
@@ -136,6 +136,15 @@ public class GameEngine {
 
   public BlockFactory.Difficulty getDifficulty() {
     return difficulty;
+  }
+  
+  
+  public void setItemGrantPolicy(ItemGrantPolicy policy) {
+    if (policy == null) {
+      return;
+    }
+    this.itemGrantPolicy = policy;
+    this.itemGrantPolicy.reset();
   }
 
   public boolean moveBlockDown() {
@@ -194,19 +203,13 @@ public class GameEngine {
       // 블록 높이 패널티 체크
       checkHeightPenalty();
 
-      // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
-      System.out.println("[GameEngine] moveBlockDown - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
+      // 대전모드: 블럭 고정 후 콜백 호출
       if (onBlockFixedCallback != null) {
-        System.out.println("[GameEngine] 블럭 고정 완료 - 콜백 호출 시작");
         try {
           onBlockFixedCallback.run();
-          System.out.println("[GameEngine] 콜백 실행 완료");
         } catch (Exception e) {
           System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
-          e.printStackTrace();
         }
-      } else {
-        System.out.println("[GameEngine] 콜백이 null입니다!");
       }
 
       spawnNextBlock();
@@ -316,19 +319,13 @@ public class GameEngine {
     // 블록 높이 패널티 체크
     checkHeightPenalty();
 
-    // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
-    System.out.println("[GameEngine] hardDrop - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
+    // 대전모드: 블럭 고정 후 콜백 호출
     if (onBlockFixedCallback != null) {
-      System.out.println("[GameEngine] 하드드롭 블럭 고정 완료 - 콜백 호출 시작");
       try {
         onBlockFixedCallback.run();
-        System.out.println("[GameEngine] 콜백 실행 완료");
       } catch (Exception e) {
         System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
-        e.printStackTrace();
       }
-    } else {
-      System.out.println("[GameEngine] 콜백이 null입니다!");
     }
 
     spawnNextBlock();
@@ -562,6 +559,10 @@ public class GameEngine {
   public GameScoring getGameScoring() {
     return gameScoring;
   }
+  
+  public BlockFactory getBlockFactory() {
+    return blockFactory;
+  }
 
   public Block getCurrentBlock() {
     return currentBlock;
@@ -677,6 +678,11 @@ public class GameEngine {
   public long getGameStartTime() {
     return gameStartTime;
   }
+  
+  public long getElapsedTime() {
+    if (gameStartTime == 0) return 0;
+    return System.currentTimeMillis() - gameStartTime;
+  }
 
   /**
    * 대전모드: 블럭 고정 후 콜백 설정
@@ -732,5 +738,35 @@ public class GameEngine {
    */
   public GameMode getGameMode() {
     return gameMode;
+  }
+  
+  // P2P 게임엔진을 위한 protected setter 메서드들
+  
+  protected void setCurrentBlock(Block block) {
+    this.currentBlock = block;
+  }
+  
+  protected void setNextBlock(Block block) {
+    this.nextBlock = block;
+  }
+  
+  protected void setX(int x) {
+    this.x = x;
+  }
+  
+  protected void setY(int y) {
+    this.y = y;
+  }
+  
+  protected void setGameOver(boolean gameOver) {
+    this.gameOver = gameOver;
+  }
+  
+  protected void setGameRunning(boolean gameRunning) {
+    this.gameRunning = gameRunning;
+  }
+  
+  protected void setGameStartTime(long gameStartTime) {
+    this.gameStartTime = gameStartTime;
   }
 }
