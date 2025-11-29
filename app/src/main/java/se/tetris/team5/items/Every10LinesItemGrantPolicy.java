@@ -15,6 +15,7 @@ public class Every10LinesItemGrantPolicy implements ItemGrantPolicy {
     if (block == null || context == null)
       return null;
 
+    // 10줄마다 아이템 부여
     if (context.totalClearedLines > 0 &&
         context.totalClearedLines >= lastGrantLine + 10) {
 
@@ -33,7 +34,7 @@ public class Every10LinesItemGrantPolicy implements ItemGrantPolicy {
       block.setItem(x, y, item);
 
       lastGrantLine = context.totalClearedLines;
-      System.out.println("[DEBUG] 2줄 삭제 아이템 부여: (" + x + "," + y + ") " + item.getName());
+      System.out.println("[DEBUG] 10줄 삭제 아이템 부여: (" + x + "," + y + ") " + item.getName());
       return item;
     }
 

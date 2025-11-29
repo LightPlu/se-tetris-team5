@@ -22,10 +22,10 @@ public class DoubleScoreBadge extends JComponent {
 
   public DoubleScoreBadge() {
     setOpaque(false);
-    // 컴팩트한 크기로 조정하여 점수 패널에서 적절한 비율 유지
-    setPreferredSize(new Dimension(90, 24));
-    setMinimumSize(new Dimension(90, 24));
-    setMaximumSize(new Dimension(90, 24));
+    // 점수 보드에 꽉 차게 표시
+    setPreferredSize(new Dimension(170, 24));
+    setMinimumSize(new Dimension(170, 24));
+    setMaximumSize(new Dimension(170, 24));
     setToolTipText("Double score active");
   }
 
