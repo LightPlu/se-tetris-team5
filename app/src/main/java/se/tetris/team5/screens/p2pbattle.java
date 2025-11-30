@@ -856,8 +856,8 @@ public class p2pbattle extends JPanel implements KeyListener {
         long elapsedTime = myPanel.getGameEngine().getElapsedTime();
         packet.setElapsedTime(elapsedTime);
         
-        // 공격 블록 전송 (대전모드 로직)
-        java.util.List<java.awt.Color[]> attackBlocks = myPanel.getAttackBlocksData();
+        // 공격 블록 전송 (게임에서 새로 생성된 공격 줄만)
+        java.util.List<java.awt.Color[]> attackBlocks = myPanel.drainPendingOutgoingAttackBlocks();
         if (!attackBlocks.isEmpty()) {
             System.out.println("[P2P] 공격 블록 전송: " + attackBlocks.size() + "줄");
             GameStatePacket attackPacket = new GameStatePacket(GameStatePacket.PacketType.ATTACK_BLOCKS);
@@ -868,9 +868,6 @@ public class p2pbattle extends JPanel implements KeyListener {
             } else if (!isServer && client != null) {
                 client.sendPacket(attackPacket);
             }
-            
-            // 전송 후 공격 블록 클리어
-            myPanel.clearAttackBlocks();
         }
         
         if (isServer && server != null) {

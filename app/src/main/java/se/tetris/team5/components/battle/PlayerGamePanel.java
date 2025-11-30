@@ -48,8 +48,10 @@ public class PlayerGamePanel extends JPanel {
   // false: 자체적으로 경과 시간 표시 (0분 → 증가)
   private boolean countdownTimerEnabled = false;
 
-  // 대전모드 공격 블럭 데이터
+  // 대전모드 공격 블럭 데이터 (수신분)
   private java.util.List<Color[]> attackBlocksData = new java.util.ArrayList<>();
+  // 대전모드: 방금 생성된 공격 블럭 (P2P 전송용)
+  private java.util.List<Color[]> pendingOutgoingAttackBlocks = new java.util.ArrayList<>();
 
   // 대전모드: 누적 공격 줄 수 (게임 전체에서 받은 총 공격 줄 수)
   private int totalReceivedAttackLines = 0;
@@ -579,11 +581,14 @@ public class PlayerGamePanel extends JPanel {
         gameBoard.triggerClearAnimation(clearedRows);
 
         // 대전모드: 2줄 이상 삭제 시 공격 블럭 데이터를 상대방에게 전송
-        if (clearedRows.size() >= 2 && opponentPanel != null) {
+        if (clearedRows.size() >= 2) {
           java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
           if (attackData != null && !attackData.isEmpty()) {
-            opponentPanel.addAttackBlocks(attackData);
-            System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
+            if (opponentPanel != null) {
+              opponentPanel.addAttackBlocks(attackData);
+              System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
+            }
+            queueOutgoingAttackBlocks(attackData);
           }
         }
       }
@@ -879,6 +884,33 @@ public class PlayerGamePanel extends JPanel {
   }
   
   /**
+   * 최근 생성된 공격 블럭 데이터를 P2P 전송을 위해 큐에 저장한다.
+   */
+  private void queueOutgoingAttackBlocks(java.util.List<Color[]> attackBlocks) {
+    if (attackBlocks == null || attackBlocks.isEmpty()) {
+      return;
+    }
+    
+    synchronized (pendingOutgoingAttackBlocks) {
+      pendingOutgoingAttackBlocks.addAll(attackBlocks);
+    }
+  }
+  
+  /**
+   * 대기 중인 공격 블럭을 가져오고 내부 큐를 비운다 (P2P 전송용).
+   */
+  public java.util.List<Color[]> drainPendingOutgoingAttackBlocks() {
+    synchronized (pendingOutgoingAttackBlocks) {
+      if (pendingOutgoingAttackBlocks.isEmpty()) {
+        return java.util.Collections.emptyList();
+      }
+      java.util.List<Color[]> copy = new java.util.ArrayList<>(pendingOutgoingAttackBlocks);
+      pendingOutgoingAttackBlocks.clear();
+      return copy;
+    }
+  }
+  
+  /**
    * P2P 대전모드: 네트워크로 받은 공격 블럭을 수신합니다
    * 
    * @param receivedBlocks 상대방으로부터 받은 공격 블럭 데이터
@@ -897,9 +929,6 @@ public class PlayerGamePanel extends JPanel {
     if (attackPanel != null) {
       attackPanel.repaint();
     }
-    
-    // 즉시 적용 (블럭 고정 시가 아닌 수신 즉시)
-    applyPendingAttackBlocks();
   }
   
   /**
