@@ -237,6 +237,30 @@ public class p2pbattle extends JPanel implements KeyListener {
         
         updateMainPanel(centerPanel);
     }
+
+    /**
+     * 서버 대기 화면에서 보여줄 IP 안내 문자열 생성
+     */
+    private String getServerIPInfoText() {
+        if (server == null) {
+            return "<html>LAN 접속: 알 수 없음<br>로컬 테스트: 127.0.0.1</html>";
+        }
+
+        java.util.List<String> reachableIPs = server.getReachableIPs();
+        java.util.List<String> lanIPs = new java.util.ArrayList<>();
+        String loopbackIP = "127.0.0.1";
+
+        for (String ip : reachableIPs) {
+            if ("127.0.0.1".equals(ip)) {
+                loopbackIP = ip;
+            } else {
+                lanIPs.add(ip);
+            }
+        }
+
+        String lanText = lanIPs.isEmpty() ? "알 수 없음" : String.join(", ", lanIPs);
+        return "<html>LAN 접속: " + lanText + "<br>로컬 테스트: " + loopbackIP + "</html>";
+    }
     
     /**
      * 서버로 시작
@@ -295,7 +319,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setBackground(new Color(0, 0, 0, 180));
         
-        JLabel ipLabel = new JLabel("서버 IP 주소: " + (server != null ? server.getServerIP() : "알 수 없음"));
+        JLabel ipLabel = new JLabel(getServerIPInfoText());
         ipLabel.setFont(createKoreanFont(Font.BOLD, 18));
         ipLabel.setForeground(Color.YELLOW);
         ipLabel.setAlignmentX(Component.CENTER_ALIGNMENT);

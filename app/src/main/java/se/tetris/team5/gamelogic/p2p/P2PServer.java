@@ -2,6 +2,9 @@ package se.tetris.team5.gamelogic.p2p;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -236,6 +239,50 @@ public class P2PServer {
         } catch (UnknownHostException e) {
             return "알 수 없음";
         }
+    }
+
+    /**
+     * 활성화된 네트워크 인터페이스의 IP 주소 목록 반환 (LAN 우선)
+     */
+    public List<String> getReachableIPs() {
+        List<String> ips = new ArrayList<>();
+
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface netInterface = interfaces.nextElement();
+                if (!netInterface.isUp() || netInterface.isLoopback() || netInterface.isVirtual()) {
+                    continue;
+                }
+
+                Enumeration<InetAddress> addresses = netInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if (addr instanceof Inet4Address && addr.isSiteLocalAddress()) {
+                        String ip = addr.getHostAddress();
+                        if (!ips.contains(ip)) {
+                            ips.add(ip);
+                        }
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            System.out.println("[P2P Server] IP 조회 오류: " + e.getMessage());
+        }
+
+        if (ips.isEmpty()) {
+            try {
+                ips.add(InetAddress.getLocalHost().getHostAddress());
+            } catch (UnknownHostException e) {
+                // ignore, fallback handled below
+            }
+        }
+
+        if (!ips.contains("127.0.0.1")) {
+            ips.add("127.0.0.1");
+        }
+
+        return ips;
     }
     
     /**
