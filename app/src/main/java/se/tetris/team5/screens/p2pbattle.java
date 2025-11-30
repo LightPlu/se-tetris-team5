@@ -561,8 +561,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         chatInputField = null;
         chatSendButton = null;
         
-        String modeText = getBattleModeText(selectedBattleMode);
-        statusLabel.setText("P2P 대전 - 준비 대기 (" + modeText + ")");
+        updateReadyScreenModeLabel();
         
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
@@ -600,6 +599,16 @@ public class p2pbattle extends JPanel implements KeyListener {
         
         updateMainPanel(centerPanel);
         startLobbyLatencyMonitor();
+    }
+
+    /**
+     * 준비 화면 상단의 모드 안내 텍스트 갱신
+     */
+    private void updateReadyScreenModeLabel() {
+        if (statusLabel != null && currentState == ScreenState.READY_WAITING) {
+            String modeText = getBattleModeText(selectedBattleMode);
+            statusLabel.setText("P2P 대전 - 준비 대기 (" + modeText + ")");
+        }
     }
     
     /**
@@ -882,6 +891,8 @@ public class p2pbattle extends JPanel implements KeyListener {
                     gameRandomSeed = packet.getRandomSeed();
                     if (currentState == ScreenState.CLIENT_CONNECTING) {
                         showReadyWaiting();
+                    } else if (currentState == ScreenState.READY_WAITING) {
+                        updateReadyScreenModeLabel();
                     }
                     break;
                     
@@ -1066,21 +1077,13 @@ public class p2pbattle extends JPanel implements KeyListener {
         isReady = false;
         opponentReady = false;
 
-        // 항상 기본 중형 크기로 복원
-        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
-        settings.loadSettings();
-        if (screenController != null) {
-            screenController.updateWindowSize();
-        }
+        restoreLobbyLayout();
 
-        // Re-initialize UI and show role selection
-        removeAll();
-        setLayout(new BorderLayout());
-        initializeUI();
-        revalidate();
-        repaint();
-        showRoleSelection();
+        if (isServer) {
+            showModeSelection();
+        } else {
+            showReadyWaiting();
+        }
     }
     
     /**
@@ -1091,21 +1094,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         stopLobbyLatencyMonitor();
         isReady = false;
         opponentReady = false;
-
-        // 항상 기본 중형 크기로 복원
-        se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
-        settings.loadSettings();
-        if (screenController != null) {
-            screenController.updateWindowSize();
-        }
-
-        // Reset to 대기방 layout
-        removeAll();
-        setLayout(new BorderLayout());
-        add(mainPanel, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+        restoreLobbyLayout();
 
         if (isServer) {
             showModeSelection();
@@ -1673,6 +1662,26 @@ public class p2pbattle extends JPanel implements KeyListener {
 
         appendChatMessage("시스템", "연결이 완료되었습니다. 간단한 메시지를 주고받을 수 있습니다.");
         return wrapper;
+    }
+
+    /**
+     * 게임 화면에서 대기방 UI로 복귀하기 위한 기본 레이아웃/크기 복원
+     */
+    private void restoreLobbyLayout() {
+        // Always revert to medium window for lobby screens
+        se.tetris.team5.utils.setting.GameSettings settings =
+            se.tetris.team5.utils.setting.GameSettings.getInstance();
+        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
+        settings.loadSettings();
+        if (screenController != null) {
+            screenController.updateWindowSize();
+        }
+
+        removeAll();
+        setLayout(new BorderLayout());
+        add(mainPanel, BorderLayout.CENTER);
+        revalidate();
+        repaint();
     }
     
     /**
