@@ -18,19 +18,18 @@ public class WeightSet {
   public double weightAttack4Lines; // 4줄 삭제 시 공격 보너스 (Tetris)
 
   public WeightSet() {
-    // 하이브리드 유전 알고리즘 최적 가중치 (2025-12-01, 집단 30, 세대 10)
-    // Step 1: 솔로 플레이로 학습된 생존 가중치
-    this.weightLandingHeight = -3.91; // Feature 1: Landing Height
-    this.weightEPCM = 7.86; // Feature 2: Eroded Piece Cells Metric
-    this.weightRowTransitions = -3.23; // Feature 3: Row Transitions
-    this.weightColumnTransitions = -15.30; // Feature 4: Column Transitions
-    this.weightHoles = -12.80; // Feature 5: Number of Holes
-    this.weightWellSums = -10.36; // Feature 6: Well Sums
+    // 유전 알고리즘 최적 가중치
+    this.weightLandingHeight = -7.80; // Feature 1: Landing Height
+    this.weightEPCM = 5.58; // Feature 2: Eroded Piece Cells Metric
+    this.weightRowTransitions = -1.58; // Feature 3: Row Transitions
+    this.weightColumnTransitions = -1.13; // Feature 4: Column Transitions
+    this.weightHoles = -18.80; // Feature 5: Number of Holes
+    this.weightWellSums = -8.69; // Feature 6: Well Sums
 
-    // Step 2: 대전 플레이로 학습된 공격 가중치
-    this.weightAttack2Lines = 20.02; // 2줄 삭제 시 보너스
-    this.weightAttack3Lines = 32.39; // 3줄 삭제 시 보너스
-    this.weightAttack4Lines = 42.47; // 4줄 삭제 시 보너스 (Tetris)
+    // 대전 모드 공격 보너스
+    this.weightAttack2Lines = 15.14; // 2줄 삭제 시 보너스
+    this.weightAttack3Lines = 19.18; // 3줄 삭제 시 보너스
+    this.weightAttack4Lines = 59.16; // 4줄 삭제 시 보너스 (Tetris)
   }
 
   public WeightSet(double weightLandingHeight, double weightEPCM, double weightRowTransitions,
