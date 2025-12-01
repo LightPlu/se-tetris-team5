@@ -1,0 +1,14 @@
+99세대 최고 가중치 (터미널 출력 기준):
+- Holes: -113.18
+- Row Transitions: -2.68
+- Aggregate Height: -0.52
+- Bumpiness: -0.27
+- Lines Cleared: 27.56
+- Tetris: 178.60
+
+적합도: 33.27
+평균 줄 수: 0.0
+평균 점수: 33
+
+코드에 사용할 가중치:
+new WeightSet(-113.18, -2.68, -0.52, -0.27, 27.56, 178.60)
