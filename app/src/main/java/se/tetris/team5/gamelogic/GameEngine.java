@@ -109,9 +109,8 @@ public class GameEngine {
       itemGrantPolicy.reset();
     }
 
-    boolean itemModeOnly = (gameMode == GameMode.ITEM);
-    currentBlock = blockFactory.createRandomBlock(itemModeOnly);
-    nextBlock = blockFactory.createRandomBlock(itemModeOnly);
+    currentBlock = blockFactory.createRandomBlock();
+    nextBlock = blockFactory.createRandomBlock();
     // debug: log initial blocks
     System.out.println("[GameEngine DEBUG] startNewGame current=" + currentBlock.getClass().getSimpleName()
         + " next=" + nextBlock.getClass().getSimpleName());
@@ -407,8 +406,7 @@ public class GameEngine {
 
     // 아이템 모드: 정책을 통해 아이템 부여 조건 확인 (10줄 체크는 정책 내부에서 처리)
     // 임시 블록을 만들어서 아이템 부여 조건을 확인
-    boolean itemModeOnly = (gameMode == GameMode.ITEM);
-    Block tempBlock = blockFactory.createRandomBlock(itemModeOnly);
+    Block tempBlock = blockFactory.createRandomBlock();
     se.tetris.team5.items.Item grantedItem = itemGrantPolicy.grantItem(
         tempBlock,
         new ItemGrantPolicy.ItemGrantContext(totalClearedLines, itemFactory));
@@ -496,8 +494,7 @@ public class GameEngine {
         System.out.println("[특수 블록] 도트 블록(DotBlock) 생성!");
       } else {
         // 일반 블록 + 아이템 (LineClearItem, TimeStopItem 등)
-        boolean itemModeOnly = (gameMode == GameMode.ITEM);
-        nextBlock = blockFactory.createRandomBlock(itemModeOnly);
+        nextBlock = blockFactory.createRandomBlock();
 
         // 블록의 모든 유효한 칸을 수집한 후 랜덤하게 선택
         java.util.List<int[]> validPositions = new java.util.ArrayList<>();
@@ -540,8 +537,7 @@ public class GameEngine {
       pendingItem = null; // 펜딩 아이템 소비
     } else {
       // 펜딩 아이템이 없으면 일반 블록 생성
-      boolean itemModeOnly = (gameMode == GameMode.ITEM);
-      nextBlock = blockFactory.createRandomBlock(itemModeOnly);
+      nextBlock = blockFactory.createRandomBlock();
     }
 
     x = START_X;
@@ -632,9 +628,9 @@ public class GameEngine {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
     }
 
-    boolean itemModeOnly = (gameMode == GameMode.ITEM);
-    currentBlock = blockFactory.createRandomBlock(itemModeOnly);
-    nextBlock = blockFactory.createRandomBlock(itemModeOnly);
+
+    currentBlock = blockFactory.createRandomBlock();
+    nextBlock = blockFactory.createRandomBlock();
     x = 3;
     y = 0;
     gameRunning = true;
