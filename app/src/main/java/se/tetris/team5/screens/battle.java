@@ -261,6 +261,17 @@ public class battle extends JPanel implements KeyListener {
       } else {
         // AI 모드: AI 컨트롤러 생성 (플레이어2만)
         aiController = new AIPlayerController(player2Panel.getGameEngine());
+        
+        // AI 난이도 설정
+        String aiDifficultyStr = System.getProperty("tetris.ai.difficulty", "NORMAL");
+        AIPlayerController.AIDifficulty aiDifficulty;
+        if ("HARD".equals(aiDifficultyStr)) {
+          aiDifficulty = AIPlayerController.AIDifficulty.HARD;
+        } else {
+          aiDifficulty = AIPlayerController.AIDifficulty.NORMAL;
+        }
+        aiController.setDifficulty(aiDifficulty);
+        
         aiController.setOnMoveCallback(() -> {
           player2Panel.updateGameUI();
         });

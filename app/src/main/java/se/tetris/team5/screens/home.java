@@ -105,6 +105,24 @@ public class home extends JPanel implements KeyListener {
   };
 
   private boolean inBattleModeSelection = false;
+  private boolean inAIDifficultySelection = false; // AI 난이도 선택 화면인지 여부
+
+  // AI 난이도 선택 메뉴
+  private String[] aiDifficultyOptions = {
+      "보통",
+      "어려움",
+      "뒤로 가기"
+  };
+
+  private String[] aiDifficultyIcons = {
+      "🟡", "🔴", "↩️"
+  };
+
+  private String[] aiDifficultyDescriptions = {
+      "🟡 보통: AI가 기본 성능으로 플레이합니다",
+      "🔴 어려움: AI가 최적화된 성능으로 플레이합니다",
+      "대전 모드 선택으로 돌아갑니다"
+  };
 
   // 배경 관련
   private BufferedImage backgroundImage;
@@ -130,7 +148,9 @@ public class home extends JPanel implements KeyListener {
    * 현재 상태에 맞는 메뉴 옵션들을 반환합니다
    */
   private String[] getCurrentMenuOptions() {
-    if (inBattleModeSelection) {
+    if (inAIDifficultySelection) {
+      return aiDifficultyOptions;
+    } else if (inBattleModeSelection) {
       return battleModeOptions;
     } else if (inDifficultySelection) {
       return difficultyMenuOptions;
@@ -143,7 +163,9 @@ public class home extends JPanel implements KeyListener {
    * 현재 상태에 맞는 메뉴 아이콘들을 반환합니다
    */
   private String[] getCurrentMenuIcons() {
-    if (inBattleModeSelection) {
+    if (inAIDifficultySelection) {
+      return aiDifficultyIcons;
+    } else if (inBattleModeSelection) {
       return battleModeIcons;
     } else if (inDifficultySelection) {
       return difficultyMenuIcons;
@@ -156,7 +178,9 @@ public class home extends JPanel implements KeyListener {
    * 현재 상태에 맞는 메뉴 설명들을 반환합니다
    */
   private String[] getCurrentMenuDescriptions() {
-    if (inBattleModeSelection) {
+    if (inAIDifficultySelection) {
+      return aiDifficultyDescriptions;
+    } else if (inBattleModeSelection) {
       return battleModeDescriptions;
     } else if (inDifficultySelection) {
       return difficultyMenuDescriptions;
@@ -477,23 +501,36 @@ public class home extends JPanel implements KeyListener {
    * 현재 선택된 메뉴를 실행합니다
    */
   private void selectCurrentMenu() {
-    if (inBattleModeSelection) {
+    if (inAIDifficultySelection) {
+      // AI 난이도 선택 화면
+      switch (selectedMenu) {
+        case 0: // 보통
+          startBattleMode("AI", "NORMAL");
+          break;
+        case 1: // 어려움
+          startBattleMode("AI", "HARD");
+          break;
+        case 2: // 뒤로 가기
+          backToAIModeSelection();
+          break;
+      }
+    } else if (inBattleModeSelection) {
       // 대전 모드 선택 화면
       switch (selectedMenu) {
         case 0: // 일반 대전
-          startBattleMode("NORMAL");
+          startBattleMode("NORMAL", null);
           break;
         case 1: // 아이템 대전
-          startBattleMode("ITEM");
+          startBattleMode("ITEM", null);
           break;
         case 2: // 시간제한 대전
-          startBattleMode("TIMELIMIT");
+          startBattleMode("TIMELIMIT", null);
           break;
         case 3: // AI 대전
-          startBattleMode("AI");
+          showAIDifficultySelection();
           break;
         case 4: // AI vs AI
-          startBattleMode("AI_VS_AI");
+          startBattleMode("AI_VS_AI", null);
           break;
         case 5: // 뒤로 가기
           backToMainMenu();
@@ -546,7 +583,18 @@ public class home extends JPanel implements KeyListener {
   private void backToMainMenu() {
     inDifficultySelection = false;
     inBattleModeSelection = false;
+    inAIDifficultySelection = false;
     selectedMenu = 0;
+    rebuildMenu();
+  }
+
+  /**
+   * AI 대전 모드 선택으로 돌아갑니다
+   */
+  private void backToAIModeSelection() {
+    inAIDifficultySelection = false;
+    inBattleModeSelection = true;
+    selectedMenu = 3; // AI 대전 선택
     rebuildMenu();
   }
 
@@ -564,7 +612,18 @@ public class home extends JPanel implements KeyListener {
    */
   private void showBattleModeSelection() {
     inBattleModeSelection = true;
+    inAIDifficultySelection = false;
     selectedMenu = 0; // 기본값: 일반 대전 선택
+    rebuildMenu();
+  }
+
+  /**
+   * AI 난이도 선택 화면으로 전환합니다
+   */
+  private void showAIDifficultySelection() {
+    inAIDifficultySelection = true;
+    inBattleModeSelection = false;
+    selectedMenu = 0; // 기본값: 보통 선택
     rebuildMenu();
   }
 
@@ -625,15 +684,23 @@ public class home extends JPanel implements KeyListener {
   /**
    * 대전 모드로 게임을 시작합니다
    * 
-   * @param battleMode "NORMAL", "ITEM", "TIMELIMIT"
+   * @param battleMode "NORMAL", "ITEM", "TIMELIMIT", "AI", "AI_VS_AI"
+   * @param aiDifficulty AI 난이도 ("NORMAL", "HARD") - AI 모드일 때만 사용
    */
-  private void startBattleMode(String battleMode) {
-    System.out.println("[게임 시작] 대전 모드 - " + battleMode);
+  private void startBattleMode(String battleMode, String aiDifficulty) {
+    System.out.println("[게임 시작] 대전 모드 - " + battleMode + (aiDifficulty != null ? " (AI 난이도: " + aiDifficulty + ")" : ""));
 
     // 전역 변수로 게임 모드 저장 (battle 화면에서 참조)
     System.setProperty("tetris.game.mode", "BATTLE");
     System.setProperty("tetris.battle.mode", battleMode);
     System.setProperty("tetris.game.difficulty", "NORMAL");
+    
+    // AI 난이도 설정 (AI 모드일 때만)
+    if (aiDifficulty != null) {
+      System.setProperty("tetris.ai.difficulty", aiDifficulty);
+    } else {
+      System.setProperty("tetris.ai.difficulty", "NORMAL"); // 기본값
+    }
 
     // 대전 모드는 창 크기를 가로로 2배 확장
     GameSettings settings = GameSettings.getInstance();
@@ -785,9 +852,11 @@ public class home extends JPanel implements KeyListener {
 
   // JTextPane 호환성을 위한 display 메서드
   public void display(JTextPane textPane) {
-    // 홈 화면 표시 시 항상 메인 메뉴로 초기화 (난이도 선택 화면 상태 해제)
-    if (inDifficultySelection) {
+    // 홈 화면 표시 시 항상 메인 메뉴로 초기화 (모든 선택 화면 상태 해제)
+    if (inDifficultySelection || inBattleModeSelection || inAIDifficultySelection) {
       inDifficultySelection = false;
+      inBattleModeSelection = false;
+      inAIDifficultySelection = false;
       selectedMenu = 0;
       // 메뉴를 다시 구성
       rebuildMenu();
@@ -842,8 +911,14 @@ public class home extends JPanel implements KeyListener {
         hideHelpMessage(); // 유효한 키를 누르면 도움말 숨김
         break;
       case KeyEvent.VK_ESCAPE:
-        if (inDifficultySelection) {
+        if (inAIDifficultySelection) {
+          // AI 난이도 선택 화면에서 ESC: 대전 모드 선택으로 돌아가기
+          backToAIModeSelection();
+        } else if (inDifficultySelection) {
           // 난이도 선택 화면에서 ESC: 메인 메뉴로 돌아가기
+          backToMainMenu();
+        } else if (inBattleModeSelection) {
+          // 대전 모드 선택 화면에서 ESC: 메인 메뉴로 돌아가기
           backToMainMenu();
         } else {
           // 메인 메뉴에서 ESC: 종료 확인

@@ -19,7 +19,15 @@ public class AIPlayerController {
   private Runnable onGameOverCallback;
   private Runnable onMoveCallback; // AI가 행동할 때마다 호출되는 콜백 (UI 업데이트용)
 
-  // AI 행동 주기 (밀리초)
+  // AI 난이도
+  public enum AIDifficulty {
+    NORMAL, // 보통: 기본 가중치의 80%, 행동 주기 250ms
+    HARD    // 어려움: 기본 가중치 100%, 행동 주기 150ms
+  }
+
+  private AIDifficulty difficulty = AIDifficulty.NORMAL;
+
+  // AI 행동 주기 (밀리초) - 고정값 (난이도는 사고 시간으로만 조절)
   private static final int AI_ACTION_INTERVAL = 200;
 
   /**
@@ -30,6 +38,30 @@ public class AIPlayerController {
   public AIPlayerController(GameEngine gameEngine) {
     this.gameEngine = gameEngine;
     this.ai = new TetrisAI(gameEngine);
+  }
+
+  /**
+   * AI 난이도 설정
+   * 난이도는 사고 시간으로만 조절됩니다. 행동 주기는 고정입니다.
+   * 
+   * @param difficulty AI 난이도 (NORMAL: 보통, HARD: 어려움)
+   */
+  public void setDifficulty(AIDifficulty difficulty) {
+    this.difficulty = difficulty;
+    
+    // AI에 난이도 적용 (사고 시간만 조절)
+    if (ai != null) {
+      ai.setDifficulty(difficulty);
+    }
+  }
+
+  /**
+   * 현재 AI 난이도 반환
+   * 
+   * @return AI 난이도
+   */
+  public AIDifficulty getDifficulty() {
+    return difficulty;
   }
 
   /**

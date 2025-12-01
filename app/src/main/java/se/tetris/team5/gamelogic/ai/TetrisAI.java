@@ -16,7 +16,7 @@ public class TetrisAI {
 
   private final GameEngine gameEngine;
   private final BlockRotationManager rotationManager;
-  private static final int THINK_DELAY_MS = 600;
+  private int thinkDelayMs = 700; // 기본값: 보통 난이도
   private long lastThinkTime = 0;
 
   // AI 상태
@@ -31,6 +31,9 @@ public class TetrisAI {
 
   // Beam Search 설정
   private static final int BEAM_WIDTH = 3; // 상위 K개만 유지
+
+  // AI 난이도
+  private AIPlayerController.AIDifficulty difficulty = AIPlayerController.AIDifficulty.NORMAL;
 
   // 평가 함수 가중치 (기본값)
   private WeightSet weights;
@@ -50,6 +53,26 @@ public class TetrisAI {
   }
 
   /**
+   * AI 난이도 설정
+   * 난이도에 따라 사고 시간만 조절합니다. 가중치는 항상 기본값을 사용합니다.
+   * 
+   * @param difficulty AI 난이도 (NORMAL: 보통, HARD: 어려움)
+   */
+  public void setDifficulty(AIPlayerController.AIDifficulty difficulty) {
+    this.difficulty = difficulty;
+
+    // 난이도에 따라 사고 시간만 조절
+    switch (difficulty) {
+      case NORMAL:
+        this.thinkDelayMs = 500; // 보통: 500ms
+        break;
+      case HARD:
+        this.thinkDelayMs = 200; // 어려움: 200ms (더 빠른 사고)
+        break;
+    }
+  }
+
+  /**
    * 현재 가중치 반환
    */
   public WeightSet getWeights() {
@@ -63,7 +86,7 @@ public class TetrisAI {
    */
   public boolean makeMove() {
     long currentTime = System.currentTimeMillis();
-    if (currentTime - lastThinkTime < THINK_DELAY_MS) {
+    if (currentTime - lastThinkTime < thinkDelayMs) {
       return false;
     }
 
