@@ -10,10 +10,21 @@ import se.tetris.team5.screens.score;
 import se.tetris.team5.screens.setting;
 import se.tetris.team5.screens.game;
 import se.tetris.team5.screens.battle;
+import se.tetris.team5.screens.p2pbattle;
 import se.tetris.team5.utils.setting.GameSettings;
 import se.tetris.team5.components.home.BGMManager;
 
 public class ScreenController extends JFrame {
+    /**
+     * 창 크기를 GameSettings의 현재 값으로 복원
+     */
+    public void restoreWindowSize() {
+      GameSettings settings = GameSettings.getInstance();
+      setSize(settings.getWindowWidth(), settings.getWindowHeight());
+      setLocationRelativeTo(null);
+      revalidate();
+      repaint();
+    }
   private JTextPane textPane;
   private String currentScreen = "loading"; // 로딩 화면부터 시작
 
@@ -23,6 +34,7 @@ public class ScreenController extends JFrame {
   private setting settingScreen;
   private game gameScreen;
   private battle battleScreen;
+  private p2pbattle p2pbattleScreen;
 
   // Loading screen components
   private JLabel loadingBackgroundLabel;
@@ -117,6 +129,7 @@ public class ScreenController extends JFrame {
     settingScreen = new setting(this);
     gameScreen = new game(this);
     battleScreen = new battle(this);
+    p2pbattleScreen = new p2pbattle(this);
   }
 
   public void showScreen(String screenName) {
@@ -200,6 +213,8 @@ public class ScreenController extends JFrame {
         }
         break;
       case "score":
+        bgmManager.stopBGM();
+        bgmManager.playScoreBGM();
         // Clear any child components so score can rebuild its UI cleanly
         textPane.removeAll();
         getContentPane().add(textPane);
@@ -216,6 +231,18 @@ public class ScreenController extends JFrame {
         settingScreen.display(textPane);
         javax.swing.SwingUtilities.invokeLater(() -> {
           textPane.requestFocusInWindow();
+        });
+        break;
+      case "p2pbattle":
+        // P2P 대전 모드
+        bgmManager.stopBGM();
+        
+        // 매번 새로 생성 (상태 초기화)
+        p2pbattleScreen = new p2pbattle(this);
+        getContentPane().add(p2pbattleScreen);
+        
+        javax.swing.SwingUtilities.invokeLater(() -> {
+          p2pbattleScreen.requestFocusInWindow();
         });
         break;
       default:
@@ -334,27 +361,24 @@ public class ScreenController extends JFrame {
         layeredPane.add(loadingBackgroundLabel, Integer.valueOf(0));
 
         // 스킵 안내 텍스트 추가 (위 레이어)
-        JLabel skipLabel = new JLabel("아무 키나 누르면 SKIP...");
-        skipLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        JLabel skipLabel = new JLabel("<html><center>아무 키나 누르면<br/>SKIP...</center></html>");
+        skipLabel.setFont(createLoadingFont());
         skipLabel.setForeground(Color.WHITE);
         skipLabel.setOpaque(true);
         skipLabel.setBackground(new Color(0, 0, 0, 150)); // 반투명 검은색 배경
         skipLabel.setHorizontalAlignment(SwingConstants.CENTER);
         skipLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        
+        final int skipWidth = 320;
+        final int skipHeight = 50;
+
         // 컴포넌트가 표시될 때 올바른 위치 계산
         addComponentListener(new java.awt.event.ComponentAdapter() {
           @Override
           public void componentResized(java.awt.event.ComponentEvent e) {
-            int width = 230;
-            int height = 30;
-            skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+            skipLabel.setBounds(getWidth() - skipWidth - 20, getHeight() - skipHeight - 60, skipWidth, skipHeight);
           }
         });
-        
-        int width = 230;
-        int height = 30;
-        skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+        skipLabel.setBounds(getWidth() - skipWidth - 20, getHeight() - skipHeight - 60, skipWidth, skipHeight);
         layeredPane.add(skipLabel, Integer.valueOf(1));
 
         getContentPane().add(layeredPane, BorderLayout.CENTER);
@@ -382,17 +406,16 @@ public class ScreenController extends JFrame {
         layeredPane.add(gradientPanel, Integer.valueOf(0));
 
         // 스킵 안내 텍스트 추가
-        JLabel skipLabel = new JLabel("아무 키나 누르면 SKIP...");
-        skipLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        JLabel skipLabel = new JLabel("<html><center>아무 키나 누르면<br/>SKIP...</center></html>");
+        skipLabel.setFont(createLoadingFont());
         skipLabel.setForeground(Color.WHITE);
         skipLabel.setOpaque(true);
         skipLabel.setBackground(new Color(0, 0, 0, 150)); // 반투명 검은색 배경
         skipLabel.setHorizontalAlignment(SwingConstants.CENTER);
         skipLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        
-        int width = 230;
-        int height = 30;
-        skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+        final int skipWidth2 = 320;
+        final int skipHeight2 = 50;
+        skipLabel.setBounds(getWidth() - skipWidth2 - 20, getHeight() - skipHeight2 - 60, skipWidth2, skipHeight2);
         layeredPane.add(skipLabel, Integer.valueOf(1));
 
         getContentPane().add(layeredPane, BorderLayout.CENTER);
@@ -412,21 +435,31 @@ public class ScreenController extends JFrame {
       layeredPane.add(blackPanel, Integer.valueOf(0));
 
       // 스킵 안내 텍스트 추가
-      JLabel skipLabel = new JLabel("아무 키나 누르면 SKIP...");
-      skipLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+      JLabel skipLabel = new JLabel("<html><center>아무 키나 누르면<br/>SKIP...</center></html>");
+      skipLabel.setFont(createLoadingFont());
       skipLabel.setForeground(Color.WHITE);
       skipLabel.setOpaque(true);
       skipLabel.setBackground(new Color(50, 50, 50, 180)); // 반투명 회색 배경
       skipLabel.setHorizontalAlignment(SwingConstants.CENTER);
       skipLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-      
-      int width = 230;
-      int height = 30;
-      skipLabel.setBounds(getWidth() - width - 20, getHeight() - height - 60, width, height);
+      final int skipWidth3 = 320;
+      final int skipHeight3 = 50;
+      skipLabel.setBounds(getWidth() - skipWidth3 - 20, getHeight() - skipHeight3 - 60, skipWidth3, skipHeight3);
       layeredPane.add(skipLabel, Integer.valueOf(1));
 
       getContentPane().add(layeredPane, BorderLayout.CENTER);
     }
+  }
+
+  private Font createLoadingFont() {
+    String[] candidates = {"Apple SD Gothic Neo", "Malgun Gothic", "NanumGothic", "Arial Unicode MS", "Dialog"};
+    for (String name : candidates) {
+      Font f = new Font(name, Font.BOLD, 16);
+      if (f.canDisplay('아') && f.canDisplay('S')) {
+        return f;
+      }
+    }
+    return new Font("Dialog", Font.BOLD, 16);
   }
 
   /**

@@ -18,6 +18,7 @@ public class BlockFactory {
   private Difficulty difficulty = Difficulty.NORMAL;
   // bag-of-7 support (shuffle bag) - kept for compatibility with older logic
   private List<Integer> bag;
+  private Integer forcedBlockType = null;
 
   /**
    * 기본 생성자 (난이도: NORMAL, seed: 랜덤)
@@ -58,15 +59,9 @@ public class BlockFactory {
   }
 
   public Block createRandomBlock() {
-    return createRandomBlock(false);
-  }
-  
-  /**
-   * 랜덤 블럭 생성 (아이템 모드 옵션)
-   * @param itemModeOnly 사용하지 않음 (하위 호환성을 위해 유지)
-   */
-  public Block createRandomBlock(boolean itemModeOnly) {
-    // 아이템 모드에서도 모든 블럭 생성 (itemModeOnly 파라미터 무시)
+    if (forcedBlockType != null) {
+      return createBlock(forcedBlockType.intValue());
+    }
     
     int[] weights;
     // 블럭 순서: I, J, L, Z, S, T, O
@@ -92,6 +87,15 @@ public class BlockFactory {
     }
     return createBlock(idx);
   
+  }
+  
+  /**
+   * 테스트 혹은 디버그 목적으로 특정 블록만 생성하도록 강제합니다.
+   * @param blockIndex createBlock에서 사용하는 타입 인덱스 (0=I, 1=J, ...)
+   *                   null을 전달하면 강제 생성을 해제합니다.
+   */
+  public void setForcedBlockType(Integer blockIndex) {
+    this.forcedBlockType = blockIndex;
   }
 
   /**

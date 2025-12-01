@@ -24,4 +24,11 @@ public interface ItemGrantPolicy {
       this.itemFactory = itemFactory;
     }
   }
+  
+  /**
+   * 정책별 내부 상태를 재설정할 때 호출
+   */
+  default void reset() {
+    // 기본 구현 없음
+  }
 }

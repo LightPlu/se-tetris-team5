@@ -1,6 +1,7 @@
 package se.tetris.team5.components.home;
 
 import javax.sound.sampled.*;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import se.tetris.team5.utils.setting.GameSettings;
@@ -19,6 +20,7 @@ public class BGMManager {
     // BGM 파일 경로 (여러 형식 시도)
     private static final String[] LOADING_BGM_FILES = {"loadingbgm.wav", "loadingbgm.mp3"};
     private static final String[] MAIN_BGM_FILES = {"mainbgm.wav", "mainbgm.mp3"};
+    private static final String[] SCORE_BGM_FILES = {"backgroundmusic.mp3", "backgroundmusic.wav"};
     
     private BGMManager() {
         gameSettings = GameSettings.getInstance();
@@ -52,6 +54,16 @@ public class BGMManager {
             return;
         }
         playBGMFromFiles(MAIN_BGM_FILES, "main");
+    }
+    
+    /**
+     * 스코어 화면용 BGM 재생
+     */
+    public void playScoreBGM() {
+        if (!gameSettings.isSoundEnabled()) {
+            return;
+        }
+        playBGMFromFiles(SCORE_BGM_FILES, "score");
     }
     
     /**
@@ -96,11 +108,28 @@ public class BGMManager {
         // 기존 BGM 정지
         stopBGM();
         
+        AudioInputStream baseStream = null;
+        AudioInputStream audioStream = null;
         try {
             // 리소스에서 BGM 파일 로드
             URL bgmUrl = getClass().getClassLoader().getResource(bgmFile);
+            if (bgmUrl == null) {
+                String[] paths = {
+                    "app/src/main/resources/" + bgmFile,
+                    "src/main/resources/" + bgmFile,
+                    bgmFile
+                };
+                for (String path : paths) {
+                    File file = new File(path);
+                    if (file.exists()) {
+                        bgmUrl = file.toURI().toURL();
+                        break;
+                    }
+                }
+            }
             if (bgmUrl != null) {
-                AudioInputStream audioStream = AudioSystem.getAudioInputStream(bgmUrl);
+                baseStream = AudioSystem.getAudioInputStream(bgmUrl);
+                audioStream = ensurePCM(baseStream);
                 currentClip = AudioSystem.getClip();
                 currentClip.open(audioStream);
                 
@@ -132,7 +161,37 @@ public class BGMManager {
         } catch (Exception e) {
             System.out.println("Unexpected error playing BGM: " + bgmFile + " - " + e.getMessage());
             return false; // 기타 오류
+        } finally {
+            try {
+                if (audioStream != null) {
+                    audioStream.close();
+                }
+            } catch (Exception ignored) {}
+            try {
+                if (baseStream != null && baseStream != audioStream) {
+                    baseStream.close();
+                }
+            } catch (Exception ignored) {}
         }
+    }
+    
+    private AudioInputStream ensurePCM(AudioInputStream source) throws Exception {
+        AudioFormat baseFormat = source.getFormat();
+        if (AudioFormat.Encoding.PCM_SIGNED.equals(baseFormat.getEncoding()) ||
+            AudioFormat.Encoding.PCM_UNSIGNED.equals(baseFormat.getEncoding())) {
+            return source;
+        }
+        
+        AudioFormat decodedFormat = new AudioFormat(
+            AudioFormat.Encoding.PCM_SIGNED,
+            baseFormat.getSampleRate(),
+            16,
+            baseFormat.getChannels(),
+            baseFormat.getChannels() * 2,
+            baseFormat.getSampleRate(),
+            false
+        );
+        return AudioSystem.getAudioInputStream(decodedFormat, source);
     }
     
     /**

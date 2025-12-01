@@ -75,6 +75,8 @@ public class Player1InputHandler implements PlayerInputHandler {
         int dropKey = settings.getPlayerKeyCode(1, "drop");
         int itemKey = settings.getPlayerKeyCode(1, "item");
         
+        System.out.println("[Player1InputHandler] keyCode=" + keyCode + ", dropKey=" + dropKey);
+        
         if (keyCode == leftKey) {
             handleMoveLeft();
         } else if (keyCode == rightKey) {
@@ -84,6 +86,7 @@ public class Player1InputHandler implements PlayerInputHandler {
         } else if (keyCode == downKey) {
             handleSoftDrop();
         } else if (keyCode == dropKey) {
+            System.out.println("[Player1InputHandler] 하드드롭 호출! gameEngine=" + (gameEngine != null));
             handleHardDrop();
         } else if (keyCode == itemKey) {
             handleUseItem();

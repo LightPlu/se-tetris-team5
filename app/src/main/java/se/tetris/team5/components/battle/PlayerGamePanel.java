@@ -48,8 +48,10 @@ public class PlayerGamePanel extends JPanel {
   // false: 자체적으로 경과 시간 표시 (0분 → 증가)
   private boolean countdownTimerEnabled = false;
 
-  // 대전모드 공격 블럭 데이터
+  // 대전모드 공격 블럭 데이터 (수신분)
   private java.util.List<Color[]> attackBlocksData = new java.util.ArrayList<>();
+  // 대전모드: 방금 생성된 공격 블럭 (P2P 전송용)
+  private java.util.List<Color[]> pendingOutgoingAttackBlocks = new java.util.ArrayList<>();
 
   // 대전모드: 누적 공격 줄 수 (게임 전체에서 받은 총 공격 줄 수)
   private int totalReceivedAttackLines = 0;
@@ -82,6 +84,18 @@ public class PlayerGamePanel extends JPanel {
    * @param themeColor  테마 색상
    */
   public PlayerGamePanel(String playerName, String controlInfo, Color themeColor) {
+    this(playerName, controlInfo, themeColor, null);
+  }
+  
+  /**
+   * 플레이어 게임 패널 생성 (GameEngine 주입 가능)
+   * 
+   * @param playerName  플레이어 이름
+   * @param controlInfo 조작키 정보
+   * @param themeColor  테마 색상
+   * @param customEngine 커스텀 게임 엔진 (null이면 일반 GameEngine 생성)
+   */
+  public PlayerGamePanel(String playerName, String controlInfo, Color themeColor, GameEngine customEngine) {
     this.playerName = playerName;
     this.controlInfo = controlInfo;
     this.themeColor = themeColor;
@@ -89,7 +103,19 @@ public class PlayerGamePanel extends JPanel {
     setLayout(new BorderLayout());
     setBackground(Color.BLACK);
 
-    initGameEngine();
+    if (customEngine != null) {
+      this.gameEngine = customEngine;
+      // 대전모드 콜백 설정
+      System.out.println("[PlayerGamePanel] 콜백 등록 중 (커스텀 엔진)...");
+      gameEngine.setOnBlockFixedCallback(() -> {
+        System.out.println("[PlayerGamePanel 콜백] 실행됨!");
+        checkAndApplyAttackBlocks();
+      });
+      System.out.println("[PlayerGamePanel] 콜백 등록 완료");
+    } else {
+      initGameEngine();
+    }
+    
     initComponents();
   }
 
@@ -533,6 +559,12 @@ public class PlayerGamePanel extends JPanel {
     int currX = gameEngine.getX();
     int currY = gameEngine.getY();
 
+    // 블록 중첩 방지: 렌더링 직전 이동 중인 블록을 보드에서 지우고 새 위치에 임시 배치
+    if (currBlock != null) {
+      gameEngine.getBoardManager().eraseBlock(currBlock, currX, currY);
+      gameEngine.getBoardManager().placeBlock(currBlock, currX, currY);
+    }
+
     se.tetris.team5.items.Item[][] items = new se.tetris.team5.items.Item[board.length][board[0].length];
     for (int i = 0; i < board.length; i++) {
       for (int j = 0; j < board[i].length; j++) {
@@ -549,11 +581,14 @@ public class PlayerGamePanel extends JPanel {
         gameBoard.triggerClearAnimation(clearedRows);
 
         // 대전모드: 2줄 이상 삭제 시 공격 블럭 데이터를 상대방에게 전송
-        if (clearedRows.size() >= 2 && opponentPanel != null) {
+        if (clearedRows.size() >= 2) {
           java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
           if (attackData != null && !attackData.isEmpty()) {
-            opponentPanel.addAttackBlocks(attackData);
-            System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
+            if (opponentPanel != null) {
+              opponentPanel.addAttackBlocks(attackData);
+              System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
+            }
+            queueOutgoingAttackBlocks(attackData);
           }
         }
       }
@@ -645,6 +680,90 @@ public class PlayerGamePanel extends JPanel {
 
   public boolean isGameOver() {
     return gameEngine.isGameOver();
+  }
+  
+  /**
+   * P2P 대전 모드: 상대방 점수 업데이트 (렌더링만)
+   */
+  public void updateScore(int score) {
+    if (scoreValueLabel != null) {
+      scoreValueLabel.setText(String.format("%,d", score));
+    }
+  }
+  
+  /**
+   * P2P 대전 모드: 상대방 레벨 업데이트 (렌더링만)
+   */
+  public void updateLevel(int level) {
+    if (levelLabel != null) {
+      levelLabel.setText("레벨: " + level);
+    }
+  }
+  
+  /**
+   * P2P 대전 모드: 상대방 줄 수 업데이트 (렌더링만)
+   */
+  public void updateLines(int lines) {
+    if (linesLabel != null) {
+      linesLabel.setText("줄: " + lines);
+    }
+  }
+  
+  /**
+   * P2P 대전 모드: 상대방 다음 블록 업데이트 (렌더링만)
+   * @param nextBlockType 다음 블록 타입 (I, O, T, S, Z, L, J, W, DOT)
+   */
+  public void updateNextBlock(String nextBlockType) {
+    if (gameEngine != null && nextBlockType != null) {
+      // 다음 블록을 nextBlockType으로 교체 (렌더링용)
+      try {
+        java.lang.reflect.Field nextBlockField = se.tetris.team5.gamelogic.GameEngine.class.getDeclaredField("nextBlock");
+        nextBlockField.setAccessible(true);
+        
+        se.tetris.team5.blocks.Block newNextBlock = createBlockFromType(nextBlockType);
+        if (newNextBlock != null) {
+          nextBlockField.set(gameEngine, newNextBlock);
+          
+          // 다음 블록 UI 재렌더링
+          if (nextVisualPanel != null) {
+            nextVisualPanel.repaint();
+          }
+        }
+      } catch (Exception e) {
+        System.err.println("[P2P] 다음 블록 업데이트 실패: " + e.getMessage());
+      }
+    }
+  }
+  
+  /**
+   * P2P 대전 모드: 상대방 타이머 업데이트 (렌더링만)
+   * @param elapsedTimeMs 경과 시간 (밀리초)
+   */
+  public void updateTimer(long elapsedTimeMs) {
+    int seconds = (int) (elapsedTimeMs / 1000);
+    int minutes = seconds / 60;
+    seconds = seconds % 60;
+    updateTimerLabel(String.format("%02d:%02d", minutes, seconds));
+  }
+  
+  /**
+   * blockType으로 Block 객체 생성
+   */
+  private se.tetris.team5.blocks.Block createBlockFromType(String blockType) {
+    if (blockType == null) return null;
+    
+    switch (blockType) {
+      case "I": return new se.tetris.team5.blocks.IBlock();
+      case "O": return new se.tetris.team5.blocks.OBlock();
+      case "T": return new se.tetris.team5.blocks.TBlock();
+      case "S": return new se.tetris.team5.blocks.SBlock();
+      case "Z": return new se.tetris.team5.blocks.ZBlock();
+      case "L": return new se.tetris.team5.blocks.LBlock();
+      case "J": return new se.tetris.team5.blocks.JBlock();
+      case "W": return new se.tetris.team5.blocks.WBlock();
+      case "DOT": return new se.tetris.team5.blocks.DotBlock();
+      default: return null;
+    }
   }
 
   /**
@@ -762,6 +881,54 @@ public class PlayerGamePanel extends JPanel {
    */
   public void setOpponentPanel(PlayerGamePanel opponent) {
     this.opponentPanel = opponent;
+  }
+  
+  /**
+   * 최근 생성된 공격 블럭 데이터를 P2P 전송을 위해 큐에 저장한다.
+   */
+  private void queueOutgoingAttackBlocks(java.util.List<Color[]> attackBlocks) {
+    if (attackBlocks == null || attackBlocks.isEmpty()) {
+      return;
+    }
+    
+    synchronized (pendingOutgoingAttackBlocks) {
+      pendingOutgoingAttackBlocks.addAll(attackBlocks);
+    }
+  }
+  
+  /**
+   * 대기 중인 공격 블럭을 가져오고 내부 큐를 비운다 (P2P 전송용).
+   */
+  public java.util.List<Color[]> drainPendingOutgoingAttackBlocks() {
+    synchronized (pendingOutgoingAttackBlocks) {
+      if (pendingOutgoingAttackBlocks.isEmpty()) {
+        return java.util.Collections.emptyList();
+      }
+      java.util.List<Color[]> copy = new java.util.ArrayList<>(pendingOutgoingAttackBlocks);
+      pendingOutgoingAttackBlocks.clear();
+      return copy;
+    }
+  }
+  
+  /**
+   * P2P 대전모드: 네트워크로 받은 공격 블럭을 수신합니다
+   * 
+   * @param receivedBlocks 상대방으로부터 받은 공격 블럭 데이터
+   */
+  public void receiveAttackBlocks(java.util.List<Color[]> receivedBlocks) {
+    if (receivedBlocks == null || receivedBlocks.isEmpty()) {
+      return;
+    }
+    
+    synchronized (attackBlocksData) {
+      attackBlocksData.addAll(receivedBlocks);
+      System.out.println("[P2P 공격 블럭 수신] " + receivedBlocks.size() + "줄 추가됨 - 대기 중인 공격: " + attackBlocksData.size() + "줄");
+    }
+    
+    // 공격 블럭 패널 업데이트
+    if (attackPanel != null) {
+      attackPanel.repaint();
+    }
   }
   
   /**
