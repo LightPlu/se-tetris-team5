@@ -112,9 +112,6 @@ public class GameEngine {
     boolean itemModeOnly = (gameMode == GameMode.ITEM);
     currentBlock = blockFactory.createRandomBlock(itemModeOnly);
     nextBlock = blockFactory.createRandomBlock(itemModeOnly);
-    // debug: log initial blocks
-    System.out.println("[GameEngine DEBUG] startNewGame current=" + currentBlock.getClass().getSimpleName()
-        + " next=" + nextBlock.getClass().getSimpleName());
     x = START_X;
     y = START_Y;
 
@@ -196,18 +193,13 @@ public class GameEngine {
       checkHeightPenalty();
 
       // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
-      System.out.println("[GameEngine] moveBlockDown - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
       if (onBlockFixedCallback != null) {
-        System.out.println("[GameEngine] 블럭 고정 완료 - 콜백 호출 시작");
         try {
           onBlockFixedCallback.run();
-          System.out.println("[GameEngine] 콜백 실행 완료");
         } catch (Exception e) {
           System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
           e.printStackTrace();
         }
-      } else {
-        System.out.println("[GameEngine] 콜백이 null입니다!");
       }
 
       spawnNextBlock();
@@ -318,18 +310,13 @@ public class GameEngine {
     checkHeightPenalty();
 
     // 대전모드: 블럭 고정 후 콜백 호출 (공격 블럭 적용)
-    System.out.println("[GameEngine] hardDrop - 블럭 고정됨, 콜백 체크: " + (onBlockFixedCallback != null));
     if (onBlockFixedCallback != null) {
-      System.out.println("[GameEngine] 하드드롭 블럭 고정 완료 - 콜백 호출 시작");
       try {
         onBlockFixedCallback.run();
-        System.out.println("[GameEngine] 콜백 실행 완료");
       } catch (Exception e) {
         System.err.println("[GameEngine] 콜백 실행 중 오류: " + e.getMessage());
         e.printStackTrace();
       }
-    } else {
-      System.out.println("[GameEngine] 콜백이 null입니다!");
     }
 
     spawnNextBlock();
@@ -454,11 +441,9 @@ public class GameEngine {
         int currentScore = gameScoring.getCurrentScore();
         if (currentScore >= PENALTY_SCORE) {
           gameScoring.addPoints(-PENALTY_SCORE);
-          System.out.println("[패널티] 블록이 10줄을 초과했습니다! -200점 (현재 높이: " + highestRow + "줄)");
         } else {
           // 점수가 200점 미만이면 0점으로 만듦
           gameScoring.addPoints(-currentScore);
-          System.out.println("[패널티] 블록이 10줄을 초과했습니다! 점수가 0점이 되었습니다 (현재 높이: " + highestRow + "줄)");
         }
         penaltyApplied = true;
       }
@@ -689,9 +674,7 @@ public class GameEngine {
    * @param callback 블럭이 고정된 직후 호출될 콜백
    */
   public void setOnBlockFixedCallback(Runnable callback) {
-    System.out.println("[GameEngine] setOnBlockFixedCallback 호출됨 - callback null 여부: " + (callback == null));
     this.onBlockFixedCallback = callback;
-    System.out.println("[GameEngine] 콜백 저장 완료");
   }
 
   /**
@@ -729,7 +712,6 @@ public class GameEngine {
    */
   public void setGameMode(GameMode mode) {
     this.gameMode = mode;
-    System.out.println("[게임 모드 변경] " + mode + " 모드로 설정되었습니다.");
   }
 
   /**

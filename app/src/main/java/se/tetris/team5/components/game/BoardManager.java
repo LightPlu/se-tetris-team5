@@ -462,7 +462,6 @@ public class BoardManager {
       }
       lastAttackBlocksData.add(rowColors);
     }
-    System.out.println("[대전모드 공격] " + lastClearedRows.size() + "줄 삭제, 공격 블럭 계산 완료");
   }
 
   /**
@@ -516,8 +515,6 @@ public class BoardManager {
         }
       }
     }
-    
-    System.out.println("[공격 블럭 추가] " + numRowsToAdd + "줄이 맨 밑에 추가됨");
     
     // 맨 위 줄에 블럭이 있으면 게임 오버 위험 (하지만 즉시 게임 오버는 아님)
     boolean topRowHasBlock = false;

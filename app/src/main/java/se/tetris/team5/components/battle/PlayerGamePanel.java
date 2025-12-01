@@ -98,12 +98,9 @@ public class PlayerGamePanel extends JPanel {
     gameEngine = new GameEngine(GameBoard.HEIGHT, GameBoard.WIDTH, false);
 
     // 대전모드: 블럭 고정 후 공격 블럭 적용 콜백 설정
-    System.out.println("[PlayerGamePanel] 콜백 등록 중...");
     gameEngine.setOnBlockFixedCallback(() -> {
-      System.out.println("[PlayerGamePanel 콜백] 실행됨!");
       checkAndApplyAttackBlocks();
     });
-    System.out.println("[PlayerGamePanel] 콜백 등록 완료");
   }
 
   private void initComponents() {
@@ -553,7 +550,6 @@ public class PlayerGamePanel extends JPanel {
           java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
           if (attackData != null && !attackData.isEmpty()) {
             opponentPanel.addAttackBlocks(attackData);
-            System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
           }
         }
       }
@@ -663,8 +659,6 @@ public class PlayerGamePanel extends JPanel {
       int remainingSpace = MAX_ATTACK_LINES - totalReceivedAttackLines;
 
       if (remainingSpace <= 0) {
-        System.out.println(
-            "[공격 블럭 거부] 누적 공격 줄 수 " + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + " - 더 이상 공격 받을 수 없음");
         return;
       }
 
@@ -675,14 +669,10 @@ public class PlayerGamePanel extends JPanel {
         // 일부만 추가 가능한 경우
         attackBlocksData.addAll(newAttackBlocks.subList(0, linesToAdd));
         totalReceivedAttackLines += linesToAdd;
-        System.out.println("[공격 블럭 부분 추가] " + linesToAdd + "/" + newAttackBlocks.size() + "줄만 추가됨, 누적: "
-            + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + "줄");
       } else {
         // 전부 추가 가능한 경우
         attackBlocksData.addAll(newAttackBlocks);
         totalReceivedAttackLines += newAttackBlocks.size();
-        System.out.println("[공격 블럭 추가] " + newAttackBlocks.size() + "줄 추가됨, 누적: " + totalReceivedAttackLines + "/"
-            + MAX_ATTACK_LINES + "줄");
       }
     }
 
@@ -711,7 +701,6 @@ public class PlayerGamePanel extends JPanel {
         if (attackPanel != null) {
           attackPanel.repaint();
         }
-        System.out.println("[공격 블럭 적용 완료] 게임 보드에 추가되고 패널 초기화됨");
       }
     }
   }
@@ -721,12 +710,8 @@ public class PlayerGamePanel extends JPanel {
    */
   private void checkAndApplyAttackBlocks() {
     synchronized (attackBlocksData) {
-      System.out.println("[checkAndApplyAttackBlocks] 호출됨 - attackBlocksData 크기: " + attackBlocksData.size());
       if (!attackBlocksData.isEmpty()) {
-        System.out.println("[블럭 고정 감지] 공격 블럭 적용 시작 - " + attackBlocksData.size() + "줄");
         applyPendingAttackBlocks();
-      } else {
-        System.out.println("[checkAndApplyAttackBlocks] 공격 블럭 데이터가 비어있음");
       }
     }
   }
