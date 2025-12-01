@@ -1009,6 +1009,12 @@ public class game extends JPanel implements KeyListener {
         System.out.println("[game screen] consuming cleared rows for animation: " + clearedRows);
         gameBoard.triggerClearAnimation(clearedRows);
       }
+      
+      // 폭탄 폭발 애니메이션
+      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = gameEngine.consumeLastBombExplosionCells();
+      if (bombCells != null && !bombCells.isEmpty()) {
+        gameBoard.triggerBombExplosion(bombCells);
+      }
     } catch (Exception ex) {
       // safe-guard: don't let UI update fail due to animation triggering
     }

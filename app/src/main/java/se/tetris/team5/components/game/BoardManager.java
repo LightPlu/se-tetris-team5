@@ -197,6 +197,9 @@ public class BoardManager {
       // 폭탄 블록(DotBlock) 특수 처리: 블록의 각 칸 위치를 중심으로 3x3 범위 폭발
       System.out.println("[폭탄 블록] DotBlock 고정 - 폭발 시작!");
 
+      // 폭발로 사라진 셀들의 좌표 초기화
+      lastBombExplosionCells.clear();
+
       // 먼저 폭탄 블록 자체를 보드에서 제거 (움직이는 블록 상태 제거)
       for (int i = 0; i < block.width(); i++) {
         for (int j = 0; j < block.height(); j++) {
@@ -339,6 +342,8 @@ public class BoardManager {
   private java.util.Set<String> lastFixedBlockPositions = new java.util.HashSet<>();
   // 마지막 줄 삭제로 생성된 공격 블럭 데이터 (대전모드용)
   private java.util.List<Color[]> lastAttackBlocksData = new java.util.ArrayList<>();
+  // 폭탄 폭발로 사라진 셀 좌표 (애니메이션용)
+  private java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> lastBombExplosionCells = new java.util.ArrayList<>();
 
   /**
    * 마지막 줄 삭제 시 타임스톱 아이템이 있었는지 반환하고 플래그 초기화
@@ -347,6 +352,13 @@ public class BoardManager {
     boolean result = timeStopItemCleared;
     timeStopItemCleared = false; // 플래그 초기화
     return result;
+  }
+  
+  /**
+   * 폭탄 폭발로 사라진 셀 좌표들을 반환합니다 (애니메이션용)
+   */
+  public java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> getLastBombExplosionCells() {
+    return new java.util.ArrayList<>(lastBombExplosionCells);
   }
 
   /**
@@ -559,6 +571,9 @@ public class BoardManager {
             boardColors[targetY][targetX] = null;
             boardItems[targetY][targetX] = null;
             explodedCells++;
+            
+            // 폭발한 셀 좌표 기록 (애니메이션용)
+            lastBombExplosionCells.add(new se.tetris.team5.components.game.GameBoard.CellPos(targetY, targetX));
           }
         }
       }

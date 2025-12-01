@@ -592,6 +592,12 @@ public class PlayerGamePanel extends JPanel {
           }
         }
       }
+      
+      // 폭탄 폭발 애니메이션 처리
+      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = gameEngine.consumeLastBombExplosionCells();
+      if (bombCells != null && !bombCells.isEmpty()) {
+        gameBoard.triggerBombExplosion(bombCells);
+      }
     } catch (Exception ex) {
       // 애니메이션 처리 실패해도 게임 진행
     }
