@@ -243,7 +243,7 @@ public class p2pbattle extends JPanel implements KeyListener {
      */
     private String getServerIPInfoText() {
         if (server == null) {
-            return "<html>LAN 접속: 알 수 없음<br>로컬 테스트: 127.0.0.1</html>";
+            return "<html><div style='text-align:center;'>LAN 접속: 알 수 없음<br>로컬 테스트: 127.0.0.1</div></html>";
         }
 
         java.util.List<String> reachableIPs = server.getReachableIPs();
@@ -259,7 +259,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         }
 
         String lanText = lanIPs.isEmpty() ? "알 수 없음" : String.join(", ", lanIPs);
-        return "<html>LAN 접속: " + lanText + "<br>로컬 테스트: " + loopbackIP + "</html>";
+        return "<html><div style='text-align:center;'>LAN 접속: " + lanText + "<br>로컬 테스트: " + loopbackIP + "</div></html>";
     }
     
     /**
@@ -323,6 +323,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         ipLabel.setFont(createKoreanFont(Font.BOLD, 18));
         ipLabel.setForeground(Color.YELLOW);
         ipLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        ipLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
         JLabel waitingLabel = new JLabel("클라이언트의 접속을 기다리는 중...");
         waitingLabel.setFont(createKoreanFont(Font.PLAIN, 16));
