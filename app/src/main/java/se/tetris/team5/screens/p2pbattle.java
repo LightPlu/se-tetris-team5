@@ -95,6 +95,7 @@ public class p2pbattle extends JPanel implements KeyListener {
     private long gameRandomSeed;
     
     private String originalWindowSize;
+    private WindowFocusListener windowFocusListener;
     
     public p2pbattle(ScreenController screenController) {
         this.screenController = screenController;
@@ -112,6 +113,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         addKeyListener(this);
         
         initializeUI();
+        setupWindowFocusHandling();
     }
     
     private void loadBackgroundImage() {
@@ -816,22 +818,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         latencyUpdateTimer = new Timer(500, e -> updateLatencyDisplay());
         latencyUpdateTimer.start();
         
-        // 키 포커스 설정
-        removeKeyListener(this); // 기존 리스너 제거
-        addKeyListener(this); // 다시 추가
-        setFocusable(true);
-        setFocusTraversalKeysEnabled(false);
-        requestFocusInWindow();
-        
-        // 몇 밀리초 후 다시 포커스 요청 (확실히)
-        Timer focusTimer = new Timer(200, e -> {
-            setFocusable(true);
-            requestFocusInWindow();
-            System.out.println("[P2P] 포커스 요청 완료");
-            ((Timer)e.getSource()).stop();
-        });
-        focusTimer.setRepeats(false);
-        focusTimer.start();
+        ensureGameplayFocus();
     }
     
     /**
@@ -1491,6 +1478,45 @@ public class p2pbattle extends JPanel implements KeyListener {
     /**
      * 최근 접속 IP 저장
      */
+    private void ensureGameplayFocus() {
+        if (currentState != ScreenState.PLAYING) {
+            return;
+        }
+        removeKeyListener(this);
+        addKeyListener(this);
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+        boolean focused = requestFocusInWindow();
+
+        Timer focusTimer = new Timer(200, e -> {
+            if (!hasFocus()) {
+                setFocusable(true);
+                requestFocusInWindow();
+                System.out.println("[P2P] 포커스 재요청");
+            }
+            ((Timer) e.getSource()).stop();
+        });
+        focusTimer.setRepeats(false);
+        focusTimer.start();
+
+        if (!focused) {
+            SwingUtilities.invokeLater(this::requestFocusInWindow);
+        }
+    }
+
+    private void setupWindowFocusHandling() {
+        if (screenController == null || windowFocusListener != null) {
+            return;
+        }
+        windowFocusListener = new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                SwingUtilities.invokeLater(() -> ensureGameplayFocus());
+            }
+        };
+        screenController.addWindowFocusListener(windowFocusListener);
+    }
+
     private void saveRecentIP(String ip) {
         try {
             java.util.Properties props = new java.util.Properties();
