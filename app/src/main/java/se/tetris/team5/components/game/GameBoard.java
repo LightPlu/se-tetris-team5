@@ -50,6 +50,8 @@ public class GameBoard extends JTextPane {
     private javax.swing.Timer animTimer = null;
     // per-row particle lists for explosion effect
     private java.util.Map<Integer, java.util.List<Particle>> rowParticles = new java.util.HashMap<>();
+    // 폭탄 폭발 애니메이션 매니저
+    private BombAnimationManager bombAnimationManager;
 
     public GameBoard() {
         initComponents();
@@ -77,6 +79,9 @@ public class GameBoard extends JTextPane {
         overlayBoard = new int[HEIGHT][WIDTH];
         overlayColors = new Color[HEIGHT][WIDTH];
         drawEmptyBoard();
+        
+        // 폭탄 애니메이션 매니저 초기화
+        bombAnimationManager = new BombAnimationManager(() -> repaint());
     }
 
     /**
@@ -300,6 +305,9 @@ public class GameBoard extends JTextPane {
             }
             g4.dispose();
         }
+        
+        // 폭탄 폭발 애니메이션 (개별 셀) - BombAnimationManager에게 위임
+        bombAnimationManager.render((Graphics2D) g, startX, startY, cellSize);
 
 
 
@@ -309,6 +317,11 @@ public class GameBoard extends JTextPane {
         }
     }
 
+    /** Trigger a bomb explosion animation for specific cells. */
+    public void triggerBombExplosion(java.util.List<CellPos> cells) {
+        bombAnimationManager.triggerBombExplosion(cells);
+    }
+    
     /** Trigger a cleared-rows animation for the given rows (row indices, 0..HEIGHT-1). */
     public void triggerClearAnimation(java.util.List<Integer> rows) {
         if (rows == null || rows.isEmpty()) return;
@@ -369,6 +382,9 @@ public class GameBoard extends JTextPane {
     }
 
     /**
+     * Create explosion particles for bomb cells.
+     */
+    /**
      * Create explosion particles for the cleared rows. Called by external code before starting
      * the animation timer; we compute pixel-relative positions so paintComponent can render them.
      */
@@ -412,6 +428,35 @@ public class GameBoard extends JTextPane {
         }
     }
 
+    /** Cell position for bomb explosion animation */
+    public static class CellPos {
+        public final int row;
+        public final int col;
+        
+        public CellPos(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
+        
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof CellPos)) return false;
+            CellPos that = (CellPos) o;
+            return row == that.row && col == that.col;
+        }
+        
+        @Override
+        public int hashCode() {
+            return row * 31 + col;
+        }
+        
+        @Override
+        public String toString() {
+            return "(" + row + "," + col + ")";
+        }
+    }
+    
     /** Simple particle used for explosion fragments. Positions are relative to the left of the grid. */
     private static class Particle {
         float x, y; // pixel offsets relative to left edge of the grid

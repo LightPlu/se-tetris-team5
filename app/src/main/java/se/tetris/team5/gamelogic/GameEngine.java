@@ -49,6 +49,9 @@ public class GameEngine {
   // Last cleared rows (for UI to consume and animate). Cleared row indices are
   // 0..HEIGHT-1
   private java.util.List<Integer> lastClearedRows = new java.util.ArrayList<>();
+  
+  // Last bomb explosion cells (for UI to consume and animate)
+  private java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> lastBombExplosionCells = new java.util.ArrayList<>();
 
   // 플레이어가 획득한 아이템 (1개만 보유, 큐로 확장 가능)
   private se.tetris.team5.items.Item acquiredItem = null;
@@ -165,6 +168,15 @@ public class GameEngine {
       boardManager.placeBlock(currentBlock, x, y);
       java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
       int lineClearRemovedBlocks = boardManager.fixBlock(currentBlock, x, y, removedItems);
+      
+      // 폭탄 블록 폭발 애니메이션 체크 (fixBlock 직후)
+      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = boardManager.getLastBombExplosionCells();
+      if (bombCells != null && !bombCells.isEmpty()) {
+        // UI로 전달하기 위해 저장 (별도 리스너 또는 consumeLastBombExplosionCells로 가져갈 수 있음)
+        lastBombExplosionCells = bombCells;
+        notifyListenersImmediate();
+      }
+      
       // 줄삭제 아이템으로 지워진 블럭 수만큼 점수 추가 (30점/블럭)
       if (lineClearRemovedBlocks > 0) {
         gameScoring.addPoints(applyDoubleScore(lineClearRemovedBlocks * 30));
@@ -284,6 +296,14 @@ public class GameEngine {
     boardManager.placeBlock(currentBlock, x, y);
     java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
     int lineClearRemovedBlocks = boardManager.fixBlock(currentBlock, x, y, removedItems);
+    
+    // 폭탄 블록 폭발 애니메이션 체크 (hardDrop에서 fixBlock 직후)
+    java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = boardManager.getLastBombExplosionCells();
+    if (bombCells != null && !bombCells.isEmpty()) {
+      lastBombExplosionCells = bombCells;
+      notifyListenersImmediate();
+    }
+    
     // 줄삭제 아이템으로 지워진 블럭 수만큼 점수 추가 (30점/블럭)
     if (lineClearRemovedBlocks > 0) {
       gameScoring.addPoints(applyDoubleScore(lineClearRemovedBlocks * 30));
@@ -609,6 +629,18 @@ public class GameEngine {
       return new java.util.ArrayList<>();
     java.util.List<Integer> out = new java.util.ArrayList<>(lastClearedRows);
     lastClearedRows.clear();
+    return out;
+  }
+  
+  /**
+   * Returns bomb explosion cells for UI animation and clears the list so
+   * subsequent calls won't return the same event again.
+   */
+  public java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> consumeLastBombExplosionCells() {
+    if (lastBombExplosionCells == null || lastBombExplosionCells.isEmpty())
+      return new java.util.ArrayList<>();
+    java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> out = new java.util.ArrayList<>(lastBombExplosionCells);
+    lastBombExplosionCells.clear();
     return out;
   }
 
