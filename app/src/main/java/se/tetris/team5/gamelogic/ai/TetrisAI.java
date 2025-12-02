@@ -16,26 +16,32 @@ public class TetrisAI {
 
   private final GameEngine gameEngine;
   private final BlockRotationManager rotationManager;
-  private int thinkDelayMs = 700; // 기본값: 보통 난이도
+
+  /** AI 사고 시간 (밀리초) */
+  private int thinkDelayMs = AIPlayerController.AIDifficulty.NORMAL.getThinkDelayMs();
   private long lastThinkTime = 0;
 
-  // AI 상태
-  private int rotate = 0; // 회전 횟수
-  private int shift = 0; // 좌우 이동
+  /** AI 상태: 회전 횟수 */
+  private int rotate = 0;
+  /** AI 상태: 좌우 이동 횟수 (양수: 왼쪽, 음수: 오른쪽) */
+  private int shift = 0;
+  /** AI 초기화 필요 여부 */
   private boolean isInitial = true;
 
-  // 보드 크기
-  private static final int WIDTH = 10;
-  private static final int HEIGHT = 20;
-  // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드(HEIGHT)를 사용
+  /** 보드 너비 */
+  private static final int BOARD_WIDTH = 10;
+  /** 보드 높이 */
+  private static final int BOARD_HEIGHT = 20;
 
-  // Beam Search 설정
-  private static final int BEAM_WIDTH = 3; // 상위 K개만 유지
+  /** Beam Search에서 유지할 상위 후보 수 */
+  private static final int BEAM_WIDTH = 3;
+  /** Beam Search에서 초기 생성할 후보 수 (필터링 전) */
+  private static final int BEAM_CANDIDATE_MULTIPLIER = 10;
 
-  // AI 난이도
+  /** AI 난이도 */
   private AIPlayerController.AIDifficulty difficulty = AIPlayerController.AIDifficulty.NORMAL;
 
-  // 평가 함수 가중치 (기본값)
+  /** 평가 함수 가중치 */
   private WeightSet weights;
 
   public TetrisAI(GameEngine gameEngine) {
@@ -55,21 +61,25 @@ public class TetrisAI {
   /**
    * AI 난이도 설정
    * 난이도에 따라 사고 시간만 조절합니다. 가중치는 항상 기본값을 사용합니다.
-   * 
+   *
    * @param difficulty AI 난이도 (NORMAL: 보통, HARD: 어려움)
    */
   public void setDifficulty(AIPlayerController.AIDifficulty difficulty) {
-    this.difficulty = difficulty;
-
-    // 난이도에 따라 사고 시간만 조절
-    switch (difficulty) {
-      case NORMAL:
-        this.thinkDelayMs = 500; // 보통: 500ms
-        break;
-      case HARD:
-        this.thinkDelayMs = 200; // 어려움: 200ms (더 빠른 사고)
-        break;
+    if (difficulty == null) {
+      throw new IllegalArgumentException("난이도는 null일 수 없습니다.");
     }
+
+    this.difficulty = difficulty;
+    this.thinkDelayMs = difficulty.getThinkDelayMs();
+  }
+
+  /**
+   * AI 사고 시간 직접 설정 (AI vs AI 모드 등 특수한 경우용)
+   *
+   * @param thinkDelayMs 사고 시간 (밀리초)
+   */
+  public void setThinkDelay(int thinkDelayMs) {
+    this.thinkDelayMs = thinkDelayMs;
   }
 
   /**
@@ -81,7 +91,7 @@ public class TetrisAI {
 
   /**
    * AI가 다음 행동을 결정하고 실행
-   * 
+   *
    * @return true if action was taken, false otherwise
    */
   public boolean makeMove() {
@@ -179,7 +189,7 @@ public class TetrisAI {
       beam.offer(new MoveScore(move, result.board, score));
 
       // Beam Width 제한
-      if (beam.size() > BEAM_WIDTH * 10) { // 여유있게 생성 후 나중에 필터링
+      if (beam.size() > BEAM_WIDTH * BEAM_CANDIDATE_MULTIPLIER) {
         PriorityQueue<MoveScore> temp = new PriorityQueue<>(
             Comparator.comparingDouble((MoveScore ms) -> ms.score).reversed());
         for (int i = 0; i < BEAM_WIDTH && !beam.isEmpty(); i++) {
@@ -287,13 +297,13 @@ public class TetrisAI {
       }
 
       // 모든 가능한 X 위치 시도
-      for (int x = -2; x <= WIDTH - 2; x++) {
+      for (int x = -2; x <= BOARD_WIDTH - 2; x++) {
         // 블록을 위에서부터 떨어뜨리기 (y는 작을수록 위쪽)
         int y = 0;
         int lastValidY = -1;
 
         // 아래로 내려가면서 유효한 위치 찾기
-        while (y < HEIGHT) { // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드 체크
+        while (y < BOARD_HEIGHT) {
           if (canPlaceBlock(rotatedBlock, x, y, board)) {
             lastValidY = y;
             y++;
@@ -314,7 +324,7 @@ public class TetrisAI {
 
   /**
    * 블록을 특정 위치에 놓았을 때의 결과 보드 상태를 반환
-   * 
+   *
    * @return SimulationResult (보드 상태와 줄 삭제 개수)
    */
   private SimulationResult simulateMove(int[][] board, Block piece, int x, int rotation) {
@@ -336,7 +346,7 @@ public class TetrisAI {
     int lastValidY = -1;
 
     // 아래로 내려가면서 유효한 위치 찾기
-    while (y < HEIGHT) { // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드 체크
+    while (y < BOARD_HEIGHT) {
       if (canPlaceBlock(rotatedBlock, x, y, newBoard)) {
         lastValidY = y;
         y++;
@@ -389,7 +399,7 @@ public class TetrisAI {
    * 4. Column Transitions: 세로 전환 횟수
    * 5. Number of Holes: 구멍 개수
    * 6. Well Sums: Well의 깊이 합
-   * 
+   *
    * 대전 모드 추가:
    * - 2줄 이상 삭제 시 공격 보너스
    */
@@ -438,9 +448,9 @@ public class TetrisAI {
    */
   private int countHoles(int[][] board) {
     int holes = 0;
-    for (int x = 0; x < WIDTH; x++) {
+    for (int x = 0; x < BOARD_WIDTH; x++) {
       boolean foundBlock = false;
-      for (int y = 0; y < HEIGHT; y++) { // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드 체크
+      for (int y = 0; y < BOARD_HEIGHT; y++) {
         if (board[y][x] == 1) { // == 1로 통일: 고정된 블록만 체크
           foundBlock = true;
         } else if (foundBlock) {
@@ -464,7 +474,7 @@ public class TetrisAI {
 
     for (int y = 0; y <= highestRow; y++) {
       boolean last = true; // 왼쪽 경계는 채워져 있다고 가정
-      for (int x = 0; x < WIDTH; x++) {
+      for (int x = 0; x < BOARD_WIDTH; x++) {
         boolean now = (board[y][x] == 1); // == 1로 통일: 고정된 블록만 체크
         if (last != now) {
           transitions++;
@@ -496,8 +506,8 @@ public class TetrisAI {
         }
       }
     }
-    // Landing Height = HEIGHT - maxY (높이로 변환, 높을수록 큰 값)
-    return HEIGHT - maxY;
+    // Landing Height = BOARD_HEIGHT - maxY (높이로 변환, 높을수록 큰 값)
+    return BOARD_HEIGHT - maxY;
   }
 
   /**
@@ -511,9 +521,9 @@ public class TetrisAI {
 
     // 삭제될 줄 찾기
     List<Integer> fullRows = new ArrayList<>();
-    for (int row = 0; row < HEIGHT; row++) {
+    for (int row = 0; row < BOARD_HEIGHT; row++) {
       boolean full = true;
-      for (int col = 0; col < WIDTH; col++) {
+      for (int col = 0; col < BOARD_WIDTH; col++) {
         if (boardBeforeClear[row][col] != 1) {
           full = false;
           break;
@@ -552,7 +562,7 @@ public class TetrisAI {
       return 0;
     }
 
-    for (int x = 0; x < WIDTH; x++) {
+    for (int x = 0; x < BOARD_WIDTH; x++) {
       boolean last = true; // 위쪽 경계는 채워져 있다고 가정
       for (int y = 0; y <= highestRow; y++) {
         boolean now = (board[y][x] == 1);
@@ -582,13 +592,13 @@ public class TetrisAI {
       return 0;
     }
 
-    for (int x = 0; x < WIDTH; x++) {
+    for (int x = 0; x < BOARD_WIDTH; x++) {
       int wellDepth = 0;
       for (int y = 0; y <= highestRow; y++) {
         // Well 조건: 현재 칸이 비어있고, 양쪽이 채워져 있음
         boolean isEmpty = (board[y][x] != 1);
         boolean leftFilled = (x == 0) || (board[y][x - 1] == 1);
-        boolean rightFilled = (x == WIDTH - 1) || (board[y][x + 1] == 1);
+        boolean rightFilled = (x == BOARD_WIDTH - 1) || (board[y][x + 1] == 1);
 
         if (isEmpty && leftFilled && rightFilled) {
           wellDepth++;
@@ -615,9 +625,9 @@ public class TetrisAI {
    */
   private int countFullRows(int[][] board) {
     int count = 0;
-    for (int y = 0; y < HEIGHT; y++) { // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드 체크
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
       boolean full = true;
-      for (int x = 0; x < WIDTH; x++) {
+      for (int x = 0; x < BOARD_WIDTH; x++) {
         if (board[y][x] != 1) { // BoardManager와 동일: != 1 체크 (고정된 블록만)
           full = false;
           break;
@@ -634,8 +644,8 @@ public class TetrisAI {
    * 가장 높은 행 찾기
    */
   private int findHighestRow(int[][] board) {
-    for (int y = 0; y < HEIGHT; y++) { // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드 체크
-      for (int x = 0; x < WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      for (int x = 0; x < BOARD_WIDTH; x++) {
         if (board[y][x] == 1) { // == 1로 통일: 고정된 블록만 체크
           return y;
         }
@@ -650,7 +660,7 @@ public class TetrisAI {
    * BoardManager의 게임 오버 로직과 동일
    */
   private boolean isGameOver(int[][] board) {
-    for (int x = 0; x < WIDTH; x++) {
+    for (int x = 0; x < BOARD_WIDTH; x++) {
       if (board[0][x] == 1) { // 맨 위 줄에 고정된 블록이 있으면 게임 오버
         return true;
       }
@@ -664,7 +674,7 @@ public class TetrisAI {
    */
   private boolean canPlaceBlock(Block block, int x, int y, int[][] board) {
     // 경계 검사
-    if (x < 0 || x + block.width() > WIDTH || y + block.height() > HEIGHT) {
+    if (x < 0 || x + block.width() > BOARD_WIDTH || y + block.height() > BOARD_HEIGHT) {
       return false;
     }
 
@@ -706,7 +716,7 @@ public class TetrisAI {
         if (block.getShape(bx, by) == 1) {
           int boardX = x + bx;
           int boardY = y + by;
-          if (boardY >= 0 && boardY < HEIGHT && boardX >= 0 && boardX < WIDTH) {
+          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
             board[boardY][boardX] = 1;
           }
         }
@@ -717,14 +727,14 @@ public class TetrisAI {
   /**
    * 줄 삭제 시뮬레이션
    * BoardManager.clearLines()와 동일한 로직 사용
-   * y=0이 위쪽, y=HEIGHT-1이 아래쪽 (BoardManager와 동일한 좌표계)
+   * y=0이 위쪽, y=BOARD_HEIGHT-1이 아래쪽 (BoardManager와 동일한 좌표계)
    */
   private int[][] simulateLineClear(int[][] board) {
     // 완성된 줄 찾기 (BoardManager와 동일: 전체 보드 체크)
     List<Integer> fullRows = new ArrayList<>();
-    for (int y = 0; y < HEIGHT; y++) { // N_BUFFER_LINES 제거: BoardManager와 동일하게 전체 보드 체크
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
       boolean full = true;
-      for (int x = 0; x < WIDTH; x++) {
+      for (int x = 0; x < BOARD_WIDTH; x++) {
         if (board[y][x] != 1) { // BoardManager와 동일: != 1 체크 (고정된 블록만)
           full = false;
           break;
@@ -743,20 +753,20 @@ public class TetrisAI {
     // 줄 삭제 시뮬레이션 (BoardManager와 동일한 로직)
     // 아래에서 위로 읽으면서, 삭제되지 않은 줄을 아래에서 위로 채움
     int[][] newBoard = new int[board.length][board[0].length];
-    int writeRow = HEIGHT - 1; // 아래쪽부터 채움
+    int writeRow = BOARD_HEIGHT - 1; // 아래쪽부터 채움
 
-    // 아래에서 위로 읽기 (HEIGHT-1부터 0까지)
-    for (int readRow = HEIGHT - 1; readRow >= 0; readRow--) {
+    // 아래에서 위로 읽기 (BOARD_HEIGHT-1부터 0까지)
+    for (int readRow = BOARD_HEIGHT - 1; readRow >= 0; readRow--) {
       if (!fullRows.contains(readRow)) {
         // 삭제되지 않은 줄을 아래에서 위로 복사
-        System.arraycopy(board[readRow], 0, newBoard[writeRow], 0, WIDTH);
+        System.arraycopy(board[readRow], 0, newBoard[writeRow], 0, BOARD_WIDTH);
         writeRow--;
       }
     }
 
     // 남은 위쪽 공간을 빈 공간(0)으로 채움 (BoardManager와 동일)
     for (int r = writeRow; r >= 0; r--) {
-      for (int c = 0; c < WIDTH; c++) {
+      for (int c = 0; c < BOARD_WIDTH; c++) {
         newBoard[r][c] = 0;
       }
     }

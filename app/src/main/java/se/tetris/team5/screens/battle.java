@@ -29,18 +29,14 @@ public class battle extends JPanel implements KeyListener {
    * 배틀 모드 리소스 정리 (타이머, 컨트롤러 등)
    * 반드시 화면 전환 시 호출할 것
    */
+  /**
+   * 배틀 모드 리소스 정리 (타이머, 컨트롤러 등)
+   * 반드시 화면 전환 시 호출할 것
+   */
   public void dispose() {
     // AI 컨트롤러 정리
-    if (aiController != null) {
-      aiController.stop();
-      aiController.dispose();
-      aiController = null;
-    }
-    if (aiController1 != null) {
-      aiController1.stop();
-      aiController1.dispose();
-      aiController1 = null;
-    }
+    disposeAllAIControllers();
+
     // 타이머 정리
     if (timeLimitTimer != null) {
       timeLimitTimer.stop();
@@ -50,11 +46,11 @@ public class battle extends JPanel implements KeyListener {
       gameOverCheckTimer.stop();
       gameOverCheckTimer = null;
     }
-    // 컨트롤러 정지
+
+    // 게임 컨트롤러 정지
     if (gameController != null) {
       gameController.stop();
     }
-    // 키 리스너 등 기타 리소스 정리 필요시 여기에 추가
   }
 
   private static final long serialVersionUID = 1L;
@@ -229,60 +225,8 @@ public class battle extends JPanel implements KeyListener {
         player2Panel,
         this::handleGameOver);
 
-    // 입력 핸들러 생성
-    if (isAIVsAIMode) {
-      // AI vs AI 모드: 둘 다 AI 컨트롤러 생성
-      aiController1 = new AIPlayerController(player1Panel.getGameEngine());
-      aiController1.setOnMoveCallback(() -> {
-        player1Panel.updateGameUI();
-      });
-      aiController1.setOnGameOverCallback(() -> {
-        player1Panel.updateGameUI();
-        if (player1Panel.isGameOver()) {
-          handleGameOver(2); // AI 2 승리
-        }
-      });
-      
-      aiController = new AIPlayerController(player2Panel.getGameEngine());
-      aiController.setOnMoveCallback(() -> {
-        player2Panel.updateGameUI();
-      });
-      aiController.setOnGameOverCallback(() -> {
-        player2Panel.updateGameUI();
-        if (player2Panel.isGameOver()) {
-          handleGameOver(1); // AI 1 승리
-        }
-      });
-    } else {
-      player1Input = new Player1InputHandler(player1Panel.getGameEngine());
-      if (!isAIMode) {
-        // AI 모드가 아닐 때만 플레이어2 입력 핸들러 생성
-        player2Input = new Player2InputHandler(player2Panel.getGameEngine());
-      } else {
-        // AI 모드: AI 컨트롤러 생성 (플레이어2만)
-        aiController = new AIPlayerController(player2Panel.getGameEngine());
-        
-        // AI 난이도 설정
-        String aiDifficultyStr = System.getProperty("tetris.ai.difficulty", "NORMAL");
-        AIPlayerController.AIDifficulty aiDifficulty;
-        if ("HARD".equals(aiDifficultyStr)) {
-          aiDifficulty = AIPlayerController.AIDifficulty.HARD;
-        } else {
-          aiDifficulty = AIPlayerController.AIDifficulty.NORMAL;
-        }
-        aiController.setDifficulty(aiDifficulty);
-        
-        aiController.setOnMoveCallback(() -> {
-          player2Panel.updateGameUI();
-        });
-        aiController.setOnGameOverCallback(() -> {
-          player2Panel.updateGameUI();
-          if (player2Panel.isGameOver()) {
-            handleGameOver(1); // 플레이어1 승리
-          }
-        });
-      }
-    }
+    // 입력 핸들러 및 AI 컨트롤러 생성
+    initializeInputHandlers();
 
     buildUI();
 
@@ -325,18 +269,7 @@ public class battle extends JPanel implements KeyListener {
     gameController.start();
 
     // AI 모드인 경우 AI 시작
-    if (isAIVsAIMode) {
-      // AI vs AI 모드: 둘 다 AI 시작
-      if (aiController1 != null) {
-        aiController1.start();
-      }
-      if (aiController != null) {
-        aiController.start();
-      }
-    } else if (isAIMode && aiController != null) {
-      // AI 모드: 플레이어2 AI만 시작
-      aiController.start();
-    }
+    startAllAIControllers();
 
     // 시간제한 모드인 경우 타이머가 항상 생성되도록 보장
     if ("TIMELIMIT".equals(battleMode)) {
@@ -399,16 +332,7 @@ public class battle extends JPanel implements KeyListener {
     }
 
     // AI 컨트롤러 즉시 정지
-    if (isAIVsAIMode) {
-      if (aiController1 != null) {
-        aiController1.stop();
-      }
-      if (aiController != null) {
-        aiController.stop();
-      }
-    } else if (isAIMode && aiController != null) {
-      aiController.stop();
-    }
+    stopAllAIControllers();
 
     // 게임 컨트롤러 정지
     if (gameController != null) {
@@ -437,22 +361,7 @@ public class battle extends JPanel implements KeyListener {
 
     if (option == 0 || option == JOptionPane.CLOSED_OPTION) {
       // 게임 정리
-      if (isAIVsAIMode) {
-        if (aiController1 != null) {
-          aiController1.stop();
-          aiController1.dispose();
-          aiController1 = null;
-        }
-        if (aiController != null) {
-          aiController.stop();
-          aiController.dispose();
-          aiController = null;
-        }
-      } else if (aiController != null) {
-        aiController.stop();
-        aiController.dispose();
-        aiController = null;
-      }
+      disposeAllAIControllers();
       if (gameController != null) {
         gameController.stop();
       }
@@ -468,22 +377,7 @@ public class battle extends JPanel implements KeyListener {
       screenController.showScreen("home");
     } else {
       // 게임 재시작
-      if (isAIVsAIMode) {
-        if (aiController1 != null) {
-          aiController1.stop();
-          aiController1.dispose();
-          aiController1 = null;
-        }
-        if (aiController != null) {
-          aiController.stop();
-          aiController.dispose();
-          aiController = null;
-        }
-      } else if (aiController != null) {
-        aiController.stop();
-        aiController.dispose();
-        aiController = null;
-      }
+      disposeAllAIControllers();
       if (gameOverCheckTimer != null) {
         gameOverCheckTimer.stop();
         gameOverCheckTimer = null;
@@ -507,6 +401,181 @@ public class battle extends JPanel implements KeyListener {
     }
   }
 
+  /**
+   * 입력 핸들러 및 AI 컨트롤러 초기화
+   */
+  private void initializeInputHandlers() {
+    if (isAIVsAIMode) {
+      initializeAIVsAIMode();
+    } else if (isAIMode) {
+      initializeAIMode();
+    } else {
+      initializeNormalBattleMode();
+    }
+  }
+
+  /**
+   * AI vs AI 모드 초기화
+   */
+  private void initializeAIVsAIMode() {
+    // AI 1 컨트롤러 생성 및 설정
+    aiController1 = createAIController(player1Panel, AIPlayerController.AIDifficulty.HARD);
+    aiController1.setOnMoveCallback(() -> player1Panel.updateGameUI());
+    aiController1.setOnGameOverCallback(() -> {
+      player1Panel.updateGameUI();
+      if (player1Panel.isGameOver()) {
+        handleGameOver(2); // AI 2 승리
+      }
+    });
+
+    // AI 2 컨트롤러 생성 및 설정
+    aiController = createAIController(player2Panel, AIPlayerController.AIDifficulty.HARD);
+    aiController.setOnMoveCallback(() -> player2Panel.updateGameUI());
+    aiController.setOnGameOverCallback(() -> {
+      player2Panel.updateGameUI();
+      if (player2Panel.isGameOver()) {
+        handleGameOver(1); // AI 1 승리
+      }
+    });
+  }
+
+  /**
+   * Player vs AI 모드 초기화
+   */
+  private void initializeAIMode() {
+    player1Input = new Player1InputHandler(player1Panel.getGameEngine());
+
+    // AI 컨트롤러 생성 및 설정
+    AIPlayerController.AIDifficulty aiDifficulty = getAIDifficultyFromSystemProperty();
+    aiController = createAIController(player2Panel, aiDifficulty);
+    aiController.setOnMoveCallback(() -> player2Panel.updateGameUI());
+    aiController.setOnGameOverCallback(() -> {
+      player2Panel.updateGameUI();
+      if (player2Panel.isGameOver()) {
+        handleGameOver(1); // 플레이어1 승리
+      }
+    });
+  }
+
+  /**
+   * 일반 대전 모드 초기화
+   */
+  private void initializeNormalBattleMode() {
+    player1Input = new Player1InputHandler(player1Panel.getGameEngine());
+    player2Input = new Player2InputHandler(player2Panel.getGameEngine());
+  }
+
+  /**
+   * AI 컨트롤러 생성 헬퍼 메서드
+   *
+   * @param panel      AI가 제어할 플레이어 패널
+   * @param difficulty AI 난이도
+   * @return 생성된 AI 컨트롤러
+   */
+  private AIPlayerController createAIController(PlayerGamePanel panel, AIPlayerController.AIDifficulty difficulty) {
+    AIPlayerController controller = new AIPlayerController(panel.getGameEngine());
+    controller.setDifficulty(difficulty);
+    return controller;
+  }
+
+  /**
+   * 시스템 속성에서 AI 난이도 가져오기
+   *
+   * @return AI 난이도 (기본값: NORMAL)
+   */
+  private AIPlayerController.AIDifficulty getAIDifficultyFromSystemProperty() {
+    String aiDifficultyStr = System.getProperty("tetris.ai.difficulty", "NORMAL");
+    return "HARD".equals(aiDifficultyStr)
+        ? AIPlayerController.AIDifficulty.HARD
+        : AIPlayerController.AIDifficulty.NORMAL;
+  }
+
+  /**
+   * AI 컨트롤러 정리 헬퍼 메서드
+   *
+   * @param controller 정리할 AI 컨트롤러
+   */
+  private void disposeAIController(AIPlayerController controller) {
+    if (controller != null) {
+      controller.stop();
+      controller.dispose();
+    }
+  }
+
+  /**
+   * 모든 AI 컨트롤러 정리
+   */
+  private void disposeAllAIControllers() {
+    disposeAIController(aiController1);
+    disposeAIController(aiController);
+    aiController1 = null;
+    aiController = null;
+  }
+
+  /**
+   * 모든 AI 컨트롤러 일시정지
+   */
+  private void pauseAllAIControllers() {
+    if (isAIVsAIMode) {
+      if (aiController1 != null) {
+        aiController1.pause();
+      }
+      if (aiController != null) {
+        aiController.pause();
+      }
+    } else if (isAIMode && aiController != null) {
+      aiController.pause();
+    }
+  }
+
+  /**
+   * 모든 AI 컨트롤러 재개
+   */
+  private void resumeAllAIControllers() {
+    if (isAIVsAIMode) {
+      if (aiController1 != null) {
+        aiController1.resume();
+      }
+      if (aiController != null) {
+        aiController.resume();
+      }
+    } else if (isAIMode && aiController != null) {
+      aiController.resume();
+    }
+  }
+
+  /**
+   * 모든 AI 컨트롤러 시작
+   */
+  private void startAllAIControllers() {
+    if (isAIVsAIMode) {
+      if (aiController1 != null) {
+        aiController1.start();
+      }
+      if (aiController != null) {
+        aiController.start();
+      }
+    } else if (isAIMode && aiController != null) {
+      aiController.start();
+    }
+  }
+
+  /**
+   * 모든 AI 컨트롤러 정지
+   */
+  private void stopAllAIControllers() {
+    if (isAIVsAIMode) {
+      if (aiController1 != null) {
+        aiController1.stop();
+      }
+      if (aiController != null) {
+        aiController.stop();
+      }
+    } else if (isAIMode && aiController != null) {
+      aiController.stop();
+    }
+  }
+
   private void restoreWindowSize() {
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
     // 저장된 원래 화면 크기로 복원
@@ -524,6 +593,18 @@ public class battle extends JPanel implements KeyListener {
       return;
 
     int keyCode = e.getKeyCode();
+
+    // AI vs AI 모드: ESC와 P 키만 처리, 나머지 키는 무시
+    if (isAIVsAIMode) {
+      if (keyCode == KeyEvent.VK_P) {
+        togglePause();
+      } else if (keyCode == KeyEvent.VK_ESCAPE) {
+        isPaused = true; // ESC 입력 시 명확히 일시정지
+        showPauseMenu();
+      }
+      // AI vs AI 모드에서는 다른 키 입력 무시
+      return;
+    }
 
     // GameSettings에서 키 코드 가져오기
     se.tetris.team5.utils.setting.GameSettings settings = se.tetris.team5.utils.setting.GameSettings.getInstance();
@@ -589,47 +670,21 @@ public class battle extends JPanel implements KeyListener {
   private void togglePause() {
     isPaused = !isPaused;
     gameController.setPaused(isPaused);
-    if (isAIVsAIMode) {
-      if (aiController1 != null) {
-        if (isPaused) {
-          aiController1.pause();
-        } else {
-          aiController1.resume();
-        }
-      }
-      if (aiController != null) {
-        if (isPaused) {
-          aiController.pause();
-        } else {
-          aiController.resume();
-        }
-      }
-    } else if (isAIMode && aiController != null) {
-      if (isPaused) {
-        aiController.pause();
-      } else {
-        aiController.resume();
-      }
-    }
+
     if (isPaused) {
+      pauseAllAIControllers();
       JOptionPane.showMessageDialog(this, "일시정지됨\nP 키를 눌러 계속하기", "일시정지", JOptionPane.INFORMATION_MESSAGE);
+    } else {
+      resumeAllAIControllers();
     }
+
     requestFocusInWindow();
   }
 
   private void showPauseMenu() {
     isPaused = true;
     gameController.setPaused(true);
-    if (isAIVsAIMode) {
-      if (aiController1 != null) {
-        aiController1.pause();
-      }
-      if (aiController != null) {
-        aiController.pause();
-      }
-    } else if (isAIMode && aiController != null) {
-      aiController.pause();
-    }
+    pauseAllAIControllers();
 
     if (timeLimitTimer != null) {
       timeLimitTimer.stop();
@@ -648,26 +703,14 @@ public class battle extends JPanel implements KeyListener {
     if (option == 0) {
       isPaused = false;
       gameController.setPaused(false);
-      if (isAIVsAIMode) {
-        if (aiController1 != null) {
-          aiController1.resume();
-        }
-        if (aiController != null) {
-          aiController.resume();
-        }
-      } else if (isAIMode && aiController != null) {
-        aiController.resume();
-      }
+      resumeAllAIControllers();
       if (timeLimitTimer != null) {
         timeLimitTimer.start();
       }
       requestFocusInWindow();
     } else {
-      if (aiController != null) {
-        aiController.stop();
-        aiController.dispose();
-        aiController = null;
-      }
+      // 메뉴로 나가기: 모든 리소스 정리
+      disposeAllAIControllers();
       if (timeLimitTimer != null) {
         timeLimitTimer.stop();
       }
