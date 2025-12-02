@@ -42,6 +42,7 @@ public class PlayerGamePanel extends JPanel {
   private Timer gameTimer;
   private Timer uiTimer; // UI 업데이트용 별도 타이머
   private long gameStartTime;
+  private long pauseStartTime; // 일시정지 시작 시점 (일시정지 기간 계산용)
 
   // 시간제한 모드: 외부에서 타이머를 제어할지 여부
   // true: battle.java에서 카운트다운 타이머 관리 (5분 → 0분)
@@ -444,6 +445,7 @@ public class PlayerGamePanel extends JPanel {
 
   public void startGame() {
     gameStartTime = System.currentTimeMillis();
+    pauseStartTime = 0; // 일시정지 시작 시점 초기화
     // 새 게임 시작 (깨끗한 보드에서 시작)
     gameEngine.startNewGame();
     startTimer();
@@ -459,6 +461,8 @@ public class PlayerGamePanel extends JPanel {
     if (gameEngine != null) {
       gameEngine.setPaused(true);
     }
+    // 일시정지 시작 시점 저장 (타이머 정확도 유지용)
+    pauseStartTime = System.currentTimeMillis();
   }
 
   public void resumeGame() {
@@ -470,6 +474,12 @@ public class PlayerGamePanel extends JPanel {
     }
     if (gameEngine != null) {
       gameEngine.setPaused(false);
+    }
+    // 일시정지 기간만큼 gameStartTime을 앞당겨서 정확한 경과 시간 유지
+    if (pauseStartTime > 0) {
+      long pauseDuration = System.currentTimeMillis() - pauseStartTime;
+      gameStartTime += pauseDuration;
+      pauseStartTime = 0;
     }
   }
 
@@ -600,7 +610,8 @@ public class PlayerGamePanel extends JPanel {
     // 타이머 업데이트
     // countdownTimerEnabled가 true면 battle.java에서 updateTimerLabel()로 업데이트하므로 여기서는
     // 건너뜀
-    if (timerLabel != null && !countdownTimerEnabled) {
+    // 일시정지 상태일 때는 타이머를 업데이트하지 않음
+    if (timerLabel != null && !countdownTimerEnabled && (gameEngine == null || !gameEngine.isPaused())) {
       long elapsed = System.currentTimeMillis() - gameStartTime;
       int minutes = (int) (elapsed / 60000);
       int seconds = (int) ((elapsed % 60000) / 1000);

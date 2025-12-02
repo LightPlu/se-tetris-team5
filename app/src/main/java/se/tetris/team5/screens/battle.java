@@ -673,6 +673,9 @@ public class battle extends JPanel implements KeyListener {
 
     if (isPaused) {
       pauseAllAIControllers();
+      // PlayerGamePanel 일시정지
+      player1Panel.pauseGame();
+      player2Panel.pauseGame();
       // 타이머 일시정지
       if (timeLimitTimer != null && timeLimitTimer.isRunning()) {
         timeLimitTimer.stop();
@@ -683,6 +686,9 @@ public class battle extends JPanel implements KeyListener {
       JOptionPane.showMessageDialog(this, "일시정지됨\nP 키를 눌러 계속하기", "일시정지", JOptionPane.INFORMATION_MESSAGE);
     } else {
       resumeAllAIControllers();
+      // PlayerGamePanel 재개
+      player1Panel.resumeGame();
+      player2Panel.resumeGame();
       // 타이머 재개
       if (timeLimitTimer != null && !timeLimitTimer.isRunning()) {
         timeLimitTimer.start();
@@ -699,6 +705,9 @@ public class battle extends JPanel implements KeyListener {
     isPaused = true;
     gameController.setPaused(true);
     pauseAllAIControllers();
+    // PlayerGamePanel 일시정지
+    player1Panel.pauseGame();
+    player2Panel.pauseGame();
 
     // 타이머 일시정지
     if (timeLimitTimer != null && timeLimitTimer.isRunning()) {
@@ -722,6 +731,9 @@ public class battle extends JPanel implements KeyListener {
       isPaused = false;
       gameController.setPaused(false);
       resumeAllAIControllers();
+      // PlayerGamePanel 재개
+      player1Panel.resumeGame();
+      player2Panel.resumeGame();
       // 타이머 재개
       if (timeLimitTimer != null && !timeLimitTimer.isRunning()) {
         timeLimitTimer.start();
