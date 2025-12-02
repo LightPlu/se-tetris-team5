@@ -69,6 +69,7 @@ public class PlayerGamePanel extends JPanel {
   private JLabel timeStopIconLabel;
   private JLabel timeStopNumberLabel;
   private JLabel timeStopSubLabel;
+  private JLabel timeStopIndicatorLabel;
 
   /**
    * 플레이어 게임 패널 생성 (기본값)
@@ -210,6 +211,18 @@ public class PlayerGamePanel extends JPanel {
 
     boardContainer.add(timeStopOverlay, Integer.valueOf(200));
 
+    // 타임스톱 획득 표시
+    timeStopIndicatorLabel = new JLabel("획득:⌛", javax.swing.SwingConstants.CENTER);
+    timeStopIndicatorLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+    timeStopIndicatorLabel.setForeground(new Color(60, 180, 170));
+    timeStopIndicatorLabel.setOpaque(true);
+    timeStopIndicatorLabel.setBackground(new Color(0, 0, 0, 180));
+    timeStopIndicatorLabel.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(60, 180, 170), 2),
+        BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+    timeStopIndicatorLabel.setVisible(false);
+    boardContainer.add(timeStopIndicatorLabel, Integer.valueOf(250));
+
     // 보드와 타이머 위치 설정
     boardContainer.addComponentListener(new java.awt.event.ComponentAdapter() {
       @Override
@@ -218,6 +231,11 @@ public class PlayerGamePanel extends JPanel {
         gameBoard.setBounds(0, 0, size.width, size.height);
         timerLabel.setBounds(10, 10, 80, 30);
         timeStopOverlay.setBounds(0, 0, size.width, size.height);
+        if (timeStopIndicatorLabel != null) {
+          int indicatorWidth = 70;
+          int indicatorHeight = 40;
+          timeStopIndicatorLabel.setBounds(size.width - indicatorWidth - 10, 10, indicatorWidth, indicatorHeight);
+        }
       }
     });
 
@@ -516,6 +534,9 @@ public class PlayerGamePanel extends JPanel {
     if (uiTimer != null) {
       uiTimer.stop();
     }
+    if (timeStopIndicatorLabel != null) {
+      timeStopIndicatorLabel.setVisible(false);
+    }
   }
 
   private void startTimer() {
@@ -686,12 +707,24 @@ public class PlayerGamePanel extends JPanel {
       }
     }
 
+    updateTimeStopIndicator();
+
     // 타이머 속도 조정
     if (gameTimer != null) {
       int newInterval = gameEngine.getGameScoring().getTimerInterval();
       if (gameTimer.getDelay() != newInterval) {
         gameTimer.setDelay(newInterval);
       }
+    }
+  }
+
+  private void updateTimeStopIndicator() {
+    if (timeStopIndicatorLabel == null || gameEngine == null) {
+      return;
+    }
+    boolean hasCharge = gameEngine.hasTimeStopCharge();
+    if (timeStopIndicatorLabel.isVisible() != hasCharge) {
+      timeStopIndicatorLabel.setVisible(hasCharge);
     }
   }
 
