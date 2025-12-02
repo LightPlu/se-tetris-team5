@@ -9,6 +9,7 @@ import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -86,9 +87,16 @@ public class setting {
         textPane.setOpaque(false);
         textPane.setBackground(Color.BLACK);
         textPane.setLayout(new BorderLayout());
+        
+        // 기존 KeyListener 제거
         for (KeyListener kl : textPane.getKeyListeners()) {
             textPane.removeKeyListener(kl);
         }
+        
+        // textPane 자체를 포커스 가능하게 설정하고 KeyListener 추가
+        textPane.setFocusable(true);
+        textPane.setEditable(false);
+        textPane.addKeyListener(new SettingKeyListener());
         
         if (backgroundPanel == null) {
             backgroundPanel = new SettingBackgroundPanel();
@@ -99,15 +107,10 @@ public class setting {
         
         JTextPane contentPane = new JTextPane();
         contentPane.setOpaque(false);
-        contentPane.setFocusable(true);
+        contentPane.setFocusable(false); // contentPane은 포커스 받지 않음
         contentPane.setEditable(false);
         contentPane.setForeground(Color.WHITE);
         contentPane.setFont(new Font("Source Code Pro", Font.BOLD, 16));
-        // Remove existing key listeners
-        for (KeyListener kl : contentPane.getKeyListeners()) {
-            contentPane.removeKeyListener(kl);
-        }
-        contentPane.addKeyListener(new SettingKeyListener());
         this.currentTextPane = contentPane;
         
         JPanel overlay = new JPanel(new BorderLayout());
@@ -119,7 +122,44 @@ public class setting {
         textPane.add(backgroundPanel, BorderLayout.CENTER);
         
         drawSettingScreen();
-        currentTextPane.requestFocusInWindow();
+        
+        // 즉시 포커스 요청 (textPane만)
+        textPane.requestFocusInWindow();
+        
+        // 다단계 포커스 요청 (UI 렌더링 완료 후)
+        SwingUtilities.invokeLater(() -> {
+            textPane.requestFocusInWindow();
+        });
+        
+        // 50ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    textPane.requestFocusInWindow();
+                });
+            }
+        }, 50);
+        
+        // 100ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    textPane.requestFocusInWindow();
+                });
+            }
+        }, 100);
+        
+        // 200ms 후 최종 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    textPane.requestFocusInWindow();
+                });
+            }
+        }, 200);
     }
     
     private void loadBackgroundImage() {
