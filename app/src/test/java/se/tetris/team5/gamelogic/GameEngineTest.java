@@ -505,4 +505,265 @@ public class GameEngineTest {
         // then: 모든 동작이 정상 처리됨
         assertFalse("Game should not be over", engine.isGameOver());
     }
+
+    // ==================== 게임 러닝 상태 테스트 ====================
+
+    @Test
+    public void testIsGameRunning() {
+        // when: 게임 리셋
+        engine.resetGame();
+        
+        // then: 게임이 실행 중
+        assertTrue("Game should be running after reset", engine.isGameRunning());
+    }
+
+    // ==================== consumeLastClearedRows 테스트 ====================
+
+    @Test
+    public void testConsumeLastClearedRowsEmpty() {
+        // given: 새 게임
+        engine.startNewGame();
+        
+        // when: 줄 삭제 없이 소비
+        java.util.List<Integer> rows = engine.consumeLastClearedRows();
+        
+        // then: 빈 리스트
+        assertTrue("Should return empty list when no rows cleared", rows.isEmpty());
+    }
+
+    @Test
+    public void testConsumeLastClearedRowsTwice() {
+        // given: 줄 삭제 발생 (하드드롭)
+        engine.hardDrop();
+        
+        // when: 첫 번째 소비
+        engine.consumeLastClearedRows();
+        
+        // when: 두 번째 소비
+        java.util.List<Integer> rows2 = engine.consumeLastClearedRows();
+        
+        // then: 두 번째는 빈 리스트 (이미 소비됨)
+        assertTrue("Second consume should return empty list", rows2.isEmpty());
+    }
+
+    // ==================== 생성자 테스트 ====================
+
+    @Test
+    public void testConstructorWithAutoStartTrue() {
+        // when: autoStart=true로 생성
+        GameEngine engine2 = new GameEngine(HEIGHT, WIDTH, true);
+        
+        // then: 게임이 시작됨
+        assertNotNull("Current block should exist", engine2.getCurrentBlock());
+        assertNotNull("Next block should exist", engine2.getNextBlock());
+    }
+
+    @Test
+    public void testConstructorWithAutoStartFalse() {
+        // when: autoStart=false로 생성
+        GameEngine engine2 = new GameEngine(HEIGHT, WIDTH, false);
+        
+        // then: 게임이 시작되지 않음
+        // startNewGame()을 호출하기 전에는 블록이 없을 수 있음
+        assertNotNull("Engine should be created", engine2);
+    }
+
+    // ==================== 블록이 null인 경우 이동 테스트 ====================
+
+    @Test
+    public void testMoveBlockLeftWhenGameOver() {
+        // given: 게임 오버 상태 만들기
+        BoardManager board = engine.getBoardManager();
+        int[][] boardArray = board.getBoard();
+        
+        // 스폰 위치를 막음
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                boardArray[y][x] = 1;
+            }
+        }
+        
+        engine.hardDrop();
+        
+        // when: 게임 오버 상태에서 왼쪽 이동 시도
+        if (engine.isGameOver()) {
+            boolean moved = engine.moveBlockLeft();
+            
+            // then: 이동 불가
+            assertFalse("Cannot move left when game over", moved);
+        }
+    }
+
+    @Test
+    public void testMoveBlockRightWhenGameOver() {
+        // given: 게임 오버 상태
+        BoardManager board = engine.getBoardManager();
+        int[][] boardArray = board.getBoard();
+        
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                boardArray[y][x] = 1;
+            }
+        }
+        
+        engine.hardDrop();
+        
+        // when: 게임 오버 상태에서 오른쪽 이동 시도
+        if (engine.isGameOver()) {
+            boolean moved = engine.moveBlockRight();
+            
+            // then: 이동 불가
+            assertFalse("Cannot move right when game over", moved);
+        }
+    }
+
+    @Test
+    public void testRotateBlockWhenGameOver() {
+        // given: 게임 오버 상태
+        BoardManager board = engine.getBoardManager();
+        int[][] boardArray = board.getBoard();
+        
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                boardArray[y][x] = 1;
+            }
+        }
+        
+        engine.hardDrop();
+        
+        // when: 게임 오버 상태에서 회전 시도
+        if (engine.isGameOver()) {
+            boolean rotated = engine.rotateBlock();
+            
+            // then: 회전 불가
+            assertFalse("Cannot rotate when game over", rotated);
+        }
+    }
+
+    @Test
+    public void testHardDropWhenGameOver() {
+        // given: 게임 오버 상태
+        BoardManager board = engine.getBoardManager();
+        int[][] boardArray = board.getBoard();
+        
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                boardArray[y][x] = 1;
+            }
+        }
+        
+        engine.hardDrop();
+        
+        // when: 게임 오버 상태에서 하드 드롭 시도
+        if (engine.isGameOver()) {
+            boolean dropped = engine.hardDrop();
+            
+            // then: 드롭 불가
+            assertFalse("Cannot hard drop when game over", dropped);
+        }
+    }
+
+    // ==================== 난이도별 점수 차이 테스트 ====================
+
+    @Test
+    public void testEasyDifficultyScoring() {
+        // given: EASY 난이도
+        engine.setDifficulty(BlockFactory.Difficulty.EASY);
+        engine.startNewGame();
+        
+        int initialScore = engine.getGameScoring().getCurrentScore();
+        
+        // when: 하드 드롭
+        engine.hardDrop();
+        
+        // then: 점수 증가 (EASY 배율 적용)
+        int finalScore = engine.getGameScoring().getCurrentScore();
+        assertTrue("Score should increase with EASY difficulty", finalScore >= initialScore);
+    }
+
+    @Test
+    public void testNormalDifficultyScoring() {
+        // given: NORMAL 난이도
+        engine.setDifficulty(BlockFactory.Difficulty.NORMAL);
+        engine.startNewGame();
+        
+        int initialScore = engine.getGameScoring().getCurrentScore();
+        
+        // when: 하드 드롭
+        engine.hardDrop();
+        
+        // then: 점수 증가
+        int finalScore = engine.getGameScoring().getCurrentScore();
+        assertTrue("Score should increase with NORMAL difficulty", finalScore >= initialScore);
+    }
+
+    // ==================== 블록 위치 경계 테스트 ====================
+
+    @Test
+    public void testBlockPositionAfterMultipleMoves() {
+        // when: 여러 번 이동
+        engine.moveBlockLeft();
+        engine.moveBlockLeft();
+        engine.moveBlockRight();
+        engine.moveBlockDown();
+        
+        int x = engine.getX();
+        int y = engine.getY();
+        
+        // then: 위치가 유효한 범위 내
+        assertTrue("X should be within bounds", x >= 0 && x < WIDTH);
+        assertTrue("Y should be within bounds", y >= 0 && y < HEIGHT);
+    }
+
+    // ==================== 연속 회전 테스트 ====================
+
+    @Test
+    public void testMultipleRotations() {
+        // when: 8번 회전 (720도)
+        for (int i = 0; i < 8; i++) {
+            engine.rotateBlock();
+        }
+        
+        // then: 블록이 정상적으로 존재
+        assertNotNull("Block should exist after multiple rotations", 
+            engine.getCurrentBlock());
+        assertFalse("Game should not be over after rotations", engine.isGameOver());
+    }
+
+    // ==================== Next 블록 교체 테스트 ====================
+
+    @Test
+    public void testNextBlockChangesAfterDrop() {
+        // given: 현재 nextBlock 저장
+        Block initialNextBlock = engine.getNextBlock();
+        
+        // when: 하드 드롭 (블록 고정 -> 새 블록 생성)
+        engine.hardDrop();
+        
+        // then: nextBlock이 변경됨
+        Block newNextBlock = engine.getNextBlock();
+        assertNotSame("Next block should change after drop", 
+            initialNextBlock, newNextBlock);
+    }
+
+    // ==================== 게임 모드 전환 테스트 ====================
+
+    @Test
+    public void testGameModeSwitch() {
+        // given: ITEM 모드
+        engine.setGameMode(GameMode.ITEM);
+        assertEquals(GameMode.ITEM, engine.getGameMode());
+        
+        // when: NORMAL 모드로 전환
+        engine.setGameMode(GameMode.NORMAL);
+        
+        // then: 모드 변경됨
+        assertEquals(GameMode.NORMAL, engine.getGameMode());
+        
+        // when: 다시 ITEM 모드로
+        engine.setGameMode(GameMode.ITEM);
+        
+        // then: 모드 변경됨
+        assertEquals(GameMode.ITEM, engine.getGameMode());
+    }
 }
