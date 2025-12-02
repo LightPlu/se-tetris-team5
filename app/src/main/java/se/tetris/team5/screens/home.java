@@ -53,7 +53,7 @@ public class home extends JPanel implements KeyListener {
     };
     
     private String[] mainMenuIcons = {
-        "🎮", "💎", "⚔️", "🌐", "🏆", "⚙️", "❌"
+        "🎮", "💎", "⚡", "🌐", "🏆", "⚙", "✖"
     };
     
     private String[] mainMenuDescriptions = {
@@ -94,7 +94,7 @@ public class home extends JPanel implements KeyListener {
     };
     
     private String[] battleModeIcons = {
-        "⚔️", "💎⚔️", "⏱️", "↩️"
+        "⚡", "💎⚡", "⏰", "←"
     };
     
     private String[] battleModeDescriptions = {
