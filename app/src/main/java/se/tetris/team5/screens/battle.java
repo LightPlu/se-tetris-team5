@@ -415,34 +415,64 @@ public class battle extends JPanel implements KeyListener {
     isPaused = true;
     gameController.setPaused(true);
 
-    if (timeLimitTimer != null) {
+    // 타이머 일시정지
+    if (timeLimitTimer != null && timeLimitTimer.isRunning()) {
       timeLimitTimer.stop();
     }
+    if (gameOverCheckTimer != null && gameOverCheckTimer.isRunning()) {
+      gameOverCheckTimer.stop();
+    }
 
-    int option = JOptionPane.showOptionDialog(
+    // 일반 모드와 동일한 형식의 일시정지 메뉴
+    String[] options = { "계속", "메뉴로 나가기", "게임 종료" };
+    int choice = JOptionPane.showOptionDialog(
         this,
-        "게임 일시정지",
+        "게임을 일시중단했습니다.\n\n" +
+            "• 계속: 현재 게임을 이어서 진행합니다.\n" +
+            "• 메뉴로 나가기: 현재 게임을 취소하고 메인 메뉴로 이동합니다.\n" +
+            "• 게임 종료: 테트리스 프로그램을 완전히 종료합니다.",
         "일시정지",
         JOptionPane.DEFAULT_OPTION,
         JOptionPane.QUESTION_MESSAGE,
         null,
-        new Object[] { "게임 계속", "메뉴로 나가기" },
-        "게임 계속");
+        options,
+        options[0]);
 
-    if (option == 0) {
+    if (choice == 0 || choice == JOptionPane.CLOSED_OPTION) {
+      // 계속하기 (기본값)
       isPaused = false;
       gameController.setPaused(false);
-      if (timeLimitTimer != null) {
+      // 타이머 재개
+      if (timeLimitTimer != null && !timeLimitTimer.isRunning()) {
         timeLimitTimer.start();
       }
+      if (gameOverCheckTimer != null && !gameOverCheckTimer.isRunning()) {
+        gameOverCheckTimer.start();
+      }
       requestFocusInWindow();
-    } else {
+    } else if (choice == 1) {
+      // 메뉴로 나가기: 모든 리소스 정리
+      isPaused = false;
       if (timeLimitTimer != null) {
         timeLimitTimer.stop();
+      }
+      if (gameOverCheckTimer != null) {
+        gameOverCheckTimer.stop();
       }
       gameController.stop();
       restoreWindowSize();
       screenController.showScreen("home");
+    } else if (choice == 2) {
+      // 게임 종료: 테트리스 프로그램 완전 종료
+      isPaused = false;
+      if (timeLimitTimer != null) {
+        timeLimitTimer.stop();
+      }
+      if (gameOverCheckTimer != null) {
+        gameOverCheckTimer.stop();
+      }
+      gameController.stop();
+      System.exit(0);
     }
   }
 
