@@ -7,6 +7,13 @@
       "request": "launch",
       "mainClass": "se.tetris.team5.App",
       "vmArgs": "-Dfile.encoding=UTF-8"
+    },
+    {
+      "type": "java",
+      "name": "Run Genetic Algorithm",
+      "request": "launch",
+      "mainClass": "se.tetris.team5.gamelogic.ai.GeneticAlgorithmRunner",
+      "vmArgs": "-Dfile.encoding=UTF-8"
     }
   ]
 }

@@ -37,19 +37,20 @@ public class GameEngine {
   private int x, y;
   private boolean gameOver;
   private boolean gameRunning;
+  private boolean paused = false;
   private long gameStartTime;
 
   // listeners to notify UI or other observers about state changes (e.g., next
   // block spawned)
   private List<Runnable> listeners = new ArrayList<>();
-  
+
   // 대전모드: 블럭 고정 후 콜백 (공격 블럭 적용용)
   private Runnable onBlockFixedCallback = null;
 
   // Last cleared rows (for UI to consume and animate). Cleared row indices are
   // 0..HEIGHT-1
   private java.util.List<Integer> lastClearedRows = new java.util.ArrayList<>();
-  
+
   // Last bomb explosion cells (for UI to consume and animate)
   private java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> lastBombExplosionCells = new java.util.ArrayList<>();
 
@@ -140,8 +141,7 @@ public class GameEngine {
   public BlockFactory.Difficulty getDifficulty() {
     return difficulty;
   }
-  
-  
+
   public void setItemGrantPolicy(ItemGrantPolicy policy) {
     if (policy == null) {
       return;
@@ -151,7 +151,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockDown() {
-    if (gameOver)
+    if (gameOver || paused)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -168,15 +168,16 @@ public class GameEngine {
       boardManager.placeBlock(currentBlock, x, y);
       java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
       int lineClearRemovedBlocks = boardManager.fixBlock(currentBlock, x, y, removedItems);
-      
+
       // 폭탄 블록 폭발 애니메이션 체크 (fixBlock 직후)
-      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = boardManager.getLastBombExplosionCells();
+      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = boardManager
+          .getLastBombExplosionCells();
       if (bombCells != null && !bombCells.isEmpty()) {
         // UI로 전달하기 위해 저장 (별도 리스너 또는 consumeLastBombExplosionCells로 가져갈 수 있음)
         lastBombExplosionCells = bombCells;
         notifyListenersImmediate();
       }
-      
+
       // 줄삭제 아이템으로 지워진 블럭 수만큼 점수 추가 (30점/블럭)
       if (lineClearRemovedBlocks > 0) {
         gameScoring.addPoints(applyDoubleScore(lineClearRemovedBlocks * 30));
@@ -230,7 +231,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockLeft() {
-    if (gameOver || currentBlock == null)
+    if (gameOver || paused || currentBlock == null)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -245,7 +246,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockRight() {
-    if (gameOver || currentBlock == null)
+    if (gameOver || paused || currentBlock == null)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -260,7 +261,7 @@ public class GameEngine {
   }
 
   public boolean rotateBlock() {
-    if (gameOver)
+    if (gameOver || paused)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -281,7 +282,7 @@ public class GameEngine {
   }
 
   public boolean hardDrop() {
-    if (gameOver)
+    if (gameOver || paused)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -296,14 +297,15 @@ public class GameEngine {
     boardManager.placeBlock(currentBlock, x, y);
     java.util.List<se.tetris.team5.items.Item> removedItems = new java.util.ArrayList<>();
     int lineClearRemovedBlocks = boardManager.fixBlock(currentBlock, x, y, removedItems);
-    
+
     // 폭탄 블록 폭발 애니메이션 체크 (hardDrop에서 fixBlock 직후)
-    java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = boardManager.getLastBombExplosionCells();
+    java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = boardManager
+        .getLastBombExplosionCells();
     if (bombCells != null && !bombCells.isEmpty()) {
       lastBombExplosionCells = bombCells;
       notifyListenersImmediate();
     }
-    
+
     // 줄삭제 아이템으로 지워진 블럭 수만큼 점수 추가 (30점/블럭)
     if (lineClearRemovedBlocks > 0) {
       gameScoring.addPoints(applyDoubleScore(lineClearRemovedBlocks * 30));
@@ -469,11 +471,9 @@ public class GameEngine {
         int currentScore = gameScoring.getCurrentScore();
         if (currentScore >= PENALTY_SCORE) {
           gameScoring.addPoints(-PENALTY_SCORE);
-          System.out.println("[패널티] 블록이 10줄을 초과했습니다! -200점 (현재 높이: " + highestRow + "줄)");
         } else {
           // 점수가 200점 미만이면 0점으로 만듦
           gameScoring.addPoints(-currentScore);
-          System.out.println("[패널티] 블록이 10줄을 초과했습니다! 점수가 0점이 되었습니다 (현재 높이: " + highestRow + "줄)");
         }
         penaltyApplied = true;
       }
@@ -579,7 +579,7 @@ public class GameEngine {
   public GameScoring getGameScoring() {
     return gameScoring;
   }
-  
+
   public BlockFactory getBlockFactory() {
     return blockFactory;
   }
@@ -619,6 +619,24 @@ public class GameEngine {
   }
 
   /**
+   * 게임 일시정지/재개 설정
+   * 
+   * @param paused true면 일시정지, false면 재개
+   */
+  public void setPaused(boolean paused) {
+    this.paused = paused;
+  }
+
+  /**
+   * 게임이 일시정지 상태인지 확인
+   * 
+   * @return true면 일시정지, false면 실행 중
+   */
+  public boolean isPaused() {
+    return paused;
+  }
+
+  /**
    * Consume and return the last cleared rows recorded by the engine.
    * Returns an empty list if none. This method clears the stored list so
    * subsequent
@@ -631,7 +649,7 @@ public class GameEngine {
     lastClearedRows.clear();
     return out;
   }
-  
+
   /**
    * Returns bomb explosion cells for UI animation and clears the list so
    * subsequent calls won't return the same event again.
@@ -639,7 +657,8 @@ public class GameEngine {
   public java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> consumeLastBombExplosionCells() {
     if (lastBombExplosionCells == null || lastBombExplosionCells.isEmpty())
       return new java.util.ArrayList<>();
-    java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> out = new java.util.ArrayList<>(lastBombExplosionCells);
+    java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> out = new java.util.ArrayList<>(
+        lastBombExplosionCells);
     lastBombExplosionCells.clear();
     return out;
   }
@@ -660,13 +679,13 @@ public class GameEngine {
       ((se.tetris.team5.items.Every10LinesItemGrantPolicy) itemGrantPolicy).reset();
     }
 
-
     currentBlock = blockFactory.createRandomBlock();
     nextBlock = blockFactory.createRandomBlock();
     x = 3;
     y = 0;
     gameRunning = true;
     gameOver = false;
+    paused = false;
     gameStartTime = System.currentTimeMillis();
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화
@@ -711,9 +730,10 @@ public class GameEngine {
   public long getGameStartTime() {
     return gameStartTime;
   }
-  
+
   public long getElapsedTime() {
-    if (gameStartTime == 0) return 0;
+    if (gameStartTime == 0)
+      return 0;
     return System.currentTimeMillis() - gameStartTime;
   }
 
@@ -723,9 +743,7 @@ public class GameEngine {
    * @param callback 블럭이 고정된 직후 호출될 콜백
    */
   public void setOnBlockFixedCallback(Runnable callback) {
-    System.out.println("[GameEngine] setOnBlockFixedCallback 호출됨 - callback null 여부: " + (callback == null));
     this.onBlockFixedCallback = callback;
-    System.out.println("[GameEngine] 콜백 저장 완료");
   }
 
   /**
@@ -763,7 +781,6 @@ public class GameEngine {
    */
   public void setGameMode(GameMode mode) {
     this.gameMode = mode;
-    System.out.println("[게임 모드 변경] " + mode + " 모드로 설정되었습니다.");
   }
 
   /**
@@ -772,33 +789,33 @@ public class GameEngine {
   public GameMode getGameMode() {
     return gameMode;
   }
-  
+
   // P2P 게임엔진을 위한 protected setter 메서드들
-  
+
   protected void setCurrentBlock(Block block) {
     this.currentBlock = block;
   }
-  
+
   protected void setNextBlock(Block block) {
     this.nextBlock = block;
   }
-  
+
   protected void setX(int x) {
     this.x = x;
   }
-  
+
   protected void setY(int y) {
     this.y = y;
   }
-  
+
   protected void setGameOver(boolean gameOver) {
     this.gameOver = gameOver;
   }
-  
+
   protected void setGameRunning(boolean gameRunning) {
     this.gameRunning = gameRunning;
   }
-  
+
   protected void setGameStartTime(long gameStartTime) {
     this.gameStartTime = gameStartTime;
   }
