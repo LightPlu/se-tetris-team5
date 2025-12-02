@@ -1429,13 +1429,7 @@ public class p2pbattle extends JPanel implements KeyListener {
             myPanel.stopGame();
         }
         
-        // 항상 기본 중형 크기로 복원
-        se.tetris.team5.utils.setting.GameSettings settings = 
-            se.tetris.team5.utils.setting.GameSettings.getInstance();
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
-        settings.loadSettings();
-        screenController.updateWindowSize();
-        
+        applyOriginalWindowSize();
         screenController.showScreen("home");
     }
     
@@ -1656,20 +1650,48 @@ public class p2pbattle extends JPanel implements KeyListener {
      * 게임 화면에서 대기방 UI로 복귀하기 위한 기본 레이아웃/크기 복원
      */
     private void restoreLobbyLayout() {
-        // Always revert to medium window for lobby screens
-        se.tetris.team5.utils.setting.GameSettings settings =
-            se.tetris.team5.utils.setting.GameSettings.getInstance();
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
-        settings.loadSettings();
-        if (screenController != null) {
-            screenController.updateWindowSize();
-        }
+        applyOriginalWindowSize();
 
         removeAll();
         setLayout(new BorderLayout());
         add(mainPanel, BorderLayout.CENTER);
         revalidate();
         repaint();
+    }
+
+    /**
+     * 사용자가 설정한 원래 창 크기를 다시 적용한다.
+     */
+    private void applyOriginalWindowSize() {
+        se.tetris.team5.utils.setting.GameSettings settings =
+            se.tetris.team5.utils.setting.GameSettings.getInstance();
+        String targetSize = originalWindowSize;
+        if (targetSize == null || targetSize.trim().isEmpty()) {
+            targetSize = settings.getWindowSize();
+        }
+        if (targetSize == null || targetSize.trim().isEmpty()) {
+            targetSize = se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM;
+        }
+        boolean applied = false;
+        try {
+            String[] parts = targetSize.toLowerCase().split("x");
+            if (parts.length == 2) {
+                int width = Integer.parseInt(parts[0].trim());
+                int height = Integer.parseInt(parts[1].trim());
+                settings.setCustomWindowSize(width, height);
+                applied = true;
+            }
+        } catch (Exception ignored) {}
+
+        if (!applied) {
+            settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
+            targetSize = se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM;
+        }
+
+        originalWindowSize = targetSize;
+        if (screenController != null) {
+            screenController.updateWindowSize();
+        }
     }
     
     /**
