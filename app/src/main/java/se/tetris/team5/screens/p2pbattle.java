@@ -944,15 +944,15 @@ public class p2pbattle extends JPanel implements KeyListener {
             
             // UI 컴포넌트 업데이트 (P2P 엔진이 상태를 가지고 있으므로 자동 반영됨)
             if (opponentPanel.getGameBoard() != null) {
-                // renderBoard는 엔진의 상태를 읽어서 그림
+                // 현재 보드에는 이동 중인 블록(값 2)이 이미 포함되어 있으므로 별도의 currentBlock 전달 불필요
                 opponentPanel.getGameBoard().renderBoard(
                     packet.getBoard(),
                     packet.getBoardColors(),
-                    null, // items
-                    createBlockFromType(packet.getCurrentBlockType()),
-                    packet.getCurrentBlockX(),
-                    packet.getCurrentBlockY(),
-                    -1 // ghostY
+                    null,
+                    null,
+                    0,
+                    0,
+                    -1
                 );
             }
             
