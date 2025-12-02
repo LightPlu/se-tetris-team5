@@ -48,11 +48,11 @@ public class p2pbattle extends JPanel implements KeyListener {
     // UI 컴포넌트
     private JPanel mainPanel;
     private JLabel statusLabel;
-    private JLabel lagIndicator;
     private JLabel latencyLabel;  // 실시간 레이턴시 표시
     private Timer latencyUpdateTimer;  // 레이턴시 업데이트 타이머
     private JLabel lobbyLatencyLabel;
     private Timer lobbyLatencyTimer;
+    private boolean isLaggingNetwork = false;
     private ImageIcon backgroundGif;
     private Image backgroundFallbackImage;
     
@@ -88,6 +88,7 @@ public class p2pbattle extends JPanel implements KeyListener {
     private se.tetris.team5.gamelogic.input.SinglePlayerInputHandler myInputHandler;
     
     private static final int TIME_LIMIT_SECONDS = 300;
+    private static final long LAG_WARNING_THRESHOLD_MS = 200;
     private Timer timeLimitTimer;
     private int remainingSeconds;
     
@@ -173,17 +174,9 @@ public class p2pbattle extends JPanel implements KeyListener {
         statusLabel.setForeground(Color.WHITE);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         
-        // 랙 인디케이터
-        lagIndicator = new JLabel("");
-        lagIndicator.setFont(createKoreanFont(Font.BOLD, 16));
-        lagIndicator.setForeground(Color.RED);
-        lagIndicator.setHorizontalAlignment(SwingConstants.CENTER);
-        lagIndicator.setVisible(false);
-        
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(0, 0, 0, 180));
         topPanel.add(statusLabel, BorderLayout.CENTER);
-        topPanel.add(lagIndicator, BorderLayout.SOUTH);
         
         mainPanel.add(topPanel, BorderLayout.NORTH);
         
@@ -298,7 +291,7 @@ public class p2pbattle extends JPanel implements KeyListener {
             
             @Override
             public void onLagDetected(boolean isLagging) {
-                SwingUtilities.invokeLater(() -> updateLagIndicator(isLagging));
+                SwingUtilities.invokeLater(() -> handleLagDetectionEvent(isLagging));
             }
             
             @Override
@@ -473,7 +466,7 @@ public class p2pbattle extends JPanel implements KeyListener {
             
             @Override
             public void onLagDetected(boolean isLagging) {
-                SwingUtilities.invokeLater(() -> updateLagIndicator(isLagging));
+                SwingUtilities.invokeLater(() -> handleLagDetectionEvent(isLagging));
             }
             
             @Override
@@ -773,7 +766,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         statusLabel.setText("P2P 대전 중 - " + getBattleModeText(selectedBattleMode));
         topPanel.add(statusLabel, BorderLayout.CENTER);
         topPanel.add(latencyLabel, BorderLayout.WEST);
-        topPanel.add(lagIndicator, BorderLayout.EAST);
         
         add(topPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
@@ -1165,18 +1157,6 @@ public class p2pbattle extends JPanel implements KeyListener {
     }
     
     /**
-     * 랙 인디케이터 업데이트
-     */
-    private void updateLagIndicator(boolean isLagging) {
-        if (lagIndicator != null) {
-            lagIndicator.setVisible(isLagging);
-            if (isLagging) {
-                lagIndicator.setText("⚠️ 네트워크 지연 발생 (200ms 초과) ⚠️");
-            }
-        }
-    }
-    
-    /**
      * 레이턴시 표시 업데이트
      */
     private void updateLatencyDisplay() {
@@ -1191,9 +1171,34 @@ public class p2pbattle extends JPanel implements KeyListener {
             latency = client.getCurrentLatency();
         }
         
-        Color color = getLatencyColor(latency);
+        if (latency <= 0) {
+            latencyLabel.setForeground(Color.LIGHT_GRAY);
+            latencyLabel.setText("핑 측정 중...");
+            updateLobbyLatencyLabel();
+            return;
+        }
+        
+        boolean thresholdLagging = latency >= LAG_WARNING_THRESHOLD_MS;
+        if (isLaggingNetwork != thresholdLagging) {
+            isLaggingNetwork = thresholdLagging;
+            updateLobbyLatencyLabel();
+        }
+        
+        Color color = isLaggingNetwork ? Color.RED : getLatencyColor(latency);
+        String text = isLaggingNetwork
+            ? String.format("핑: %dms (지연)", latency)
+            : String.format("핑: %dms", latency);
         latencyLabel.setForeground(color);
-        latencyLabel.setText(String.format("핑: %dms", latency));
+        latencyLabel.setText(text);
+        updateLobbyLatencyLabel();
+    }
+    
+    private void handleLagDetectionEvent(boolean isLagging) {
+        if (this.isLaggingNetwork != isLagging) {
+            this.isLaggingNetwork = isLagging;
+            updateLobbyLatencyLabel();
+        }
+        updateLatencyDisplay();
     }
     
     private void sendChatMessage() {
@@ -1296,12 +1301,18 @@ public class p2pbattle extends JPanel implements KeyListener {
             return;
         }
         
-        if (latency == 0) {
+        if (latency <= 0) {
             lobbyLatencyLabel.setForeground(Color.LIGHT_GRAY);
             lobbyLatencyLabel.setText("핑 측정 중...");
         } else {
-            lobbyLatencyLabel.setForeground(getLatencyColor(latency));
-            lobbyLatencyLabel.setText(String.format("현재 핑: %dms", latency));
+            boolean lagging = isLaggingNetwork || latency >= LAG_WARNING_THRESHOLD_MS;
+            if (lagging) {
+                lobbyLatencyLabel.setForeground(Color.RED);
+                lobbyLatencyLabel.setText(String.format("현재 핑: %dms (지연)", latency));
+            } else {
+                lobbyLatencyLabel.setForeground(getLatencyColor(latency));
+                lobbyLatencyLabel.setText(String.format("현재 핑: %dms", latency));
+            }
         }
     }
     
