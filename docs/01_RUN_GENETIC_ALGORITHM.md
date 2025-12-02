@@ -97,15 +97,16 @@ java -cp "app/build/classes/java/main:app/build/libs/*" se.tetris.team5.gamelogi
 ```
 === 최적화 완료 ===
 최적 가중치:
-Holes: -52.34, RowTrans: -3.12, AggHeight: -0.48, Bumpiness: -0.18, Lines: 12.45, Tetris: 105.67
+Landing Height: -7.80, EPCM: 5.58, Row Transitions: -1.58, Column Transitions: -1.13
+Holes: -18.80, Well Sums: -8.69, Attack 2 Lines: 15.14, Attack 3 Lines: 19.18, Attack 4 Lines: 59.16
 
 최종 성능:
-평균 줄 수: 125.3
-평균 점수: 15230
-적합도: 12530.00
+평균 줄 수: 4.0
+평균 점수: 2034
+적합도: -2424.21
 
 === 코드에 사용할 가중치 ===
-new WeightSet(-52.34, -3.12, -0.48, -0.18, 12.45, 105.67)
+new WeightSet(-7.80, 5.58, -1.58, -1.13, -18.80, -8.69, 15.14, 19.18, 59.16)
 ```
 
 이 가중치를 `TetrisAI`에 적용하면 최적화된 AI를 사용할 수 있습니다!
