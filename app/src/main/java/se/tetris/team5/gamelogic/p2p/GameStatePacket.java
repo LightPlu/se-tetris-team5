@@ -21,7 +21,6 @@ public class GameStatePacket implements Serializable {
         GAME_STATE,            // 게임 상태 업데이트
         ATTACK_BLOCKS,         // 공격 블럭 전송
         GAME_OVER,             // 게임 오버
-        RESTART_REQUEST,       // 재시작 요청
         DISCONNECT,            // 연결 종료
         PING,                  // 연결 확인 (핑)
         PONG,                  // 핑 응답
@@ -42,6 +41,7 @@ public class GameStatePacket implements Serializable {
     private int level;
     private int linesCleared;
     private long elapsedTime; // 게임 경과 시간 (밀리초)
+    private boolean hasTimeStopCharge; // 타임스톱 보유 여부
     
     // 공격 블럭 데이터
     private List<Color[]> attackBlocks;
@@ -154,6 +154,14 @@ public class GameStatePacket implements Serializable {
     
     public void setElapsedTime(long elapsedTime) {
         this.elapsedTime = elapsedTime;
+    }
+    
+    public boolean hasTimeStopCharge() {
+        return hasTimeStopCharge;
+    }
+
+    public void setHasTimeStopCharge(boolean hasTimeStopCharge) {
+        this.hasTimeStopCharge = hasTimeStopCharge;
     }
     
     public List<Color[]> getAttackBlocks() {

@@ -3,11 +3,15 @@ package se.tetris.team5.components.battle;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 import se.tetris.team5.blocks.Block;
@@ -36,6 +40,8 @@ public class PlayerGamePanel extends JPanel {
   private JLabel linesLabel;
   private JLabel timerLabel;
   private JPanel attackPanel;
+  private JLabel timeStopIndicatorLabel;
+  private javax.swing.JLayeredPane boardContainer;
 
   // 게임 로직
   private GameEngine gameEngine;
@@ -65,6 +71,7 @@ public class PlayerGamePanel extends JPanel {
   private Timer timeStopCountdownTimer;
   private int timeStopRemaining = 0;
   private JPanel timeStopOverlay;
+  private JPanel timeStopCenterPanel;
   private JLabel timeStopIconLabel;
   private JLabel timeStopNumberLabel;
   private JLabel timeStopSubLabel;
@@ -134,7 +141,7 @@ public class PlayerGamePanel extends JPanel {
 
   private void initComponents() {
     // 게임 보드 + 타이머 오버레이
-    javax.swing.JLayeredPane boardContainer = new javax.swing.JLayeredPane();
+    boardContainer = new javax.swing.JLayeredPane();
     boardContainer.setLayout(null);
 
     gameBoard = new GameBoard();
@@ -150,7 +157,7 @@ public class PlayerGamePanel extends JPanel {
     boardContainer.add(timerLabel, Integer.valueOf(100));
     
     // 타임스톱 오버레이 패널 (처음에는 숨김)
-    timeStopOverlay = new JPanel() {
+    timeStopOverlay = new JPanel(null) {
       @Override
       protected void paintComponent(java.awt.Graphics g) {
         java.awt.Graphics2D g2d = (java.awt.Graphics2D) g.create();
@@ -161,45 +168,63 @@ public class PlayerGamePanel extends JPanel {
         super.paintComponent(g);
       }
     };
-    timeStopOverlay.setLayout(new BoxLayout(timeStopOverlay, BoxLayout.Y_AXIS));
     timeStopOverlay.setOpaque(false); // 투명도 적용을 위해 필수
     timeStopOverlay.setVisible(false);
     
+    timeStopCenterPanel = new JPanel(new GridBagLayout());
+    timeStopCenterPanel.setOpaque(false);
+    
     timeStopIconLabel = new JLabel("⏱", javax.swing.SwingConstants.CENTER);
-    timeStopIconLabel.setFont(new Font("Dialog", Font.BOLD, 48));
     timeStopIconLabel.setForeground(Color.CYAN);
-    timeStopIconLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     
     timeStopNumberLabel = new JLabel("5", javax.swing.SwingConstants.CENTER);
-    timeStopNumberLabel.setFont(new Font("Dialog", Font.BOLD, 72));
     timeStopNumberLabel.setForeground(Color.YELLOW);
-    timeStopNumberLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     
     timeStopSubLabel = new JLabel("초 남음", javax.swing.SwingConstants.CENTER);
-    timeStopSubLabel.setFont(new Font("Dialog", Font.BOLD, 24));
     timeStopSubLabel.setForeground(Color.WHITE);
-    timeStopSubLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.insets = new Insets(0, 0, 6, 0);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 1.0;
+    timeStopCenterPanel.add(timeStopIconLabel, gbc);
+
+    gbc.gridy = 1;
+    gbc.insets = new Insets(6, 0, 6, 0);
+    gbc.weighty = 1.0;
+    timeStopCenterPanel.add(timeStopNumberLabel, gbc);
+
+    gbc.gridy = 2;
+    gbc.insets = new Insets(0, 0, 0, 0);
+    gbc.weighty = 0.0;
+    timeStopCenterPanel.add(timeStopSubLabel, gbc);
     
-    timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
-    timeStopOverlay.add(timeStopIconLabel);
-    timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
-    timeStopOverlay.add(timeStopNumberLabel);
-    timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
-    timeStopOverlay.add(timeStopSubLabel);
-    timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
+    timeStopOverlay.add(timeStopCenterPanel);
     
     boardContainer.add(timeStopOverlay, Integer.valueOf(200));
+
+    timeStopIndicatorLabel = new JLabel("획득:⌛", javax.swing.SwingConstants.CENTER);
+    timeStopIndicatorLabel.setFont(createKoreanFont(Font.BOLD, 16));
+    timeStopIndicatorLabel.setForeground(new Color(60, 180, 170));
+    timeStopIndicatorLabel.setOpaque(true);
+    timeStopIndicatorLabel.setBackground(new Color(0, 0, 0, 180));
+    timeStopIndicatorLabel.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(60, 180, 170), 2),
+        BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+    timeStopIndicatorLabel.setVisible(false);
+    boardContainer.add(timeStopIndicatorLabel, Integer.valueOf(250));
 
     // 보드와 타이머 위치 설정
     boardContainer.addComponentListener(new java.awt.event.ComponentAdapter() {
       @Override
       public void componentResized(java.awt.event.ComponentEvent e) {
-        java.awt.Dimension size = boardContainer.getSize();
-        gameBoard.setBounds(0, 0, size.width, size.height);
-        timerLabel.setBounds(10, 10, 80, 30);
-        timeStopOverlay.setBounds(0, 0, size.width, size.height);
+        layoutBoardComponents();
       }
     });
+
+    SwingUtilities.invokeLater(this::layoutBoardComponents);
 
     // 오른쪽 정보 패널
     JPanel rightPanel = createRightPanel();
@@ -463,6 +488,9 @@ public class PlayerGamePanel extends JPanel {
     if (uiTimer != null) {
       uiTimer.stop();
     }
+    if (timeStopIndicatorLabel != null) {
+      timeStopIndicatorLabel.setVisible(false);
+    }
   }
 
   public void resumeGame() {
@@ -645,6 +673,8 @@ public class PlayerGamePanel extends JPanel {
       }
     }
 
+    updateTimeStopIndicator();
+
     // 타이머 속도 조정
     if (gameTimer != null) {
       int newInterval = gameEngine.getGameScoring().getTimerInterval();
@@ -652,6 +682,85 @@ public class PlayerGamePanel extends JPanel {
         gameTimer.setDelay(newInterval);
       }
     }
+  }
+
+  private void layoutBoardComponents() {
+    if (boardContainer == null) {
+      return;
+    }
+    java.awt.Dimension size = boardContainer.getSize();
+    if (size == null || size.width == 0 || size.height == 0) {
+      return;
+    }
+    if (gameBoard != null) {
+      gameBoard.setBounds(0, 0, size.width, size.height);
+    }
+    if (timerLabel != null) {
+      int timerWidth = Math.max(80, Math.min(120, size.width / 4));
+      timerLabel.setBounds(10, 10, timerWidth, 30);
+    }
+    if (timeStopOverlay != null) {
+      timeStopOverlay.setBounds(0, 0, size.width, size.height);
+    }
+    if (timeStopCenterPanel != null && timeStopIconLabel != null
+        && timeStopNumberLabel != null && timeStopSubLabel != null) {
+      int labelWidth = Math.max(200, size.width / 2);
+      int labelHeight = Math.max(120, size.height / 4);
+      int padTop = Math.max(12, labelHeight / 8);
+      int totalHeight = labelHeight + padTop;
+      timeStopCenterPanel.setBounds(
+          (size.width - labelWidth) / 2,
+          (size.height - totalHeight) / 2,
+          labelWidth,
+          totalHeight);
+      int numberFontSize = Math.max(40, (labelHeight - padTop) * 3 / 4);
+      int iconFontSize = Math.max(24, (labelHeight - padTop) / 6);
+      int subFontSize = Math.max(12, (labelHeight - padTop) / 8);
+      timeStopNumberLabel.setFont(createKoreanFont(Font.BOLD, numberFontSize));
+      timeStopIconLabel.setFont(createKoreanFont(Font.PLAIN, iconFontSize));
+      timeStopSubLabel.setFont(createKoreanFont(Font.PLAIN, subFontSize));
+    }
+    positionTimeStopIndicator();
+  }
+
+  private void updateTimeStopIndicator() {
+    if (timeStopIndicatorLabel == null || gameEngine == null) {
+      return;
+    }
+    positionTimeStopIndicator();
+    boolean hasCharge = gameEngine.hasTimeStopCharge();
+    if (timeStopIndicatorLabel.isVisible() != hasCharge) {
+      timeStopIndicatorLabel.setVisible(hasCharge);
+    }
+  }
+
+  // P2P 관전자 패널에서 네트워크로 받은 타임스톱 상태를 즉시 반영
+  public void updateTimeStopIndicatorFromNetwork(boolean hasCharge) {
+    if (timeStopIndicatorLabel == null || gameEngine == null) {
+      return;
+    }
+    gameEngine.setTimeStopCharge(hasCharge);
+    positionTimeStopIndicator();
+    timeStopIndicatorLabel.setVisible(hasCharge);
+  }
+
+  private void positionTimeStopIndicator() {
+    if (boardContainer == null || timeStopIndicatorLabel == null) {
+      return;
+    }
+    java.awt.Dimension size = boardContainer.getSize();
+    if (size == null || size.width == 0 || size.height == 0) {
+      return;
+    }
+    int indicatorWidth = Math.max(60, size.width / 6);
+    indicatorWidth = Math.min(indicatorWidth, 90);
+    int indicatorHeight = Math.min(Math.max(40, size.height / 12), 55);
+    int margin = 10;
+    int x = size.width - indicatorWidth - margin;
+    int y = margin;
+    timeStopIndicatorLabel.setBounds(x, y, indicatorWidth, indicatorHeight);
+    int fontSize = Math.max(14, indicatorHeight / 3);
+    timeStopIndicatorLabel.setFont(createKoreanFont(Font.BOLD, fontSize));
   }
 
   /**
@@ -993,6 +1102,7 @@ public class PlayerGamePanel extends JPanel {
       timeStopNumberLabel.setText(String.valueOf(timeStopRemaining));
       timeStopSubLabel.setText("초 남음");
       timeStopOverlay.setVisible(true);
+      layoutBoardComponents();
     }
   }
   

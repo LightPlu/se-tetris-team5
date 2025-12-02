@@ -490,6 +490,11 @@ public class GameEngine {
   public boolean hasTimeStopCharge() {
     return hasTimeStopCharge;
   }
+  
+  // 외부에서 타임스톱 충전 상태를 강제로 설정 (P2P 동기화용)
+  public void setTimeStopCharge(boolean hasCharge) {
+    this.hasTimeStopCharge = hasCharge;
+  }
 
   // 타임스톱 사용 (충전 소모)
   public void useTimeStop() {

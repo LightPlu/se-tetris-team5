@@ -483,10 +483,6 @@ public class p2pbattle extends JPanel implements KeyListener {
                     if (connectButton != null) {
                         connectButton.setEnabled(true);
                     }
-                    // 재연결 시도인 경우 홈으로 돌아가기
-                    if (currentState == ScreenState.CLIENT_CONNECTING && ipField == null) {
-                        returnToHome();
-                    }
                 });
             }
         });
@@ -843,6 +839,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         // 게임 경과 시간 계산 및 전송
         long elapsedTime = myPanel.getGameEngine().getElapsedTime();
         packet.setElapsedTime(elapsedTime);
+        packet.setHasTimeStopCharge(myPanel.getGameEngine().hasTimeStopCharge());
         
         // 공격 블록 전송 (게임에서 새로 생성된 공격 줄만)
         java.util.List<java.awt.Color[]> attackBlocks = myPanel.drainPendingOutgoingAttackBlocks();
@@ -915,10 +912,6 @@ public class p2pbattle extends JPanel implements KeyListener {
                 case GAME_OVER:
                     handleGameOver(packet.getWinner());
                     break;
-                    
-                case RESTART_REQUEST:
-                    handleRestartRequest();
-                    break;
                 case CHAT_MESSAGE:
                     appendChatMessage(getOpponentRoleLabel(), packet.getMessage());
                     break;
@@ -954,6 +947,8 @@ public class p2pbattle extends JPanel implements KeyListener {
                 packet.getLinesCleared(),
                 packet.getElapsedTime()
             );
+            p2pEngine.setTimeStopCharge(packet.hasTimeStopCharge());
+            opponentPanel.updateTimeStopIndicatorFromNetwork(packet.hasTimeStopCharge());
             
             // UI 컴포넌트 업데이트 (P2P 엔진이 상태를 가지고 있으므로 자동 반영됨)
             if (opponentPanel.getGameBoard() != null) {
@@ -1023,9 +1018,10 @@ public class p2pbattle extends JPanel implements KeyListener {
         }
 
         String message = winner == (isServer ? 1 : 2) ?
-            "축하합니다! 승리하셨습니다!\n\n대기방으로 돌아가서 재대결 하시겠습니까?" :
-            "아쉽게도 패배하셨습니다...\n\n대기방으로 돌아가서 재대결 하시겠습니까?";
+            "축하합니다! 승리하셨습니다!\n\n메인 메뉴로 돌아가거나 게임을 종료할 수 있습니다." :
+            "아쉽게도 패배하셨습니다...\n\n메인 메뉴로 돌아가거나 게임을 종료할 수 있습니다.";
 
+        Object[] options = { "메인 메뉴", "게임 종료" };
         int option = JOptionPane.showOptionDialog(
             this,
             message,
@@ -1033,58 +1029,14 @@ public class p2pbattle extends JPanel implements KeyListener {
             JOptionPane.DEFAULT_OPTION,
             JOptionPane.INFORMATION_MESSAGE,
             null,
-            new Object[] { "대기방으로", "메인 메뉴" },
-            "대기방으로"
+            options,
+            options[0]
         );
 
         if (option == 0 || option == JOptionPane.CLOSED_OPTION) {
-            // 재시작 요청 (닫기 버튼도 대기방으로)
-            requestRestart();
-        } else {
             disconnect();
-        }
-    }
-    
-    /**
-     * 재시작 요청
-     */
-    private void requestRestart() {
-        stopTimeLimitTimer();
-        stopLobbyLatencyMonitor();
-        GameStatePacket packet = new GameStatePacket(GameStatePacket.PacketType.RESTART_REQUEST);
-        
-        if (isServer && server != null) {
-            server.sendPacket(packet);
-        } else if (!isServer && client != null) {
-            client.sendPacket(packet);
-        }
-        
-        isReady = false;
-        opponentReady = false;
-
-        restoreLobbyLayout();
-
-        if (isServer) {
-            showModeSelection();
-        } else {
-            showReadyWaiting();
-        }
-    }
-    
-    /**
-     * 재시작 요청 처리
-     */
-    private void handleRestartRequest() {
-        stopTimeLimitTimer();
-        stopLobbyLatencyMonitor();
-        isReady = false;
-        opponentReady = false;
-        restoreLobbyLayout();
-
-        if (isServer) {
-            showModeSelection();
-        } else {
-            showReadyWaiting();
+        } else if (option == 1) {
+            exitApplication();
         }
     }
     
@@ -1110,6 +1062,46 @@ public class p2pbattle extends JPanel implements KeyListener {
     }
     
     /**
+     * 애플리케이션 완전 종료
+     */
+    private void exitApplication() {
+        stopTimeLimitTimer();
+        stopLobbyLatencyMonitor();
+        if (latencyUpdateTimer != null) {
+            latencyUpdateTimer.stop();
+            latencyUpdateTimer = null;
+        }
+
+        try {
+            GameStatePacket packet = new GameStatePacket(GameStatePacket.PacketType.DISCONNECT);
+            if (isServer && server != null) {
+                server.sendPacket(packet);
+                server.close();
+                server = null;
+            } else if (!isServer && client != null) {
+                client.sendPacket(packet);
+                client.close();
+                client = null;
+            }
+        } catch (Exception ignored) {}
+
+        if (gameController != null) {
+            gameController.stop();
+            gameController = null;
+        }
+        if (myPanel != null) {
+            myPanel.stopGame();
+        }
+        if (opponentPanel != null) {
+            opponentPanel.stopGame();
+        }
+        if (screenController != null) {
+            screenController.dispose();
+        }
+        System.exit(0);
+    }
+    
+    /**
      * 연결 끊김 처리
      */
     private void handleDisconnection(String reason) {
@@ -1129,34 +1121,23 @@ public class p2pbattle extends JPanel implements KeyListener {
         // 연결 끊김 이유에 따른 자세한 메시지
         String detailedMessage = getDisconnectionMessage(reason);
         
-        // 클라이언트인 경우 재연결 옵션 제공
-        if (!isServer && currentState != ScreenState.ROLE_SELECTION) {
-            int option = JOptionPane.showOptionDialog(
-                this,
-                detailedMessage + "\n\n다시 연결하시겠습니까?",
-                "연결 종료",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE,
-                null,
-                new Object[] { "재연결 시도", "메인 메뉴" },
-                "재연결 시도"
-            );
-            
-            if (option == 0) {
-                // 재연결 시도
-                attemptReconnect();
-                return;
-            }
-        } else {
-            JOptionPane.showMessageDialog(
-                this,
-                detailedMessage,
-                "연결 종료",
-                JOptionPane.WARNING_MESSAGE
-            );
+        Object[] options = { "메인 메뉴", "게임 종료" };
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            detailedMessage + "\n\n게임을 종료하거나 메인 화면으로 돌아가세요.",
+            "연결 종료",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.WARNING_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+        
+        if (choice == 1) {
+            exitApplication();
+            return;
         }
         
-        // 역할 선택 화면 대신 홈 화면으로 이동
         returnToHome();
     }
     
@@ -1181,34 +1162,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         } else {
             return "연결이 끊어졌습니다.\n\n원인: " + reason;
         }
-    }
-    
-    /**
-     * 재연결 시도
-     */
-    private void attemptReconnect() {
-        String lastIP = ipField != null ? ipField.getText() : "";
-        if (lastIP.isEmpty() && recentIPComboBox != null && recentIPComboBox.getItemCount() > 0) {
-            lastIP = recentIPComboBox.getItemAt(0);
-        }
-        
-        if (lastIP.isEmpty()) {
-            showError("이전 연결 정보를 찾을 수 없습니다.\n처음부터 다시 연결해주세요.");
-            returnToHome();
-            return;
-        }
-        
-        // 기존 연결 정리
-        if (client != null) {
-            client.close();
-            client = null;
-        }
-        
-        // 재연결 시도
-        statusLabel.setText("재연결 시도 중...");
-        currentState = ScreenState.CLIENT_CONNECTING;
-        
-        connectToServer(lastIP);
     }
     
     /**
@@ -1754,6 +1707,18 @@ public class p2pbattle extends JPanel implements KeyListener {
     public void keyPressed(KeyEvent e) {
         System.out.println("[P2P] 키 입력 감지: " + KeyEvent.getKeyText(e.getKeyCode()));
 
+        if (currentState == ScreenState.PLAYING) {
+            se.tetris.team5.utils.setting.GameSettings settings =
+                se.tetris.team5.utils.setting.GameSettings.getInstance();
+            int itemKey = settings.getKeyCode("item");
+            if (e.getKeyCode() == itemKey && myPanel != null) {
+                if (myPanel.useItem()) {
+                    ensureGameplayFocus();
+                }
+                return;
+            }
+        }
+
         if (currentState == ScreenState.PLAYING && myInputHandler != null) {
             myInputHandler.handleKeyPress(e.getKeyCode());
             System.out.println("[P2P] 키 입력 처리 완료");
@@ -1769,7 +1734,8 @@ public class p2pbattle extends JPanel implements KeyListener {
 
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
             if (currentState == ScreenState.PLAYING) {
-                String message = "게임을 종료하시겠습니까?\n\n대기방으로 돌아가거나 메인 메뉴로 이동할 수 있습니다.";
+                String message = "게임을 종료하시겠습니까?\n\n메인 메뉴로 돌아가거나 게임을 완전히 종료할 수 있습니다.";
+                Object[] options = { "메인 메뉴", "게임 종료" };
                 int option = JOptionPane.showOptionDialog(
                     this,
                     message,
@@ -1777,13 +1743,15 @@ public class p2pbattle extends JPanel implements KeyListener {
                     JOptionPane.DEFAULT_OPTION,
                     JOptionPane.INFORMATION_MESSAGE,
                     null,
-                    new Object[] { "대기방으로", "메인 메뉴" },
-                    "대기방으로"
+                    options,
+                    options[0]
                 );
-                if (option == 0 || option == JOptionPane.CLOSED_OPTION) {
-                    requestRestart();
-                } else {
+                if (option == 0) {
                     disconnect();
+                } else if (option == 1) {
+                    exitApplication();
+                } else {
+                    ensureGameplayFocus();
                 }
             }
         }
