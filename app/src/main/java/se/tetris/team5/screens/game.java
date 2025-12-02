@@ -1619,7 +1619,6 @@ public class game extends JPanel implements KeyListener {
     int rightKey = settings.getKeyCode("right");
     int rotateKey = settings.getKeyCode("rotate");
     int dropKey = settings.getKeyCode("drop");
-    int pauseKey = settings.getKeyCode("pause");
     int itemKey = settings.getKeyCode("item");
 
     // 일시정지 상태일 때의 키 처리
@@ -1667,11 +1666,6 @@ public class game extends JPanel implements KeyListener {
           break;
       }
 
-      // 일시정지 상태에서도 설정된 일시정지 키로 게임 재개 가능
-      if (pauseKey != -1 && e.getKeyCode() == pauseKey) {
-        resumeGame();
-      }
-
       return; // 일시정지 상태에서는 다른 키 무시
     }
 
@@ -1701,8 +1695,6 @@ public class game extends JPanel implements KeyListener {
       if (gameEngine.hasTimeStopCharge() && !isTimeStopped) {
         activateTimeStop();
       }
-    } else if (keyCode == pauseKey) {
-      pauseGame();
     }
   }
 

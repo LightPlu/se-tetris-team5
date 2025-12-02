@@ -386,9 +386,7 @@ public class battle extends JPanel implements KeyListener {
     player2Input.handleKeyPress(keyCode);
     
     // 공통 키 처리
-    if (keyCode == KeyEvent.VK_P) {
-      togglePause();
-    } else if (keyCode == KeyEvent.VK_ESCAPE) {
+    if (keyCode == KeyEvent.VK_ESCAPE) {
       isPaused = true; // ESC 입력 시 명확히 일시정지
       showPauseMenu();
     }
@@ -400,15 +398,6 @@ public class battle extends JPanel implements KeyListener {
 
   @Override
   public void keyReleased(KeyEvent e) {
-  }
-
-  private void togglePause() {
-    isPaused = !isPaused;
-    gameController.setPaused(isPaused);
-    if (isPaused) {
-      JOptionPane.showMessageDialog(this, "일시정지됨\nP 키를 눌러 계속하기", "일시정지", JOptionPane.INFORMATION_MESSAGE);
-    }
-    requestFocusInWindow();
   }
 
   private void showPauseMenu() {
