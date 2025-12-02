@@ -69,6 +69,8 @@ public class PlayerGamePanel extends JPanel {
   private JLabel timeStopIconLabel;
   private JLabel timeStopNumberLabel;
   private JLabel timeStopSubLabel;
+  // 타임스톱 아이템 획득 표시 (게임보드 오른쪽 위)
+  private JLabel timeStopIndicator;
 
   /**
    * 플레이어 게임 패널 생성 (기본값)
@@ -191,6 +193,18 @@ public class PlayerGamePanel extends JPanel {
 
     boardContainer.add(timeStopOverlay, Integer.valueOf(200));
 
+    // 타임스톱 아이템 획득 표시 (오른쪽 위) - 일반 모드와 동일
+    timeStopIndicator = new JLabel("획득:⌛", javax.swing.SwingConstants.CENTER);
+    timeStopIndicator.setFont(new Font("Dialog", Font.BOLD, 16));
+    timeStopIndicator.setForeground(new Color(60, 180, 170));
+    timeStopIndicator.setOpaque(true);
+    timeStopIndicator.setBackground(new Color(0, 0, 0, 180));
+    timeStopIndicator.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(60, 180, 170), 2),
+        BorderFactory.createEmptyBorder(1, 1, 1, 1)));
+    timeStopIndicator.setVisible(false);
+    boardContainer.add(timeStopIndicator, Integer.valueOf(200));
+
     // 보드와 타이머 위치 설정
     boardContainer.addComponentListener(new java.awt.event.ComponentAdapter() {
       @Override
@@ -199,6 +213,10 @@ public class PlayerGamePanel extends JPanel {
         gameBoard.setBounds(0, 0, size.width, size.height);
         timerLabel.setBounds(10, 10, 80, 30);
         timeStopOverlay.setBounds(0, 0, size.width, size.height);
+        // 타임스톱 표시 위치 (오른쪽 위)
+        int indicatorWidth = 60;
+        int indicatorHeight = 45;
+        timeStopIndicator.setBounds(size.width - indicatorWidth - 10, 10, indicatorWidth, indicatorHeight);
       }
     });
 
@@ -698,6 +716,9 @@ public class PlayerGamePanel extends JPanel {
       linesLabel.setText("줄: " + gameEngine.getGameScoring().getLinesCleared());
     }
 
+    // 타임스톱 획득 표시 업데이트
+    updateTimeStopIndicator();
+
     // 타이머 업데이트
     // countdownTimerEnabled가 true면 battle.java에서 updateTimerLabel()로 업데이트하므로 여기서는
     // 건너뜀
@@ -1118,6 +1139,15 @@ public class PlayerGamePanel extends JPanel {
     }
 
     System.out.println("[" + playerName + "] 타임스톱 종료");
+  }
+
+  /**
+   * 타임스톱 획득 표시를 업데이트합니다 (일반 모드와 동일)
+   */
+  private void updateTimeStopIndicator() {
+    if (gameEngine != null && timeStopIndicator != null) {
+      timeStopIndicator.setVisible(gameEngine.hasTimeStopCharge());
+    }
   }
 
 }
