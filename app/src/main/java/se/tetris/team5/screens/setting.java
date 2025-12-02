@@ -700,7 +700,12 @@ public class setting {
             try {
                 Thread.sleep(2000);
                 currentKeyAction = "";
-                drawKeySettingScreen();
+                // 대전모드 키 설정 중이면 대전모드 화면으로, 아니면 일반 키 설정 화면으로
+                if (isBattleKeySettingMode) {
+                    drawBattleKeySettingScreen();
+                } else {
+                    drawKeySettingScreen();
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -875,7 +880,7 @@ public class setting {
                     // 설정 인터페이스에 필수적인 키만 제한
                     if (newKeyCode == KeyEvent.VK_ESCAPE || newKeyCode == KeyEvent.VK_ENTER) {
                         // 제한된 키에 대한 경고 메시지
-                        showKeyWarning("ESC와 Enter키는 설정할 수 없습니다.");
+                        showKeyWarning("Enter키로는 설정할 수 없습니다.");
                         return;
                     }
                     
