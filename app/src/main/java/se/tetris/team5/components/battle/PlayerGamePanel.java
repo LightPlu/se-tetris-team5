@@ -57,7 +57,7 @@ public class PlayerGamePanel extends JPanel {
 
   // 대전모드: 상대방 패널 참조 (공격 블럭 전송용)
   private PlayerGamePanel opponentPanel;
-  
+
   // 타임스톱 관련
   private boolean isTimeStopped = false;
   private Timer timeStopCountdownTimer;
@@ -76,7 +76,7 @@ public class PlayerGamePanel extends JPanel {
 
   /**
    * 플레이어 게임 패널 생성
-   * 
+   *
    * @param playerName  플레이어 이름
    * @param controlInfo 조작키 정보
    * @param themeColor  테마 색상
@@ -97,9 +97,31 @@ public class PlayerGamePanel extends JPanel {
     // autoStart=false로 생성하여 자동 시작 방지 (빈 보드 상태)
     gameEngine = new GameEngine(GameBoard.HEIGHT, GameBoard.WIDTH, false);
 
-    // 대전모드: 블럭 고정 후 공격 블럭 적용 콜백 설정
+    // 대전모드: 블럭 고정 후 공격 블럭 적용 및 전송 콜백 설정
     gameEngine.setOnBlockFixedCallback(() -> {
+      // 받은 공격 블럭 적용
       checkAndApplyAttackBlocks();
+
+      // 줄 삭제 애니메이션 트리거 (consumeLastClearedRows 호출 전에)
+      try {
+        java.util.List<Integer> clearedRows = gameEngine.consumeLastClearedRows();
+        if (clearedRows != null && !clearedRows.isEmpty()) {
+          // 애니메이션 트리거
+          if (gameBoard != null) {
+            gameBoard.triggerClearAnimation(clearedRows);
+          }
+
+          // 보낼 공격 블럭 전송 (2줄 이상 삭제 시)
+          if (clearedRows.size() >= 2 && opponentPanel != null) {
+            java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
+            if (attackData != null && !attackData.isEmpty()) {
+              opponentPanel.addAttackBlocks(attackData);
+            }
+          }
+        }
+      } catch (Exception ex) {
+        // 공격 블럭 전송 실패해도 게임 진행
+      }
     });
   }
 
@@ -119,7 +141,7 @@ public class PlayerGamePanel extends JPanel {
     timerLabel.setBackground(new Color(0, 0, 0, 180));
     timerLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
     boardContainer.add(timerLabel, Integer.valueOf(100));
-    
+
     // 타임스톱 오버레이 패널 (처음에는 숨김)
     timeStopOverlay = new JPanel() {
       @Override
@@ -135,22 +157,22 @@ public class PlayerGamePanel extends JPanel {
     timeStopOverlay.setLayout(new BoxLayout(timeStopOverlay, BoxLayout.Y_AXIS));
     timeStopOverlay.setOpaque(false); // 투명도 적용을 위해 필수
     timeStopOverlay.setVisible(false);
-    
+
     timeStopIconLabel = new JLabel("⏱", javax.swing.SwingConstants.CENTER);
     timeStopIconLabel.setFont(new Font("Dialog", Font.BOLD, 48));
     timeStopIconLabel.setForeground(Color.CYAN);
     timeStopIconLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    
+
     timeStopNumberLabel = new JLabel("5", javax.swing.SwingConstants.CENTER);
     timeStopNumberLabel.setFont(new Font("Dialog", Font.BOLD, 72));
     timeStopNumberLabel.setForeground(Color.YELLOW);
     timeStopNumberLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    
+
     timeStopSubLabel = new JLabel("초 남음", javax.swing.SwingConstants.CENTER);
     timeStopSubLabel.setFont(new Font("Dialog", Font.BOLD, 24));
     timeStopSubLabel.setForeground(Color.WHITE);
     timeStopSubLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    
+
     timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
     timeStopOverlay.add(timeStopIconLabel);
     timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
@@ -158,7 +180,7 @@ public class PlayerGamePanel extends JPanel {
     timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
     timeStopOverlay.add(timeStopSubLabel);
     timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
-    
+
     boardContainer.add(timeStopOverlay, Integer.valueOf(200));
 
     // 보드와 타이머 위치 설정
@@ -540,18 +562,14 @@ public class PlayerGamePanel extends JPanel {
     gameBoard.renderBoard(board, boardColors, items, currBlock, currX, currY, ghostY);
 
     // 줄 삭제 애니메이션 처리
+    // 주의: onBlockFixedCallback에서 이미 consumeLastClearedRows()를 호출했으므로,
+    // 여기서는 이미 소비된 데이터가 없을 수 있습니다. 하지만 혹시 모를 경우를 대비해 체크합니다.
     try {
       java.util.List<Integer> clearedRows = gameEngine.consumeLastClearedRows();
       if (clearedRows != null && !clearedRows.isEmpty()) {
+        // onBlockFixedCallback에서 이미 애니메이션을 트리거했지만,
+        // 혹시 놓친 경우를 대비해 여기서도 트리거합니다.
         gameBoard.triggerClearAnimation(clearedRows);
-
-        // 대전모드: 2줄 이상 삭제 시 공격 블럭 데이터를 상대방에게 전송
-        if (clearedRows.size() >= 2 && opponentPanel != null) {
-          java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
-          if (attackData != null && !attackData.isEmpty()) {
-            opponentPanel.addAttackBlocks(attackData);
-          }
-        }
       }
     } catch (Exception ex) {
       // 애니메이션 처리 실패해도 게임 진행
@@ -612,7 +630,7 @@ public class PlayerGamePanel extends JPanel {
   /**
    * 타이머 라벨 업데이트 (시간제한 모드용)
    * battle.java에서 카운트다운 타이머를 관리할 때 호출됨
-   * 
+   *
    * @param timeString 표시할 시간 문자열 (예: "05:00", "04:59")
    */
   public void updateTimerLabel(String timeString) {
@@ -623,7 +641,7 @@ public class PlayerGamePanel extends JPanel {
 
   /**
    * 외부(시간제한 모드)에서 타이머를 제어할지 여부를 설정
-   * 
+   *
    * @param enabled true: 외부에서 타이머 제어 (카운트다운), false: 자체 타이머 (경과 시간)
    */
   public void setCountdownTimerEnabled(boolean enabled) {
@@ -646,7 +664,7 @@ public class PlayerGamePanel extends JPanel {
   /**
    * 대전모드: 공격 블럭 데이터를 업데이트합니다.
    * 게임 전체 누적 공격 줄 수가 10줄을 초과할 수 없습니다.
-   * 
+   *
    * @param newAttackBlocks 추가할 공격 블럭 데이터 (각 Color[] 배열이 한 줄을 나타냄)
    */
   public void addAttackBlocks(java.util.List<Color[]> newAttackBlocks) {
@@ -718,7 +736,7 @@ public class PlayerGamePanel extends JPanel {
 
   /**
    * 대전모드: 현재 공격 블럭 데이터를 반환합니다.
-   * 
+   *
    * @return 공격 블럭 데이터 리스트
    */
   public java.util.List<Color[]> getAttackBlocksData() {
@@ -742,37 +760,38 @@ public class PlayerGamePanel extends JPanel {
 
   /**
    * 대전모드: 상대방 패널을 설정합니다 (공격 블럭 전송용)
-   * 
+   *
    * @param opponent 상대방 PlayerGamePanel
    */
   public void setOpponentPanel(PlayerGamePanel opponent) {
     this.opponentPanel = opponent;
   }
-  
+
   /**
    * 아이템 사용 - 타임스톱 활성화
+   *
    * @return 아이템 사용 성공 여부
    */
   public boolean useItem() {
     if (gameEngine != null && gameEngine.hasTimeStopCharge() && !isTimeStopped) {
       isTimeStopped = true;
       gameEngine.useTimeStop(); // 충전 소모
-      
+
       // 타이머 정지
       if (gameTimer != null) {
         gameTimer.stop();
       }
-      
+
       // 타임스톱 오버레이 표시 및 카운트다운 시작
       timeStopRemaining = 5;
       showTimeStopOverlay();
-      
+
       // 기존 카운트다운 타이머 정리
       if (timeStopCountdownTimer != null) {
         timeStopCountdownTimer.stop();
         timeStopCountdownTimer = null;
       }
-      
+
       // 1초마다 카운트다운
       timeStopCountdownTimer = new Timer(1000, e -> {
         timeStopRemaining--;
@@ -789,13 +808,13 @@ public class PlayerGamePanel extends JPanel {
       });
       timeStopCountdownTimer.setRepeats(true);
       timeStopCountdownTimer.start();
-      
+
       System.out.println("[" + playerName + "] 타임스톱 아이템 사용!");
       return true;
     }
     return false;
   }
-  
+
   /**
    * 타임스톱 오버레이 표시
    */
@@ -807,7 +826,7 @@ public class PlayerGamePanel extends JPanel {
       timeStopOverlay.setVisible(true);
     }
   }
-  
+
   /**
    * 타임스톱 오버레이 업데이트
    */
@@ -816,23 +835,23 @@ public class PlayerGamePanel extends JPanel {
       timeStopNumberLabel.setText(String.valueOf(timeStopRemaining));
     }
   }
-  
+
   /**
    * 타임스톱 해제
    */
   private void deactivateTimeStop() {
     isTimeStopped = false;
-    
+
     // 오버레이 숨기기
     if (timeStopOverlay != null) {
       timeStopOverlay.setVisible(false);
     }
-    
+
     // 타이머 재시작
     if (gameTimer != null && !isGameOver()) {
       gameTimer.start();
     }
-    
+
     System.out.println("[" + playerName + "] 타임스톱 종료");
   }
 }
