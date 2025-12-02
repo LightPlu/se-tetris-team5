@@ -15,7 +15,9 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({
     se.tetris.team5.screens.BattleModeTest.class,
     se.tetris.team5.components.battle.PlayerGamePanelTest.class,
-    se.tetris.team5.gamelogic.battle.BattleGameControllerTest.class
+    se.tetris.team5.gamelogic.battle.BattleGameControllerTest.class,
+    se.tetris.team5.screens.AIBattleModeTest.class,
+    se.tetris.team5.components.battle.PlayerGamePanelAnimationTest.class
 })
 public class BattleModeSuite {
   // 테스트 스위트 - 본문 필요 없음
