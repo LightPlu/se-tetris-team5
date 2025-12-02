@@ -1,4 +1,6 @@
-package se.tetris.team5.gamelogic.ai;
+package se.tetris.team5.gamelogic.ai.training;
+
+import se.tetris.team5.gamelogic.ai.WeightSet;
 
 /**
  * 세대별 결과를 저장하는 클래스

@@ -1,4 +1,6 @@
-package se.tetris.team5.gamelogic.ai;
+package se.tetris.team5.gamelogic.ai.training;
+
+import se.tetris.team5.gamelogic.ai.WeightSet;
 
 /**
  * 유전 알고리즘의 개체 (Individual)

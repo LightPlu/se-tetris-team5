@@ -1,7 +1,9 @@
-package se.tetris.team5.gamelogic.ai;
+package se.tetris.team5.gamelogic.ai.training;
 
 import se.tetris.team5.gamelogic.GameEngine;
 import se.tetris.team5.gamelogic.GameMode;
+import se.tetris.team5.gamelogic.ai.TetrisAI;
+import se.tetris.team5.gamelogic.ai.WeightSet;
 import javax.swing.Timer;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -220,7 +222,7 @@ public class FitnessEvaluator {
 
       final int[] moves = { 0 };
       final boolean[] gameFinished = { false };
-      
+
       // 보드 상태 추적
       final int[] maxHeight = { 0 };
       final int[] sumHeight = { 0 };
@@ -232,13 +234,13 @@ public class FitnessEvaluator {
         public void actionPerformed(ActionEvent e) {
           if (!engine.isGameOver()) {
             engine.moveBlockDown();
-            
+
             // 보드 상태 측정
             int[][] board = engine.getBoardManager().getBoard();
             int currentMaxHeight = engine.getBoardManager().getHighestBlockRow();
             int currentAvgHeight = calculateAverageHeight(board);
             int currentHoles = countHoles(board);
-            
+
             maxHeight[0] = Math.max(maxHeight[0], currentMaxHeight);
             sumHeight[0] += currentAvgHeight;
             heightCount[0]++;
@@ -291,7 +293,7 @@ public class FitnessEvaluator {
       survivalFitness += avgHoles * -5.0; // 구멍이 적을수록 좋음
       survivalFitness += linesCleared * 100.0; // 줄 삭제 보너스
       survivalFitness += gameTimeMs / 1000.0 * 10.0; // 생존 시간 보너스
-      
+
       if (gameTimeMs > 18750) { // 19초 이상 생존
         survivalFitness += 1000.0;
       }

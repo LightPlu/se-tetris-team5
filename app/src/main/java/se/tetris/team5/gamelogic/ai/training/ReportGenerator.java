@@ -1,5 +1,6 @@
-package se.tetris.team5.gamelogic.ai;
+package se.tetris.team5.gamelogic.ai.training;
 
+import se.tetris.team5.gamelogic.ai.WeightSet;
 import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Date;
