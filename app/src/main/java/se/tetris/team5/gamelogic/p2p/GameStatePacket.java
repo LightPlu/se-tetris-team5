@@ -44,7 +44,7 @@ public class GameStatePacket implements Serializable {
     private boolean hasTimeStopCharge; // 타임스톱 보유 여부
     
     // 공격 블럭 데이터
-    private List<Color[]> attackBlocks;
+    private List<int[]> attackBlocks;
     
     // 게임 모드 선택
     private String battleMode; // "NORMAL", "ITEM", "TIMELIMIT"
@@ -164,11 +164,11 @@ public class GameStatePacket implements Serializable {
         this.hasTimeStopCharge = hasTimeStopCharge;
     }
     
-    public List<Color[]> getAttackBlocks() {
+    public List<int[]> getAttackBlocks() {
         return attackBlocks;
     }
     
-    public void setAttackBlocks(List<Color[]> attackBlocks) {
+    public void setAttackBlocks(List<int[]> attackBlocks) {
         this.attackBlocks = attackBlocks;
     }
     

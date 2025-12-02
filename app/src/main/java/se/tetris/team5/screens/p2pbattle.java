@@ -838,7 +838,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         if (!attackBlocks.isEmpty()) {
             System.out.println("[P2P] 공격 블록 전송: " + attackBlocks.size() + "줄");
             GameStatePacket attackPacket = new GameStatePacket(GameStatePacket.PacketType.ATTACK_BLOCKS);
-            attackPacket.setAttackBlocks(attackBlocks);
+            attackPacket.setAttackBlocks(encodeAttackBlocks(attackBlocks));
             
             if (isServer && server != null) {
                 server.sendPacket(attackPacket);
@@ -893,8 +893,8 @@ public class p2pbattle extends JPanel implements KeyListener {
                 case ATTACK_BLOCKS:
                     // 공격 블록 수신 - 내 패널에 적용
                     if (myPanel != null && currentState == ScreenState.PLAYING) {
-                        java.util.List<java.awt.Color[]> receivedAttacks = packet.getAttackBlocks();
-                        if (receivedAttacks != null && !receivedAttacks.isEmpty()) {
+                        java.util.List<java.awt.Color[]> receivedAttacks = decodeAttackBlocks(packet.getAttackBlocks());
+                        if (!receivedAttacks.isEmpty()) {
                             System.out.println("[P2P] 공격 블록 수신: " + receivedAttacks.size() + "줄");
                             myPanel.receiveAttackBlocks(receivedAttacks);
                         }
@@ -1692,6 +1692,42 @@ public class p2pbattle extends JPanel implements KeyListener {
         if (screenController != null) {
             screenController.updateWindowSize();
         }
+    }
+
+    private java.util.List<int[]> encodeAttackBlocks(java.util.List<java.awt.Color[]> blocks) {
+        java.util.List<int[]> encoded = new java.util.ArrayList<>();
+        if (blocks == null) {
+            return encoded;
+        }
+        for (java.awt.Color[] row : blocks) {
+            if (row == null) {
+                continue;
+            }
+            int[] encodedRow = new int[row.length];
+            for (int i = 0; i < row.length; i++) {
+                encodedRow[i] = row[i] != null ? row[i].getRGB() : 0;
+            }
+            encoded.add(encodedRow);
+        }
+        return encoded;
+    }
+
+    private java.util.List<java.awt.Color[]> decodeAttackBlocks(java.util.List<int[]> encoded) {
+        java.util.List<java.awt.Color[]> decoded = new java.util.ArrayList<>();
+        if (encoded == null || encoded.isEmpty()) {
+            return decoded;
+        }
+        for (int[] row : encoded) {
+            if (row == null) {
+                continue;
+            }
+            java.awt.Color[] decodedRow = new java.awt.Color[row.length];
+            for (int i = 0; i < row.length; i++) {
+                decodedRow[i] = row[i] == 0 ? null : new java.awt.Color(row[i], true);
+            }
+            decoded.add(decodedRow);
+        }
+        return decoded;
     }
     
     /**
