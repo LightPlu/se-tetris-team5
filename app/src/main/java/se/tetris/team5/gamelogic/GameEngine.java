@@ -37,12 +37,13 @@ public class GameEngine {
   private int x, y;
   private boolean gameOver;
   private boolean gameRunning;
+  private boolean paused = false;
   private long gameStartTime;
 
   // listeners to notify UI or other observers about state changes (e.g., next
   // block spawned)
   private List<Runnable> listeners = new ArrayList<>();
-  
+
   // 대전모드: 블럭 고정 후 콜백 (공격 블럭 적용용)
   private Runnable onBlockFixedCallback = null;
 
@@ -137,7 +138,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockDown() {
-    if (gameOver)
+    if (gameOver || paused)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -208,7 +209,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockLeft() {
-    if (gameOver || currentBlock == null)
+    if (gameOver || paused || currentBlock == null)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -223,7 +224,7 @@ public class GameEngine {
   }
 
   public boolean moveBlockRight() {
-    if (gameOver || currentBlock == null)
+    if (gameOver || paused || currentBlock == null)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -238,7 +239,7 @@ public class GameEngine {
   }
 
   public boolean rotateBlock() {
-    if (gameOver)
+    if (gameOver || paused)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -259,7 +260,7 @@ public class GameEngine {
   }
 
   public boolean hardDrop() {
-    if (gameOver)
+    if (gameOver || paused)
       return false;
 
     boardManager.eraseBlock(currentBlock, x, y);
@@ -587,6 +588,24 @@ public class GameEngine {
   }
 
   /**
+   * 게임 일시정지/재개 설정
+   * 
+   * @param paused true면 일시정지, false면 재개
+   */
+  public void setPaused(boolean paused) {
+    this.paused = paused;
+  }
+
+  /**
+   * 게임이 일시정지 상태인지 확인
+   * 
+   * @return true면 일시정지, false면 실행 중
+   */
+  public boolean isPaused() {
+    return paused;
+  }
+
+  /**
    * Consume and return the last cleared rows recorded by the engine.
    * Returns an empty list if none. This method clears the stored list so
    * subsequent
@@ -623,6 +642,7 @@ public class GameEngine {
     y = 0;
     gameRunning = true;
     gameOver = false;
+    paused = false;
     gameStartTime = System.currentTimeMillis();
     totalClearedLines = 0;
     hasTimeStopCharge = false; // 타임스톱 충전 초기화

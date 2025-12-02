@@ -673,9 +673,23 @@ public class battle extends JPanel implements KeyListener {
 
     if (isPaused) {
       pauseAllAIControllers();
+      // 타이머 일시정지
+      if (timeLimitTimer != null && timeLimitTimer.isRunning()) {
+        timeLimitTimer.stop();
+      }
+      if (gameOverCheckTimer != null && gameOverCheckTimer.isRunning()) {
+        gameOverCheckTimer.stop();
+      }
       JOptionPane.showMessageDialog(this, "일시정지됨\nP 키를 눌러 계속하기", "일시정지", JOptionPane.INFORMATION_MESSAGE);
     } else {
       resumeAllAIControllers();
+      // 타이머 재개
+      if (timeLimitTimer != null && !timeLimitTimer.isRunning()) {
+        timeLimitTimer.start();
+      }
+      if (gameOverCheckTimer != null && !gameOverCheckTimer.isRunning()) {
+        gameOverCheckTimer.start();
+      }
     }
 
     requestFocusInWindow();
@@ -686,8 +700,12 @@ public class battle extends JPanel implements KeyListener {
     gameController.setPaused(true);
     pauseAllAIControllers();
 
-    if (timeLimitTimer != null) {
+    // 타이머 일시정지
+    if (timeLimitTimer != null && timeLimitTimer.isRunning()) {
       timeLimitTimer.stop();
+    }
+    if (gameOverCheckTimer != null && gameOverCheckTimer.isRunning()) {
+      gameOverCheckTimer.stop();
     }
 
     int option = JOptionPane.showOptionDialog(
@@ -704,8 +722,12 @@ public class battle extends JPanel implements KeyListener {
       isPaused = false;
       gameController.setPaused(false);
       resumeAllAIControllers();
-      if (timeLimitTimer != null) {
+      // 타이머 재개
+      if (timeLimitTimer != null && !timeLimitTimer.isRunning()) {
         timeLimitTimer.start();
+      }
+      if (gameOverCheckTimer != null && !gameOverCheckTimer.isRunning()) {
+        gameOverCheckTimer.start();
       }
       requestFocusInWindow();
     } else {
@@ -713,6 +735,9 @@ public class battle extends JPanel implements KeyListener {
       disposeAllAIControllers();
       if (timeLimitTimer != null) {
         timeLimitTimer.stop();
+      }
+      if (gameOverCheckTimer != null) {
+        gameOverCheckTimer.stop();
       }
       gameController.stop();
       restoreWindowSize();

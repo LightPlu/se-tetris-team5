@@ -456,6 +456,9 @@ public class PlayerGamePanel extends JPanel {
     if (uiTimer != null) {
       uiTimer.stop();
     }
+    if (gameEngine != null) {
+      gameEngine.setPaused(true);
+    }
   }
 
   public void resumeGame() {
@@ -464,6 +467,9 @@ public class PlayerGamePanel extends JPanel {
     }
     if (uiTimer != null) {
       uiTimer.start();
+    }
+    if (gameEngine != null) {
+      gameEngine.setPaused(false);
     }
   }
 
