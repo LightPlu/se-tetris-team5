@@ -180,6 +180,163 @@ task packageForDistribution {
     }
 }
 
+// macOS용 .app 번들 생성
+task createMacApp {
+    dependsOn fatJar
+    group = 'distribution'
+    description = 'macOS용 .app 번들 생성 (더블클릭으로 실행 가능)'
+    
+    doLast {
+        def appName = 'ChainSaw-Tetris'
+        def buildDir = layout.buildDirectory.get().asFile
+        def appDir = file("${buildDir}/mac/${appName}.app")
+        def contentsDir = file("${appDir}/Contents")
+        def macOSDir = file("${contentsDir}/MacOS")
+        def resourcesDir = file("${contentsDir}/Resources")
+        
+        // 기존 앱 번들 삭제
+        if (appDir.exists()) {
+            appDir.deleteDir()
+        }
+        
+        // 디렉토리 구조 생성
+        macOSDir.mkdirs()
+        resourcesDir.mkdirs()
+        
+        // Fat JAR 복사
+        def fatJarFile = file("${buildDir}/libs/${project.name}-fat.jar")
+        def jarDestination = file("${resourcesDir}/${appName}.jar")
+        copy {
+            from fatJarFile
+            into resourcesDir
+            rename { "${appName}.jar" }
+        }
+        
+        // 런처 스크립트 생성
+        def launcherScript = file("${macOSDir}/${appName}")
+        launcherScript.text = """#!/bin/bash
+cd "\$(dirname "\$0")"
+exec java -Xdock:name="${appName}" -Xdock:icon="../Resources/${appName}.icns" -Dfile.encoding=UTF-8 -jar "../Resources/${appName}.jar"
+"""
+        // 실행 권한 부여
+        launcherScript.setExecutable(true)
+        
+        // Info.plist 생성
+        def infoPlist = file("${contentsDir}/Info.plist")
+        infoPlist.text = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>${appName}</string>
+    <key>CFBundleIconFile</key>
+    <string>${appName}</string>
+    <key>CFBundleIdentifier</key>
+    <string>se.tetris.team5</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>${appName}</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.10</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+</dict>
+</plist>
+"""
+        
+        // 아이콘 처리 (있으면 복사)
+        def iconSource = file("${project.projectDir}/src/main/resources/Tetris_Mac_icon.icns")
+        def iconPng = file("${project.projectDir}/src/main/resources/Tetris_icon.png")
+        
+        if (iconSource.exists()) {
+            copy {
+                from iconSource
+                into resourcesDir
+                rename { "${appName}.icns" }
+            }
+        } else if (iconPng.exists()) {
+            // PNG를 ICNS로 변환 시도
+            try {
+                exec {
+                    commandLine 'sips', '-s', 'format', 'icns', iconPng.absolutePath, '--out', "${resourcesDir}/${appName}.icns"
+                }
+            } catch (Exception e) {
+                println "⚠️  아이콘 변환 실패. 기본 아이콘 사용"
+            }
+        }
+        
+        println "✅ macOS .app 번들이 생성되었습니다!"
+        println "📂 위치: ${appDir.absolutePath}"
+        println "🎮 실행: Finder에서 ${appName}.app을 더블클릭"
+        println "💡 Dock에 드래그하여 등록할 수 있습니다"
+    }
+}
+
+// macOS 배포용 DMG 생성
+task createMacDMG {
+    dependsOn createMacApp
+    group = 'distribution'
+    description = 'macOS 배포용 DMG 이미지 생성'
+    
+    doLast {
+        def appName = 'ChainSaw-Tetris'
+        def buildDir = layout.buildDirectory.get().asFile
+        def appDir = file("${buildDir}/mac/${appName}.app")
+        def dmgFile = file("${buildDir}/distributions/${appName}-macOS.dmg")
+        
+        // 기존 DMG 삭제
+        if (dmgFile.exists()) {
+            dmgFile.delete()
+        }
+        
+        dmgFile.parentFile.mkdirs()
+        
+        try {
+            // DMG 생성
+            exec {
+                commandLine 'hdiutil', 'create',
+                    '-volname', appName,
+                    '-srcfolder', appDir.absolutePath,
+                    '-ov',
+                    '-format', 'UDZO',
+                    dmgFile.absolutePath
+            }
+            
+            println "✅ macOS DMG 파일이 생성되었습니다!"
+            println "📦 파일: ${dmgFile.absolutePath}"
+            println "💡 DMG를 마운트하여 Applications 폴더로 드래그하세요"
+        } catch (Exception e) {
+            println "❌ DMG 생성 실패: ${e.message}"
+            println "⚠️  .app 번들은 ${appDir.absolutePath}에서 사용 가능합니다"
+        }
+    }
+}
+
+// 전체 macOS 배포 패키지 생성
+task packageForMacOS {
+    dependsOn createMacDMG
+    group = 'distribution'
+    description = 'macOS 전체 배포 패키지 생성 (.app + DMG)'
+    
+    doLast {
+        def buildDir = layout.buildDirectory.get().asFile
+        println "✅ macOS 배포 패키지가 준비되었습니다!"
+        println "📁 .app 위치: ${buildDir}/mac/"
+        println "📁 DMG 위치: ${buildDir}/distributions/"
+    }
+}
+
 // JPackage를 사용한 네이티브 실행파일 생성 (Java 14+)
 task createNativeExecutable {
     dependsOn fatJar
