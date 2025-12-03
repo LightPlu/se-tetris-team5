@@ -62,8 +62,6 @@ public class battle extends JPanel implements KeyListener {
   private Player1InputHandler player1Input;
   private Player2InputHandler player2Input;
 
-  private boolean isPaused = false;
-
   // 시간제한 모드 관련
   private String battleMode; // "NORMAL", "ITEM", "TIMELIMIT"
   private javax.swing.Timer timeLimitTimer;
@@ -128,13 +126,6 @@ public class battle extends JPanel implements KeyListener {
   }
 
   // === 테스트 지원 메서드 ===
-  /**
-   * 테스트 환경에서 강제로 일시정지 상태로 만듦
-   */
-  public void forcePause() {
-    this.isPaused = true;
-  }
-
   /**
    * 테스트 환경에서 타임리밋 타이머를 강제로 생성
    */
@@ -201,9 +192,6 @@ public class battle extends JPanel implements KeyListener {
 
     buildUI();
 
-    // 일시정지 상태 초기화
-    isPaused = false;
-
     addMouseListener(new java.awt.event.MouseAdapter() {
       @Override
       public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -267,7 +255,7 @@ public class battle extends JPanel implements KeyListener {
     }
 
     gameOverCheckTimer = new javax.swing.Timer(500, e -> {
-      if (!isPaused && gameController != null) {
+      if (gameController != null) {
         gameController.checkGameOver();
       }
     });
@@ -291,8 +279,6 @@ public class battle extends JPanel implements KeyListener {
   }
 
   private void handleGameOver(int winner) {
-    isPaused = true;
-
     String message = winner == 1 ? "🎉 플레이어 1 승리! 🎉" : "🎉 플레이어 2 승리! 🎉";
 
     int option = JOptionPane.showOptionDialog(
@@ -401,7 +387,6 @@ public class battle extends JPanel implements KeyListener {
   }
 
   private void showPauseMenu() {
-    isPaused = true;
     gameController.setPaused(true);
 
     // 타이머 일시정지
@@ -478,7 +463,7 @@ public class battle extends JPanel implements KeyListener {
     }
 
     timeLimitTimer = new javax.swing.Timer(1000, e -> {
-      if (!isPaused && !gameController.isGameOver()) {
+      if (!gameController.isGameOver()) {
         remainingSeconds--;
         updateTimerLabels();
 
