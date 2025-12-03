@@ -1036,14 +1036,14 @@ public class P2PBattleTest {
             "handlePacketReceived", GameStatePacket.class);
         handlePacketReceivedMethod.setAccessible(true);
         
-        // when: RESTART_REQUEST 패킷 수신
-        GameStatePacket packet = new GameStatePacket(GameStatePacket.PacketType.RESTART_REQUEST);
+        // when: DISCONNECT 패킷 수신 (RESTART_REQUEST는 존재하지 않음)
+        GameStatePacket packet = new GameStatePacket(GameStatePacket.PacketType.DISCONNECT);
         
         handlePacketReceivedMethod.invoke(p2pBattleScreen, packet);
         Thread.sleep(100);
         
         // then: 예외 없이 처리
-        assertTrue("RESTART_REQUEST packet should be handled", true);
+        assertTrue("DISCONNECT packet should be handled", true);
     }
 
     // ==================== 서버 IP 정보 테스트 ====================

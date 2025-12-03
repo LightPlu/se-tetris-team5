@@ -244,8 +244,8 @@ public class GameStatePacketTest {
 
     @Test
     public void testAttackBlocks() {
-        java.util.List<Color[]> attackBlocks = new java.util.ArrayList<>();
-        attackBlocks.add(new Color[]{Color.RED, Color.BLUE});
+        java.util.List<int[]> attackBlocks = new java.util.ArrayList<>();
+        attackBlocks.add(new int[]{1, 0, 1, 0, 1, 0, 1, 0, 1, 0});
         
         packet.setAttackBlocks(attackBlocks);
         assertEquals("공격 블록 설정", attackBlocks, packet.getAttackBlocks());
@@ -304,7 +304,6 @@ public class GameStatePacketTest {
             GameStatePacket.PacketType.GAME_STATE,
             GameStatePacket.PacketType.ATTACK_BLOCKS,
             GameStatePacket.PacketType.GAME_OVER,
-            GameStatePacket.PacketType.RESTART_REQUEST,
             GameStatePacket.PacketType.DISCONNECT,
             GameStatePacket.PacketType.PING,
             GameStatePacket.PacketType.PONG,
@@ -382,7 +381,7 @@ public class GameStatePacketTest {
 
     @Test
     public void testAttackBlocksEmpty() {
-        java.util.List<Color[]> emptyList = new java.util.ArrayList<>();
+        java.util.List<int[]> emptyList = new java.util.ArrayList<>();
         packet.setAttackBlocks(emptyList);
         
         assertNotNull("빈 공격 블록 리스트", packet.getAttackBlocks());
