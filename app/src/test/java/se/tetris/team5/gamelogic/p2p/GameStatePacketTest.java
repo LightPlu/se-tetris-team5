@@ -223,4 +223,217 @@ public class GameStatePacketTest {
         packet.setLevel(-1);
         assertEquals("음수 레벨이 허용되어야 함", -1, packet.getLevel());
     }
+
+    @Test
+    public void testNextBlockType() {
+        packet.setNextBlockType("O");
+        assertEquals("다음 블록 타입 설정", "O", packet.getNextBlockType());
+    }
+
+    @Test
+    public void testElapsedTime() {
+        packet.setElapsedTime(60000L);
+        assertEquals("경과 시간 설정", 60000L, packet.getElapsedTime());
+    }
+
+    @Test
+    public void testRandomSeed() {
+        packet.setRandomSeed(123456789L);
+        assertEquals("랜덤 시드 설정", 123456789L, packet.getRandomSeed());
+    }
+
+    @Test
+    public void testAttackBlocks() {
+        java.util.List<Color[]> attackBlocks = new java.util.ArrayList<>();
+        attackBlocks.add(new Color[]{Color.RED, Color.BLUE});
+        
+        packet.setAttackBlocks(attackBlocks);
+        assertEquals("공격 블록 설정", attackBlocks, packet.getAttackBlocks());
+    }
+
+    @Test
+    public void testCompletePacketSerialization() throws IOException, ClassNotFoundException {
+        // 완전한 패킷 데이터 설정
+        packet.setCurrentBlockX(5);
+        packet.setCurrentBlockY(10);
+        packet.setCurrentBlockType("L");
+        packet.setNextBlockType("J");
+        packet.setScore(9999);
+        packet.setLevel(7);
+        packet.setLinesCleared(35);
+        packet.setElapsedTime(120000L);
+        packet.setBattleMode("ITEM");
+        packet.setRandomSeed(987654321L);
+        packet.setWinner(1);
+        packet.setMessage("Complete test");
+        
+        // 직렬화
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(packet);
+        oos.flush();
+        
+        // 역직렬화
+        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        ObjectInputStream ois = new ObjectInputStream(bais);
+        GameStatePacket result = (GameStatePacket) ois.readObject();
+        
+        // 검증
+        assertEquals(5, result.getCurrentBlockX());
+        assertEquals(10, result.getCurrentBlockY());
+        assertEquals("L", result.getCurrentBlockType());
+        assertEquals("J", result.getNextBlockType());
+        assertEquals(9999, result.getScore());
+        assertEquals(7, result.getLevel());
+        assertEquals(35, result.getLinesCleared());
+        assertEquals(120000L, result.getElapsedTime());
+        assertEquals("ITEM", result.getBattleMode());
+        assertEquals(987654321L, result.getRandomSeed());
+        assertEquals(1, result.getWinner());
+        assertEquals("Complete test", result.getMessage());
+    }
+
+    @Test
+    public void testPacketTypeEnumValues() {
+        GameStatePacket.PacketType[] expectedTypes = {
+            GameStatePacket.PacketType.CONNECTION_REQUEST,
+            GameStatePacket.PacketType.CONNECTION_ACCEPTED,
+            GameStatePacket.PacketType.GAME_MODE_SELECT,
+            GameStatePacket.PacketType.READY,
+            GameStatePacket.PacketType.GAME_START,
+            GameStatePacket.PacketType.GAME_STATE,
+            GameStatePacket.PacketType.ATTACK_BLOCKS,
+            GameStatePacket.PacketType.GAME_OVER,
+            GameStatePacket.PacketType.RESTART_REQUEST,
+            GameStatePacket.PacketType.DISCONNECT,
+            GameStatePacket.PacketType.PING,
+            GameStatePacket.PacketType.PONG,
+            GameStatePacket.PacketType.CHAT_MESSAGE
+        };
+        
+        for (GameStatePacket.PacketType type : expectedTypes) {
+            assertNotNull("패킷 타입이 존재해야 함", type);
+        }
+    }
+
+    @Test
+    public void testEmptyBoardSerialization() throws IOException, ClassNotFoundException {
+        int[][] emptyBoard = new int[20][10];
+        packet.setBoard(emptyBoard);
+        
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(packet);
+        
+        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        ObjectInputStream ois = new ObjectInputStream(bais);
+        GameStatePacket result = (GameStatePacket) ois.readObject();
+        
+        assertNotNull("빈 보드가 직렬화되어야 함", result.getBoard());
+        assertEquals(20, result.getBoard().length);
+    }
+
+    @Test
+    public void testMultipleSerializationCycles() throws IOException, ClassNotFoundException {
+        packet.setScore(5000);
+        
+        for (int i = 0; i < 5; i++) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(packet);
+            
+            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            packet = (GameStatePacket) ois.readObject();
+        }
+        
+        assertEquals("여러 번 직렬화 후에도 데이터 유지", 5000, packet.getScore());
+    }
+
+    @Test
+    public void testZeroValues() {
+        packet.setScore(0);
+        packet.setLevel(0);
+        packet.setLinesCleared(0);
+        packet.setCurrentBlockX(0);
+        packet.setCurrentBlockY(0);
+        
+        assertEquals(0, packet.getScore());
+        assertEquals(0, packet.getLevel());
+        assertEquals(0, packet.getLinesCleared());
+        assertEquals(0, packet.getCurrentBlockX());
+        assertEquals(0, packet.getCurrentBlockY());
+    }
+
+    @Test
+    public void testBoundaryValues() {
+        packet.setScore(Integer.MAX_VALUE);
+        assertEquals(Integer.MAX_VALUE, packet.getScore());
+        
+        packet.setScore(Integer.MIN_VALUE);
+        assertEquals(Integer.MIN_VALUE, packet.getScore());
+    }
+
+    @Test
+    public void testAttackBlocksNull() {
+        packet.setAttackBlocks(null);
+        assertNull("null 공격 블록 허용", packet.getAttackBlocks());
+    }
+
+    @Test
+    public void testAttackBlocksEmpty() {
+        java.util.List<Color[]> emptyList = new java.util.ArrayList<>();
+        packet.setAttackBlocks(emptyList);
+        
+        assertNotNull("빈 공격 블록 리스트", packet.getAttackBlocks());
+        assertTrue("리스트가 비어있어야 함", packet.getAttackBlocks().isEmpty());
+    }
+
+    @Test
+    public void testAllBlockTypes() {
+        String[] allTypes = {"I", "O", "T", "S", "Z", "L", "J", "W", "DOT"};
+        
+        for (String type : allTypes) {
+            packet.setCurrentBlockType(type);
+            packet.setNextBlockType(type);
+            
+            assertEquals(type, packet.getCurrentBlockType());
+            assertEquals(type, packet.getNextBlockType());
+        }
+    }
+
+    @Test
+    public void testLongElapsedTime() {
+        long longTime = 3600000L; // 1시간
+        packet.setElapsedTime(longTime);
+        assertEquals(longTime, packet.getElapsedTime());
+    }
+
+    @Test
+    public void testBattleModeNull() {
+        packet.setBattleMode(null);
+        assertNull("null 배틀 모드 허용", packet.getBattleMode());
+    }
+
+    @Test
+    public void testWinnerBoundary() {
+        packet.setWinner(0);
+        assertEquals(0, packet.getWinner());
+        
+        packet.setWinner(3);
+        assertEquals(3, packet.getWinner());
+    }
+
+    @Test
+    public void testEmptyMessage() {
+        packet.setMessage("");
+        assertEquals("", packet.getMessage());
+    }
+
+    @Test
+    public void testLongMessage() {
+        String longMessage = "A".repeat(1000);
+        packet.setMessage(longMessage);
+        assertEquals(longMessage, packet.getMessage());
+    }
 }
