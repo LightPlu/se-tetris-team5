@@ -612,7 +612,7 @@ public class PlayerGamePanel extends JPanel {
         if (clearedRows.size() >= 2) {
           java.util.List<Color[]> attackData = gameEngine.getBoardManager().getAttackBlocksData();
           if (attackData != null && !attackData.isEmpty()) {
-            if (opponentPanel != null) {
+            if (shouldNotifyLocalOpponentPanel()) {
               opponentPanel.addAttackBlocks(attackData);
               System.out.println("[공격 전송] " + attackData.size() + "줄을 상대방에게 전송");
             }
@@ -999,6 +999,17 @@ public class PlayerGamePanel extends JPanel {
    */
   public void setOpponentPanel(PlayerGamePanel opponent) {
     this.opponentPanel = opponent;
+  }
+  
+  /**
+   * P2P 관전 패널에는 공격 블럭을 직접 주입하지 않는다.
+   */
+  private boolean shouldNotifyLocalOpponentPanel() {
+    if (opponentPanel == null) {
+      return false;
+    }
+    GameEngine opponentEngine = opponentPanel.getGameEngine();
+    return !(opponentEngine instanceof se.tetris.team5.gamelogic.P2PGameEngine);
   }
   
   /**
