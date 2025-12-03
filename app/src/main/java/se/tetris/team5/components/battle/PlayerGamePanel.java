@@ -758,8 +758,8 @@ public class PlayerGamePanel extends JPanel {
       }
     }
 
-    updateTimeStopIndicator();
-
+    refreshTimeStopIndicator();
+  
     // 타이머 속도 조정
     if (gameTimer != null) {
       int newInterval = gameEngine.getGameScoring().getTimerInterval();
@@ -808,7 +808,7 @@ public class PlayerGamePanel extends JPanel {
     positionTimeStopIndicator();
   }
 
-  private void updateTimeStopIndicator() {
+  private void refreshTimeStopIndicator() {
     if (timeStopIndicatorLabel == null || gameEngine == null) {
       return;
     }
@@ -825,8 +825,7 @@ public class PlayerGamePanel extends JPanel {
       return;
     }
     gameEngine.setTimeStopCharge(hasCharge);
-    positionTimeStopIndicator();
-    timeStopIndicatorLabel.setVisible(hasCharge);
+    refreshTimeStopIndicator();
   }
 
   private void positionTimeStopIndicator() {
