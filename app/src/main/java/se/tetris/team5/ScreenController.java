@@ -42,6 +42,7 @@ public class ScreenController extends JFrame {
   private JPanel fadeOverlay;
   private Timer fadeTimer;
   private float fadeAlpha = 0.0f;
+  private boolean isSkipping = false; // 스킵 중복 방지 플래그
 
   // BGM manager
   private BGMManager bgmManager;
@@ -168,9 +169,51 @@ public class ScreenController extends JFrame {
         textPane.removeAll();
         getContentPane().add(textPane);
         homeScreen.display(textPane);
+        
+        // homeScreen 패널에 포커스 요청 (다단계)
         javax.swing.SwingUtilities.invokeLater(() -> {
-          textPane.requestFocusInWindow();
+          homeScreen.requestFocusInWindow();
         });
+        
+        // 50ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+          @Override
+          public void run() {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+              homeScreen.requestFocusInWindow();
+            });
+          }
+        }, 50);
+        
+        // 100ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+          @Override
+          public void run() {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+              homeScreen.requestFocusInWindow();
+            });
+          }
+        }, 100);
+        
+        // 200ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+          @Override
+          public void run() {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+              homeScreen.requestFocusInWindow();
+            });
+          }
+        }, 200);
+        
+        // 300ms 후 최종 재시도 (스킵 시나리오 대비)
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+          @Override
+          public void run() {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+              homeScreen.requestFocusInWindow();
+            });
+          }
+        }, 300);
         break;
       case "game":
         // 게임 화면에서는 BGM 정지 (게임 자체 BGM 사용)
@@ -277,6 +320,7 @@ public class ScreenController extends JFrame {
    */
   private void showLoadingScreen() {
     currentScreen = "loading";
+    isSkipping = false; // 스킵 플래그 초기화
 
     // 기존 컨텐트 제거
     getContentPane().removeAll();
@@ -287,10 +331,29 @@ public class ScreenController extends JFrame {
     // 로딩 배경 설정
     setupLoadingBackground();
 
-    // 키 입력 리스너 추가 (아무 키나 눌러서 스킵 가능)
+    // 키 입력 리스너 추가 (Enter 키로 스킵 가능)
     KeyListener skipListener = new java.awt.event.KeyAdapter() {
       @Override
       public void keyPressed(java.awt.event.KeyEvent e) {
+        // Enter 키만 스킵 처리
+        if (e.getKeyCode() != java.awt.event.KeyEvent.VK_ENTER) {
+          return;
+        }
+        
+        // 중복 실행 방지
+        if (isSkipping) {
+          e.consume();
+          return;
+        }
+        isSkipping = true;
+        
+        // 키 이벤트를 즉시 소비하여 다른 리스너로 전달되지 않도록
+        e.consume();
+        
+        // 리스너 즉시 제거
+        removeKeyListener(this);
+        
+        // 스킵 실행
         skipLoadingScreen();
       }
     };
@@ -327,7 +390,7 @@ public class ScreenController extends JFrame {
       removeKeyListener(kl);
     }
 
-    // 즉시 홈 화면으로 전환
+    // 즉시 홈 화면으로 전환 (포커스는 showScreen의 home case가 처리)
     SwingUtilities.invokeLater(() -> {
       showScreen("home");
     });
@@ -361,7 +424,7 @@ public class ScreenController extends JFrame {
         layeredPane.add(loadingBackgroundLabel, Integer.valueOf(0));
 
         // 스킵 안내 텍스트 추가 (위 레이어)
-        JLabel skipLabel = new JLabel("<html><center>아무 키나 누르면<br/>SKIP...</center></html>");
+        JLabel skipLabel = new JLabel("<html><center>ENTER를 눌러 SKIP...</center></html>");
         skipLabel.setFont(createLoadingFont());
         skipLabel.setForeground(Color.WHITE);
         skipLabel.setOpaque(true);
