@@ -23,6 +23,18 @@ public class score {
     private String currentGameModeFilter = "ITEM"; // "ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"
     private JButton[] modeTabButtons; // 모드 탭 버튼들을 저장
 
+    // 키보드 네비게이션
+    private int selectedIndex = 0; // 0: Back, 1-4: 모드 탭들
+    private static final int NAV_BACK = 0;
+    private static final int NAV_ITEM = 1;
+    private static final int NAV_EASY = 2;
+    private static final int NAV_NORMAL = 3;
+    private static final int NAV_HARD = 4;
+    private JButton backButton; // Back 버튼 참조
+    
+    // 점수 항목 선택
+    private int selectedScoreIndex = -1; // -1: 선택 없음, 0-9: 현재 페이지의 점수 인덱스
+
     // Pagination
     private static final int PAGE_SIZE = 10;
     // fixed row height to keep alignment consistent
@@ -88,36 +100,29 @@ public class score {
         // Left controls: Back + Score reset
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         leftControls.setOpaque(false);
-        JButton topBack = new JButton("◀ 뒤로가기");
-        topBack.setFocusable(false);
-        topBack.setBackground(new Color(30, 30, 35));
-        topBack.setForeground(Color.WHITE);
-        topBack.setFont(createKoreanFont(Font.BOLD, 13));
-        topBack.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(100, 200, 255), 2), // 밝은 파란 테두리
-            BorderFactory.createEmptyBorder(6, 14, 6, 14)
-        ));
-        topBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton = new JButton("◀ 뒤로가기");
+        backButton.setFocusable(false);
+        backButton.setBackground(new Color(30, 30, 35));
+        backButton.setForeground(Color.WHITE);
+        backButton.setFont(createKoreanFont(Font.BOLD, 13));
+        updateButtonBorder(backButton, selectedIndex == NAV_BACK);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         // 호버 효과 추가
-        topBack.addMouseListener(new java.awt.event.MouseAdapter() {
+        backButton.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                topBack.setBackground(new Color(50, 50, 60));
-                topBack.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(150, 220, 255), 2),
-                    BorderFactory.createEmptyBorder(6, 14, 6, 14)
-                ));
+                if (selectedIndex != NAV_BACK) {
+                    backButton.setBackground(new Color(50, 50, 60));
+                }
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
-                topBack.setBackground(new Color(30, 30, 35));
-                topBack.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(100, 200, 255), 2),
-                    BorderFactory.createEmptyBorder(6, 14, 6, 14)
-                ));
+                if (selectedIndex != NAV_BACK) {
+                    backButton.setBackground(new Color(30, 30, 35));
+                }
             }
         });
-        topBack.addActionListener(ae -> {
+        backButton.addActionListener(ae -> {
             int res = JOptionPane.showConfirmDialog(screenController,
                 "뒤로 가시겠습니까? (현재 화면을 벗어납니다)",
                 "확인",
@@ -125,7 +130,7 @@ public class score {
             if (res == JOptionPane.YES_OPTION) screenController.showScreen("home");
         });
 
-        leftControls.add(topBack);
+        leftControls.add(backButton);
         titlePanel.add(leftControls, BorderLayout.WEST);
 
     JLabel title = new JLabel("SCORE BOARD", SwingConstants.CENTER);
@@ -232,22 +237,19 @@ public class score {
         center.add(listScroll, BorderLayout.CENTER);
         bgPanel.add(center, BorderLayout.CENTER);
 
-        // Bottom: footer image (small) + controls
-        JPanel controls = buildControlsPanel();
+        // Bottom: footer image only (no pagination controls)
         JPanel footerPanel = buildFooterImagePanel();
-
-        JPanel southWrapper = new JPanel(new BorderLayout());
-        southWrapper.setOpaque(false);
-        southWrapper.add(footerPanel, BorderLayout.CENTER);
-        southWrapper.add(controls, BorderLayout.SOUTH);
-        bgPanel.add(southWrapper, BorderLayout.SOUTH);
+        bgPanel.add(footerPanel, BorderLayout.SOUTH);
 
         // Place bgPanel into the textPane
         currentTextPane.add(bgPanel, BorderLayout.CENTER);
 
     // Initial render: schedule after layout so component widths (header/viewport)
     // are available and column pixel calculations are correct.
-    SwingUtilities.invokeLater(this::renderScores);
+    SwingUtilities.invokeLater(() -> {
+        updateNavigationButtons(); // 초기 네비게이션 상태 설정
+        renderScores();
+    });
     }
 
     private JPanel createModeTabPanel() {
@@ -275,10 +277,12 @@ public class score {
             tabButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
             tabButton.setFont(createKoreanFont(Font.BOLD, 12));
             
+            final int btnIndex = i + 1; // NAV_ITEM = 1, NAV_EASY = 2, etc.
             tabButton.addActionListener(e -> {
+                selectedIndex = btnIndex;
                 currentGameModeFilter = mode;
                 currentPage = 0; // 모드 변경 시 첫 페이지로 이동
-                updateModeTabButtons(); // 버튼 색상 업데이트만
+                updateNavigationButtons(); // 네비게이션 버튼들 업데이트
                 renderScores(); // 점수 다시 로드
             });
             
@@ -300,6 +304,58 @@ public class score {
         } else {
             button.setBackground(new Color(60, 60, 70));
             button.setForeground(gameSettings.getUIColor("text"));
+        }
+    }
+
+    /**
+     * Back 버튼 테두리 업데이트
+     */
+    private void updateButtonBorder(JButton button, boolean isSelected) {
+        if (isSelected) {
+            button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(gameSettings.getUIColor("success"), 3),
+                BorderFactory.createEmptyBorder(6, 14, 6, 14)
+            ));
+            button.setBackground(new Color(50, 50, 60));
+        } else {
+            button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 200, 255), 2),
+                BorderFactory.createEmptyBorder(6, 14, 6, 14)
+            ));
+            button.setBackground(new Color(30, 30, 35));
+        }
+    }
+
+    /**
+     * 모든 네비게이션 버튼 업데이트
+     */
+    private void updateNavigationButtons() {
+        // Back 버튼 업데이트
+        if (backButton != null) {
+            updateButtonBorder(backButton, selectedIndex == NAV_BACK);
+        }
+        
+        // 모드 탭 버튼들 업데이트
+        if (modeTabButtons != null) {
+            String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+            for (int i = 0; i < modeTabButtons.length && i < modes.length; i++) {
+                boolean isModeSelected = modes[i].equals(currentGameModeFilter);
+                boolean isNavigationSelected = (selectedIndex == i + 1);
+                
+                if (isNavigationSelected) {
+                    // 키보드 선택됨
+                    modeTabButtons[i].setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(Color.YELLOW, 3),
+                        BorderFactory.createEmptyBorder(8, 16, 8, 16)
+                    ));
+                } else {
+                    // 일반 테두리
+                    modeTabButtons[i].setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+                }
+                
+                // 배경색은 모드 선택 여부에 따라
+                updateButtonStyle(modeTabButtons[i], isModeSelected);
+            }
         }
     }
 
@@ -473,8 +529,8 @@ public class score {
     private JPanel buildFooterImagePanel() {
         JPanel footer = new JPanel(new GridBagLayout());
         footer.setOpaque(false);
-    // Reserve a bit more vertical space for footer so animated GIFs are visible
-    footer.setPreferredSize(new Dimension(0, 160));
+    // Slightly increased footer height for better visibility
+    footer.setPreferredSize(new Dimension(0, 120));
 
         // try classpath first
     // Prefer animated GIF if present (classpath or filesystem).
@@ -540,8 +596,8 @@ public class score {
         }
 
         if (img != null) {
-            // scale to fit height up to 140px and width up to 600px
-            int maxH = 200, maxW = 600;
+            // scale to fit height up to 100px and width up to 600px
+            int maxH = 100, maxW = 600;
             int iw = img.getWidth(null);
             int ih = img.getHeight(null);
             if (iw > 0 && ih > 0) {
@@ -772,12 +828,25 @@ public class score {
             JPanel row = new JPanel(new GridBagLayout());
             // make row visually distinct from background to avoid terminal look
             Color rowBg = (i % 2 == 0) ? new Color(28, 28, 38) : new Color(36, 36, 46);
+            
+            // 키보드로 선택된 행인지 확인
+            boolean isSelectedByKeyboard = (selectedScoreIndex == i);
+            
             row.setBackground(rowBg);
             row.setOpaque(true);
-            row.setBorder(BorderFactory.createCompoundBorder(
+            
+            // 선택된 행에 특별한 테두리 적용
+            if (isSelectedByKeyboard) {
+                row.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color.YELLOW, 3),
+                    BorderFactory.createEmptyBorder(6, 8, 6, 8)
+                ));
+            } else {
+                row.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createMatteBorder(0, 0, 1, 0, gameSettings.getUIColor("border")),
                     BorderFactory.createEmptyBorder(6, 8, 6, 8)
-            ));
+                ));
+            }
 
             if (i < pageScores.size()) {
                 ScoreManager.ScoreEntry entry = pageScores.get(i);
@@ -788,9 +857,11 @@ public class score {
                                        highlightedEntry.equals(entry) && 
                                        highlightVisible;
                 
-                // 강조 표시 시 배경색 변경
-                if (isHighlighted) {
+                // 강조 표시 시 배경색 변경 (키보드 선택과 구분)
+                if (isHighlighted && !isSelectedByKeyboard) {
                     row.setBackground(new Color(255, 215, 0, 100)); // 반투명 골드
+                } else if (isSelectedByKeyboard) {
+                    row.setBackground(new Color(100, 100, 150)); // 키보드 선택 시 밝은 배경
                 }
                 
                 JLabel colRank = new JLabel(String.valueOf(rank));
@@ -899,24 +970,6 @@ public class score {
         // Ensure the list container updates its layout after adding rows
         listContainer.revalidate();
         listContainer.repaint();
-
-        // Page indicator
-        int totalPages;
-        if (showOnlyDummy) {
-            int total = buildSampleEntries().size();
-            totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
-        } else {
-            // 모드 필터링 적용
-            totalPages = Math.max(1, scoreManager.getTotalPagesByMode(PAGE_SIZE, currentGameModeFilter));
-        }
-        JLabel pageInfo = findPageInfoLabel(currentTextPane);
-        if (pageInfo == null) {
-            pageInfo = new JLabel();
-            pageInfo.setForeground(gameSettings.getUIColor("text"));
-            pageInfo.setHorizontalAlignment(SwingConstants.CENTER);
-            currentTextPane.add(pageInfo, BorderLayout.SOUTH);
-        }
-        pageInfo.setText(String.format("Page %d / %d    —    Use ← / → or buttons to navigate.", currentPage + 1, totalPages));
 
         currentTextPane.revalidate();
         currentTextPane.repaint();
@@ -1064,56 +1117,43 @@ public class score {
     }
 
     /**
+     * 현재 선택된 버튼 실행
+     */
+    private void executeSelectedButton() {
+        if (selectedIndex == NAV_BACK) {
+            // Back 버튼 실행
+            int res = JOptionPane.showConfirmDialog(screenController,
+                "뒤로 가시겠습니까? (현재 화면을 벗어납니다)",
+                "확인",
+                JOptionPane.YES_NO_OPTION);
+            if (res == JOptionPane.YES_OPTION) {
+                screenController.showScreen("home");
+            }
+        } else {
+            // 모드 탭 버튼 실행
+            String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
+            int modeIndex = selectedIndex - 1;
+            if (modeIndex >= 0 && modeIndex < modes.length) {
+                switchToMode(modes[modeIndex]);
+                updateNavigationButtons();
+            }
+        }
+    }
+
+    /**
      * 특정 게임 모드로 전환
      */
     private void switchToMode(String mode) {
         if (!mode.equals(currentGameModeFilter)) {
             currentGameModeFilter = mode;
             currentPage = 0; // 모드 변경 시 첫 페이지로 이동
-            updateModeTabButtons(); // 버튼 색상 업데이트만
+            selectedScoreIndex = -1; // 점수 선택 초기화
+            updateNavigationButtons(); // 네비게이션 버튼 업데이트
             renderScores(); // 점수 다시 로드
         }
         
         // 모드 변경 시 강조 효과 중지
         stopHighlightEffect();
-    }
-
-    /**
-     * 이전 게임 모드로 전환 (위 화살표)
-     */
-    private void switchToPreviousMode() {
-        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
-        int currentIndex = -1;
-        for (int i = 0; i < modes.length; i++) {
-            if (modes[i].equals(currentGameModeFilter)) {
-                currentIndex = i;
-                break;
-            }
-        }
-        if (currentIndex > 0) {
-            switchToMode(modes[currentIndex - 1]);
-        } else if (currentIndex == 0) {
-            switchToMode(modes[modes.length - 1]); // 순환: 첫 번째에서 마지막으로
-        }
-    }
-
-    /**
-     * 다음 게임 모드로 전환 (아래 화살표)
-     */
-    private void switchToNextMode() {
-        String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
-        int currentIndex = -1;
-        for (int i = 0; i < modes.length; i++) {
-            if (modes[i].equals(currentGameModeFilter)) {
-                currentIndex = i;
-                break;
-            }
-        }
-        if (currentIndex >= 0 && currentIndex < modes.length - 1) {
-            switchToMode(modes[currentIndex + 1]);
-        } else if (currentIndex == modes.length - 1) {
-            switchToMode(modes[0]); // 순환: 마지막에서 첫 번째로
-        }
     }
 
     private class ScoreKeyListener implements KeyListener {
@@ -1137,44 +1177,119 @@ public class score {
                     }
                     break;
                 case KeyEvent.VK_LEFT:
-                    if (currentPage > 0) {
-                        currentPage--;
-                        stopHighlightEffect(); // 페이지 이동 시 강조 효과 중지
-                        renderScores();
+                    // 좌우 키로 네비게이션 버튼 이동
+                    selectedIndex--;
+                    if (selectedIndex < NAV_BACK) {
+                        selectedIndex = NAV_HARD; // 순환: Back 이전에서 Hard로
                     }
+                    selectedScoreIndex = -1; // 점수 선택 해제
+                    updateNavigationButtons();
+                    renderScores();
                     break;
                 case KeyEvent.VK_RIGHT:
+                    // 좌우 키로 네비게이션 버튼 이동
+                    selectedIndex++;
+                    if (selectedIndex > NAV_HARD) {
+                        selectedIndex = NAV_BACK; // 순환: Hard 다음에서 Back으로
+                    }
+                    selectedScoreIndex = -1; // 점수 선택 해제
+                    updateNavigationButtons();
+                    renderScores();
+                    break;
+                case KeyEvent.VK_ENTER:
+                case KeyEvent.VK_SPACE:
+                    // 현재 선택된 버튼 실행
+                    executeSelectedButton();
+                    break;
+                case KeyEvent.VK_1:
+                    selectedIndex = NAV_ITEM;
+                    switchToMode("ITEM");
+                    updateNavigationButtons();
+                    break;
+                case KeyEvent.VK_2:
+                    selectedIndex = NAV_EASY;
+                    switchToMode("NORMAL_EASY");
+                    updateNavigationButtons();
+                    break;
+                case KeyEvent.VK_3:
+                    selectedIndex = NAV_NORMAL;
+                    switchToMode("NORMAL_NORMAL");
+                    updateNavigationButtons();
+                    break;
+                case KeyEvent.VK_4:
+                    selectedIndex = NAV_HARD;
+                    switchToMode("NORMAL_HARD");
+                    updateNavigationButtons();
+                    break;
+                case KeyEvent.VK_UP:
+                    // 위 키로 점수 항목 이동
+                    if (selectedScoreIndex == -1) {
+                        // 선택 없을 때: 첫 번째 항목 선택
+                        selectedScoreIndex = 0;
+                        renderScores();
+                    } else if (selectedScoreIndex > 0) {
+                        // 같은 페이지 내에서 위로 이동
+                        selectedScoreIndex--;
+                        renderScores();
+                    } else if (selectedScoreIndex == 0 && currentPage > 0) {
+                        // 첫 번째 항목에서 위로: 이전 페이지의 마지막 항목으로
+                        currentPage--;
+                        selectedScoreIndex = PAGE_SIZE - 1;
+                        stopHighlightEffect();
+                        renderScores();
+                        // 실제 항목 수에 맞게 조정
+                        SwingUtilities.invokeLater(() -> {
+                            List<ScoreManager.ScoreEntry> pageScores;
+                            if (showOnlyDummy) {
+                                java.util.List<ScoreManager.ScoreEntry> sample = buildSampleEntries();
+                                int start = currentPage * PAGE_SIZE;
+                                int end = Math.min(start + PAGE_SIZE, sample.size());
+                                pageScores = new java.util.ArrayList<>(sample.subList(start, end));
+                            } else {
+                                pageScores = scoreManager.getScoresPageByMode(currentPage, PAGE_SIZE, currentGameModeFilter);
+                            }
+                            if (selectedScoreIndex >= pageScores.size()) {
+                                selectedScoreIndex = Math.max(0, pageScores.size() - 1);
+                                renderScores();
+                            }
+                        });
+                    }
+                    break;
+                case KeyEvent.VK_DOWN:
+                    // 아래 키로 점수 항목 이동
+                    List<ScoreManager.ScoreEntry> currentPageScores;
+                    if (showOnlyDummy) {
+                        java.util.List<ScoreManager.ScoreEntry> sample = buildSampleEntries();
+                        int start = currentPage * PAGE_SIZE;
+                        int end = Math.min(start + PAGE_SIZE, sample.size());
+                        currentPageScores = new java.util.ArrayList<>(sample.subList(start, end));
+                    } else {
+                        currentPageScores = scoreManager.getScoresPageByMode(currentPage, PAGE_SIZE, currentGameModeFilter);
+                    }
+                    
                     int totalPages;
                     if (showOnlyDummy) {
                         int total = buildSampleEntries().size();
                         totalPages = Math.max(1, (int) Math.ceil((double) total / PAGE_SIZE));
                     } else {
-                        // 모드 필터링 적용
                         totalPages = Math.max(1, scoreManager.getTotalPagesByMode(PAGE_SIZE, currentGameModeFilter));
                     }
-                    if (currentPage < totalPages - 1) {
+                    
+                    if (selectedScoreIndex == -1) {
+                        // 선택 없을 때: 첫 번째 항목 선택
+                        selectedScoreIndex = 0;
+                        renderScores();
+                    } else if (selectedScoreIndex < currentPageScores.size() - 1) {
+                        // 같은 페이지 내에서 아래로 이동
+                        selectedScoreIndex++;
+                        renderScores();
+                    } else if (selectedScoreIndex == currentPageScores.size() - 1 && currentPage < totalPages - 1) {
+                        // 마지막 항목에서 아래로: 다음 페이지의 첫 번째 항목으로
                         currentPage++;
-                        stopHighlightEffect(); // 페이지 이동 시 강조 효과 중지
+                        selectedScoreIndex = 0;
+                        stopHighlightEffect();
                         renderScores();
                     }
-                    break;
-                case KeyEvent.VK_1:
-                    switchToMode("ITEM");
-                    break;
-                case KeyEvent.VK_2:
-                    switchToMode("NORMAL_EASY");
-                    break;
-                case KeyEvent.VK_3:
-                    switchToMode("NORMAL_NORMAL");
-                    break;
-                case KeyEvent.VK_4:
-                    switchToMode("NORMAL_HARD");
-                    break;
-                case KeyEvent.VK_UP:
-                    switchToPreviousMode();
-                    break;
-                case KeyEvent.VK_DOWN:
-                    switchToNextMode();
                     break;
             }
             e.consume();
