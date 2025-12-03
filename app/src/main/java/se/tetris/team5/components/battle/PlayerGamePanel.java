@@ -59,7 +59,7 @@ public class PlayerGamePanel extends JPanel {
   // 대전모드: 방금 생성된 공격 블럭 (P2P 전송용)
   private java.util.List<Color[]> pendingOutgoingAttackBlocks = new java.util.ArrayList<>();
 
-  // 대전모드: 누적 공격 줄 수 (게임 전체에서 받은 총 공격 줄 수)
+  // 대전모드: 대기 중인 공격 줄 수 (최대 MAX_ATTACK_LINES)
   private int totalReceivedAttackLines = 0;
   private static final int MAX_ATTACK_LINES = 10;
 
@@ -883,7 +883,7 @@ public class PlayerGamePanel extends JPanel {
 
   /**
    * 대전모드: 공격 블럭 데이터를 업데이트합니다.
-   * 게임 전체 누적 공격 줄 수가 10줄을 초과할 수 없습니다.
+   * 동시에 대기할 수 있는 공격 줄 수가 10줄을 넘지 않도록 관리합니다.
    * 
    * @param newAttackBlocks 추가할 공격 블럭 데이터 (각 Color[] 배열이 한 줄을 나타냄)
    */
@@ -893,12 +893,12 @@ public class PlayerGamePanel extends JPanel {
     }
 
     synchronized (attackBlocksData) {
-      // 누적 공격 줄 수 체크
+      // 현재 대기 중인 공격 줄 수 체크
       int remainingSpace = MAX_ATTACK_LINES - totalReceivedAttackLines;
 
       if (remainingSpace <= 0) {
         System.out.println(
-            "[공격 블럭 거부] 누적 공격 줄 수 " + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + " - 더 이상 공격 받을 수 없음");
+            "[공격 블럭 거부] 대기 중 공격 줄 수 " + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + " - 더 이상 공격 받을 수 없음");
         return;
       }
 
@@ -909,13 +909,13 @@ public class PlayerGamePanel extends JPanel {
         // 일부만 추가 가능한 경우
         attackBlocksData.addAll(newAttackBlocks.subList(0, linesToAdd));
         totalReceivedAttackLines += linesToAdd;
-        System.out.println("[공격 블럭 부분 추가] " + linesToAdd + "/" + newAttackBlocks.size() + "줄만 추가됨, 누적: "
+        System.out.println("[공격 블럭 부분 추가] " + linesToAdd + "/" + newAttackBlocks.size() + "줄만 추가됨, 대기 중: "
             + totalReceivedAttackLines + "/" + MAX_ATTACK_LINES + "줄");
       } else {
         // 전부 추가 가능한 경우
         attackBlocksData.addAll(newAttackBlocks);
         totalReceivedAttackLines += newAttackBlocks.size();
-        System.out.println("[공격 블럭 추가] " + newAttackBlocks.size() + "줄 추가됨, 누적: " + totalReceivedAttackLines + "/"
+        System.out.println("[공격 블럭 추가] " + newAttackBlocks.size() + "줄 추가됨, 대기 중: " + totalReceivedAttackLines + "/"
             + MAX_ATTACK_LINES + "줄");
       }
     }
@@ -941,7 +941,9 @@ public class PlayerGamePanel extends JPanel {
 
       if (success) {
         // 성공적으로 추가되었으면 공격 블럭 패널 초기화
+        int appliedLines = blocksToApply.size();
         attackBlocksData.clear();
+        totalReceivedAttackLines = Math.max(0, totalReceivedAttackLines - appliedLines);
         if (attackPanel != null) {
           attackPanel.repaint();
         }
@@ -982,6 +984,7 @@ public class PlayerGamePanel extends JPanel {
   public void clearAttackBlocks() {
     synchronized (attackBlocksData) {
       attackBlocksData.clear();
+      totalReceivedAttackLines = 0;
     }
 
     if (attackPanel != null) {
@@ -1034,16 +1037,8 @@ public class PlayerGamePanel extends JPanel {
     if (receivedBlocks == null || receivedBlocks.isEmpty()) {
       return;
     }
-    
-    synchronized (attackBlocksData) {
-      attackBlocksData.addAll(receivedBlocks);
-      System.out.println("[P2P 공격 블럭 수신] " + receivedBlocks.size() + "줄 추가됨 - 대기 중인 공격: " + attackBlocksData.size() + "줄");
-    }
-    
-    // 공격 블럭 패널 업데이트
-    if (attackPanel != null) {
-      attackPanel.repaint();
-    }
+    System.out.println("[P2P 공격 블럭 수신] " + receivedBlocks.size() + "줄 수신");
+    addAttackBlocks(receivedBlocks);
   }
   
   /**
