@@ -476,4 +476,13 @@ public class battle extends JPanel implements KeyListener {
 
     handleGameOver(winner);
   }
+
+  /**
+   * 테스트용: 게임을 강제로 일시정지
+   */
+  public void forcePause() {
+    if (gameController != null) {
+      gameController.setPaused(true);
+    }
+  }
 }

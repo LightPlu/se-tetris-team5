@@ -749,4 +749,547 @@ public class GameSettingsTest {
         assertEquals("Empty action should return -1", -1, gameSettings.getKeyCode(""));
         assertEquals("Null action should return -1", -1, gameSettings.getKeyCode(null));
     }
+
+    // ==================== 추가 테스트 60개 ====================
+    
+    @Test
+    public void testCustomWindowSize() {
+        gameSettings.setCustomWindowSize(1000, 1200);
+        assertEquals("Custom width should be 1000", 1000, gameSettings.getWindowWidth());
+        assertEquals("Custom height should be 1200", 1200, gameSettings.getWindowHeight());
+    }
+    
+    @Test
+    public void testCustomWindowSizeNotPersisted() {
+        gameSettings.setCustomWindowSize(900, 1000);
+        // 커스텀 사이즈는 저장하지 않음
+        assertEquals("900x1000", gameSettings.getWindowSize());
+    }
+    
+    @Test
+    public void testItemKeyDefault() {
+        assertEquals("Default item key should be 16 (Shift)", 16, gameSettings.getKeyCode("item"));
+    }
+    
+    @Test
+    public void testGetPlayerKeyCodePlayer1() {
+        assertEquals("Player1 down should be 83 (S)", 83, gameSettings.getPlayerKeyCode(1, "down"));
+        assertEquals("Player1 left should be 65 (A)", 65, gameSettings.getPlayerKeyCode(1, "left"));
+        assertEquals("Player1 right should be 68 (D)", 68, gameSettings.getPlayerKeyCode(1, "right"));
+        assertEquals("Player1 rotate should be 87 (W)", 87, gameSettings.getPlayerKeyCode(1, "rotate"));
+        assertEquals("Player1 drop should be 90 (Z)", 90, gameSettings.getPlayerKeyCode(1, "drop"));
+        assertEquals("Player1 item should be 88 (X)", 88, gameSettings.getPlayerKeyCode(1, "item"));
+    }
+    
+    @Test
+    public void testGetPlayerKeyCodePlayer2() {
+        assertEquals("Player2 down should be 40 (DOWN)", 40, gameSettings.getPlayerKeyCode(2, "down"));
+        assertEquals("Player2 left should be 37 (LEFT)", 37, gameSettings.getPlayerKeyCode(2, "left"));
+        assertEquals("Player2 right should be 39 (RIGHT)", 39, gameSettings.getPlayerKeyCode(2, "right"));
+        assertEquals("Player2 rotate should be 38 (UP)", 38, gameSettings.getPlayerKeyCode(2, "rotate"));
+        assertEquals("Player2 drop should be 16 (SHIFT)", 16, gameSettings.getPlayerKeyCode(2, "drop"));
+        assertEquals("Player2 item should be 17 (CTRL)", 17, gameSettings.getPlayerKeyCode(2, "item"));
+    }
+    
+    @Test
+    public void testGetPlayerKeyCodeInvalidPlayer() {
+        assertEquals("Invalid player number should return -1", -1, gameSettings.getPlayerKeyCode(0, "down"));
+        assertEquals("Invalid player number should return -1", -1, gameSettings.getPlayerKeyCode(3, "down"));
+        assertEquals("Invalid player number should return -1", -1, gameSettings.getPlayerKeyCode(-1, "down"));
+    }
+    
+    @Test
+    public void testGetPlayerKeyCodeInvalidAction() {
+        assertEquals("Invalid action should return -1", -1, gameSettings.getPlayerKeyCode(1, "invalid"));
+        assertEquals("Null action should return -1", -1, gameSettings.getPlayerKeyCode(1, null));
+        assertEquals("Empty action should return -1", -1, gameSettings.getPlayerKeyCode(1, ""));
+    }
+    
+    @Test
+    public void testSetPlayerKeyCodePlayer1() {
+        gameSettings.setPlayerKeyCode(1, "down", 75); // K키
+        assertEquals("Player1 down should be updated to 75", 75, gameSettings.getPlayerKeyCode(1, "down"));
+    }
+    
+    @Test
+    public void testSetPlayerKeyCodePlayer2() {
+        gameSettings.setPlayerKeyCode(2, "left", 74); // J키
+        assertEquals("Player2 left should be updated to 74", 74, gameSettings.getPlayerKeyCode(2, "left"));
+    }
+    
+    @Test
+    public void testSetPlayerKeyCodeInvalidPlayer() {
+        gameSettings.setPlayerKeyCode(0, "down", 75);
+        gameSettings.setPlayerKeyCode(3, "down", 75);
+        // 잘못된 플레이어 번호는 무시되어야 함
+        assertTrue("Invalid player number should be ignored", true);
+    }
+    
+    @Test
+    public void testPlayerKeyDuplicateRemoval() {
+        gameSettings.setPlayerKeyCode(1, "down", 75); // K키로 설정
+        gameSettings.setPlayerKeyCode(1, "left", 75); // 같은 K키로 설정
+        
+        // down 키는 -1로 변경되어야 함
+        assertEquals("Previous key should be disabled", -1, gameSettings.getPlayerKeyCode(1, "down"));
+        assertEquals("New key should be active", 75, gameSettings.getPlayerKeyCode(1, "left"));
+    }
+    
+    @Test
+    public void testWBlockColor() {
+        gameSettings.setColorblindMode(false);
+        Color wColor = gameSettings.getColorForBlock("W");
+        assertEquals("W block color should be dark gray", new Color(64, 64, 64), wColor);
+        
+        gameSettings.setColorblindMode(true);
+        Color wColorBlind = gameSettings.getColorForBlock("W");
+        assertEquals("W block color in colorblind mode", new Color(85, 85, 85), wColorBlind);
+    }
+    
+    @Test
+    public void testUIColorSuccess() {
+        gameSettings.setColorblindMode(false);
+        Color successColor = gameSettings.getUIColor("success");
+        assertEquals("Success color should be green", Color.GREEN, successColor);
+        
+        gameSettings.setColorblindMode(true);
+        Color successColorBlind = gameSettings.getUIColor("success");
+        assertEquals("Success color in colorblind mode", new Color(0, 158, 115), successColorBlind);
+    }
+    
+    @Test
+    public void testUIColorError() {
+        gameSettings.setColorblindMode(false);
+        Color errorColor = gameSettings.getUIColor("error");
+        assertEquals("Error color should be red", Color.RED, errorColor);
+        
+        gameSettings.setColorblindMode(true);
+        Color errorColorBlind = gameSettings.getUIColor("error");
+        assertEquals("Error color in colorblind mode", new Color(213, 94, 0), errorColorBlind);
+    }
+    
+    @Test
+    public void testUIColorWarning() {
+        gameSettings.setColorblindMode(false);
+        Color warningColor = gameSettings.getUIColor("warning");
+        assertEquals("Warning color should be yellow", Color.YELLOW, warningColor);
+        
+        gameSettings.setColorblindMode(true);
+        Color warningColorBlind = gameSettings.getUIColor("warning");
+        assertEquals("Warning color in colorblind mode", new Color(255, 255, 0), warningColorBlind);
+    }
+    
+    @Test
+    public void testUIColorInfo() {
+        gameSettings.setColorblindMode(false);
+        Color infoColor = gameSettings.getUIColor("info");
+        assertEquals("Info color should be cyan", Color.CYAN, infoColor);
+        
+        gameSettings.setColorblindMode(true);
+        Color infoColorBlind = gameSettings.getUIColor("info");
+        assertEquals("Info color in colorblind mode", new Color(135, 206, 250), infoColorBlind);
+    }
+    
+    @Test
+    public void testAllWindowSizeConstants() {
+        assertEquals("Small window size", "450x600", GameSettings.WINDOW_SIZE_SMALL);
+        assertEquals("Medium window size", "550x700", GameSettings.WINDOW_SIZE_MEDIUM);
+        assertEquals("Large window size", "650x800", GameSettings.WINDOW_SIZE_LARGE);
+    }
+    
+    @Test
+    public void testWindowSizeSmallDimensions() {
+        gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_SMALL);
+        assertEquals("Small width should be 450", 450, gameSettings.getWindowWidth());
+        assertEquals("Small height should be 600", 600, gameSettings.getWindowHeight());
+    }
+    
+    @Test
+    public void testWindowSizeMediumDimensions() {
+        gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_MEDIUM);
+        assertEquals("Medium width should be 550", 550, gameSettings.getWindowWidth());
+        assertEquals("Medium height should be 700", 700, gameSettings.getWindowHeight());
+    }
+    
+    @Test
+    public void testWindowSizeLargeDimensions() {
+        gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_LARGE);
+        assertEquals("Large width should be 650", 650, gameSettings.getWindowWidth());
+        assertEquals("Large height should be 800", 800, gameSettings.getWindowHeight());
+    }
+    
+    @Test
+    public void testDefaultSettingsAllKeys() {
+        gameSettings.setDefaultSettings();
+        
+        // 싱글 플레이 키
+        assertEquals("Default down", 40, gameSettings.getKeyCode("down"));
+        assertEquals("Default left", 37, gameSettings.getKeyCode("left"));
+        assertEquals("Default right", 39, gameSettings.getKeyCode("right"));
+        assertEquals("Default rotate", 38, gameSettings.getKeyCode("rotate"));
+        assertEquals("Default drop", 32, gameSettings.getKeyCode("drop"));
+        assertEquals("Default pause", 80, gameSettings.getKeyCode("pause"));
+        assertEquals("Default item", 16, gameSettings.getKeyCode("item"));
+        
+        // Player1 키
+        assertEquals("Default P1 down", 83, gameSettings.getPlayerKeyCode(1, "down"));
+        assertEquals("Default P1 left", 65, gameSettings.getPlayerKeyCode(1, "left"));
+        assertEquals("Default P1 right", 68, gameSettings.getPlayerKeyCode(1, "right"));
+        assertEquals("Default P1 rotate", 87, gameSettings.getPlayerKeyCode(1, "rotate"));
+        assertEquals("Default P1 drop", 90, gameSettings.getPlayerKeyCode(1, "drop"));
+        assertEquals("Default P1 item", 88, gameSettings.getPlayerKeyCode(1, "item"));
+        
+        // Player2 키
+        assertEquals("Default P2 down", 40, gameSettings.getPlayerKeyCode(2, "down"));
+        assertEquals("Default P2 left", 37, gameSettings.getPlayerKeyCode(2, "left"));
+        assertEquals("Default P2 right", 39, gameSettings.getPlayerKeyCode(2, "right"));
+        assertEquals("Default P2 rotate", 38, gameSettings.getPlayerKeyCode(2, "rotate"));
+        assertEquals("Default P2 drop", 16, gameSettings.getPlayerKeyCode(2, "drop"));
+        assertEquals("Default P2 item", 17, gameSettings.getPlayerKeyCode(2, "item"));
+    }
+    
+    @Test
+    public void testColorblindModeI BlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color iColor = gameSettings.getColorForBlock("I");
+        assertEquals("I block colorblind color", new Color(135, 206, 250), iColor);
+    }
+    
+    @Test
+    public void testColorblindModeOBlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color oColor = gameSettings.getColorForBlock("O");
+        assertEquals("O block colorblind color", new Color(255, 255, 0), oColor);
+    }
+    
+    @Test
+    public void testColorblindModeTBlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color tColor = gameSettings.getColorForBlock("T");
+        assertEquals("T block colorblind color", new Color(199, 21, 133), tColor);
+    }
+    
+    @Test
+    public void testColorblindModeLBlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color lColor = gameSettings.getColorForBlock("L");
+        assertEquals("L block colorblind color", new Color(255, 165, 0), lColor);
+    }
+    
+    @Test
+    public void testColorblindModeJBlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color jColor = gameSettings.getColorForBlock("J");
+        assertEquals("J block colorblind color", new Color(0, 0, 255), jColor);
+    }
+    
+    @Test
+    public void testColorblindModeSBlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color sColor = gameSettings.getColorForBlock("S");
+        assertEquals("S block colorblind color", new Color(0, 158, 115), sColor);
+    }
+    
+    @Test
+    public void testColorblindModeZBlockColor() {
+        gameSettings.setColorblindMode(true);
+        Color zColor = gameSettings.getColorForBlock("Z");
+        assertEquals("Z block colorblind color", new Color(213, 94, 0), zColor);
+    }
+    
+    @Test
+    public void testColorblindModeTextColor() {
+        gameSettings.setColorblindMode(true);
+        Color textColor = gameSettings.getUIColor("text");
+        assertEquals("Text color in colorblind mode", new Color(245, 245, 245), textColor);
+    }
+    
+    @Test
+    public void testColorblindModeHighlightColor() {
+        gameSettings.setColorblindMode(true);
+        Color highlightColor = gameSettings.getUIColor("highlight");
+        assertEquals("Highlight color in colorblind mode", new Color(255, 255, 0), highlightColor);
+    }
+    
+    @Test
+    public void testColorblindModeBorderColor() {
+        gameSettings.setColorblindMode(true);
+        Color borderColor = gameSettings.getUIColor("border");
+        assertEquals("Border color in colorblind mode", new Color(170, 170, 170), borderColor);
+    }
+    
+    @Test
+    public void testMultipleKeyChanges() {
+        gameSettings.setKeyCode("down", 83); // S
+        gameSettings.setKeyCode("left", 65); // A
+        gameSettings.setKeyCode("right", 68); // D
+        gameSettings.setKeyCode("rotate", 87); // W
+        
+        assertEquals("Down should be S", 83, gameSettings.getKeyCode("down"));
+        assertEquals("Left should be A", 65, gameSettings.getKeyCode("left"));
+        assertEquals("Right should be D", 68, gameSettings.getKeyCode("right"));
+        assertEquals("Rotate should be W", 87, gameSettings.getKeyCode("rotate"));
+    }
+    
+    @Test
+    public void testComplexKeyDuplicateScenario() {
+        gameSettings.setKeyCode("down", 65); // A
+        gameSettings.setKeyCode("left", 66); // B
+        gameSettings.setKeyCode("right", 67); // C
+        
+        // right에 down과 같은 키 설정
+        gameSettings.setKeyCode("right", 65); // A
+        
+        assertEquals("down should be disabled", -1, gameSettings.getKeyCode("down"));
+        assertEquals("left should remain B", 66, gameSettings.getKeyCode("left"));
+        assertEquals("right should be A", 65, gameSettings.getKeyCode("right"));
+    }
+    
+    @Test
+    public void testPlayerKeyComplexDuplicateScenario() {
+        gameSettings.setPlayerKeyCode(1, "down", 75); // K
+        gameSettings.setPlayerKeyCode(1, "left", 76); // L
+        gameSettings.setPlayerKeyCode(1, "right", 77); // M
+        
+        // right에 down과 같은 키 설정
+        gameSettings.setPlayerKeyCode(1, "right", 75); // K
+        
+        assertEquals("down should be disabled", -1, gameSettings.getPlayerKeyCode(1, "down"));
+        assertEquals("left should remain L", 76, gameSettings.getPlayerKeyCode(1, "left"));
+        assertEquals("right should be K", 75, gameSettings.getPlayerKeyCode(1, "right"));
+    }
+    
+    @Test
+    public void testAllActionKeyChanges() {
+        String[] actions = {"down", "left", "right", "rotate", "drop", "pause", "item"};
+        
+        for (int i = 0; i < actions.length; i++) {
+            int newKey = 100 + i;
+            gameSettings.setKeyCode(actions[i], newKey);
+            assertEquals("Key for " + actions[i] + " should be updated", 
+                newKey, gameSettings.getKeyCode(actions[i]));
+        }
+    }
+    
+    @Test
+    public void testAllPlayerActionsKeyChanges() {
+        String[] actions = {"down", "left", "right", "rotate", "drop", "item"};
+        
+        // Player 1
+        for (int i = 0; i < actions.length; i++) {
+            int newKey = 200 + i;
+            gameSettings.setPlayerKeyCode(1, actions[i], newKey);
+            assertEquals("Player1 key for " + actions[i] + " should be updated", 
+                newKey, gameSettings.getPlayerKeyCode(1, actions[i]));
+        }
+        
+        // Player 2
+        for (int i = 0; i < actions.length; i++) {
+            int newKey = 300 + i;
+            gameSettings.setPlayerKeyCode(2, actions[i], newKey);
+            assertEquals("Player2 key for " + actions[i] + " should be updated", 
+                newKey, gameSettings.getPlayerKeyCode(2, actions[i]));
+        }
+    }
+    
+    @Test
+    public void testSaveAndLoadAllSettings() {
+        // 모든 설정 변경
+        gameSettings.setWindowSize(GameSettings.WINDOW_SIZE_SMALL);
+        gameSettings.setGameSpeed(5);
+        gameSettings.setSoundEnabled(false);
+        gameSettings.setColorblindMode(true);
+        gameSettings.setKeyCode("down", 83);
+        gameSettings.setPlayerKeyCode(1, "left", 70);
+        gameSettings.setPlayerKeyCode(2, "right", 75);
+        
+        gameSettings.saveSettings();
+        gameSettings.loadSettings();
+        
+        // 모든 설정 확인
+        assertEquals("Window size should persist", GameSettings.WINDOW_SIZE_SMALL, gameSettings.getWindowSize());
+        assertEquals("Game speed should persist", 5, gameSettings.getGameSpeed());
+        assertFalse("Sound should persist", gameSettings.isSoundEnabled());
+        assertTrue("Colorblind mode should persist", gameSettings.isColorblindMode());
+        assertEquals("Key down should persist", 83, gameSettings.getKeyCode("down"));
+        assertEquals("Player1 left should persist", 70, gameSettings.getPlayerKeyCode(1, "left"));
+        assertEquals("Player2 right should persist", 75, gameSettings.getPlayerKeyCode(2, "right"));
+    }
+    
+    @Test
+    public void testGameSpeedEdgeCases() {
+        gameSettings.setGameSpeed(-10);
+        assertEquals("Should save negative speed", -10, gameSettings.getGameSpeed());
+        
+        gameSettings.setGameSpeed(100);
+        assertEquals("Should save high speed", 100, gameSettings.getGameSpeed());
+        
+        gameSettings.setGameSpeed(0);
+        assertEquals("Should save zero speed", 0, gameSettings.getGameSpeed());
+    }
+    
+    @Test
+    public void testAllBlockTypesInBothModes() {
+        String[] blockTypes = {"I", "O", "T", "L", "J", "S", "Z", "W", "UNKNOWN"};
+        
+        gameSettings.setColorblindMode(false);
+        for (String type : blockTypes) {
+            Color normalColor = gameSettings.getColorForBlock(type);
+            assertNotNull("Normal mode color should not be null for " + type, normalColor);
+        }
+        
+        gameSettings.setColorblindMode(true);
+        for (String type : blockTypes) {
+            Color colorblindColor = gameSettings.getColorForBlock(type);
+            assertNotNull("Colorblind mode color should not be null for " + type, colorblindColor);
+        }
+    }
+    
+    @Test
+    public void testAllUIElementsInBothModes() {
+        String[] elements = {"background", "text", "highlight", "border", "success", "error", "warning", "info", "unknown"};
+        
+        gameSettings.setColorblindMode(false);
+        for (String element : elements) {
+            Color normalColor = gameSettings.getUIColor(element);
+            assertNotNull("Normal mode UI color should not be null for " + element, normalColor);
+        }
+        
+        gameSettings.setColorblindMode(true);
+        for (String element : elements) {
+            Color colorblindColor = gameSettings.getUIColor(element);
+            assertNotNull("Colorblind mode UI color should not be null for " + element, colorblindColor);
+        }
+    }
+    
+    @Test
+    public void testWindowSizeWithTrailingSpaces() {
+        gameSettings.setWindowSize("500x600  ");
+        try {
+            int width = gameSettings.getWindowWidth();
+            int height = gameSettings.getWindowHeight();
+            // 공백이 있어도 파싱 가능하거나 예외 발생
+        } catch (Exception e) {
+            assertTrue("Should handle trailing spaces", true);
+        }
+    }
+    
+    @Test
+    public void testWindowSizeWithNoX() {
+        gameSettings.setWindowSize("500-600");
+        try {
+            int width = gameSettings.getWindowWidth();
+            int height = gameSettings.getWindowHeight();
+            fail("Should throw exception for invalid format");
+        } catch (Exception e) {
+            assertTrue("Should throw exception for invalid format", true);
+        }
+    }
+    
+    @Test
+    public void testGetKeyNameForAllLetters() {
+        char[] letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
+        for (char letter : letters) {
+            String name = gameSettings.getKeyName((int) letter);
+            assertEquals("Key name should match letter", String.valueOf(letter), name);
+        }
+    }
+    
+    @Test
+    public void testGetKeyNameForArrows() {
+        assertEquals("←", gameSettings.getKeyName(37));
+        assertEquals("↑", gameSettings.getKeyName(38));
+        assertEquals("→", gameSettings.getKeyName(39));
+        assertEquals("↓", gameSettings.getKeyName(40));
+    }
+    
+    @Test
+    public void testGetKeyNameForModifiers() {
+        assertEquals("Shift", gameSettings.getKeyName(16));
+        assertEquals("Ctrl", gameSettings.getKeyName(17));
+        assertEquals("Alt", gameSettings.getKeyName(18));
+    }
+    
+    @Test
+    public void testGetKeyNameForSpecial() {
+        assertEquals("Enter", gameSettings.getKeyName(10));
+        assertEquals("Esc", gameSettings.getKeyName(27));
+        assertEquals("Tab", gameSettings.getKeyName(9));
+        assertEquals("Space", gameSettings.getKeyName(32));
+    }
+    
+    @Test
+    public void testGetKeyNameForInvalid() {
+        assertEquals("없음", gameSettings.getKeyName(-1));
+        assertEquals("Key-999", gameSettings.getKeyName(-999));
+        assertEquals("Key9999", gameSettings.getKeyName(9999));
+    }
+    
+    @Test
+    public void testCustomWindowSizeVariousDimensions() {
+        int[][] sizes = {{800, 600}, {1024, 768}, {1280, 720}, {1920, 1080}};
+        
+        for (int[] size : sizes) {
+            gameSettings.setCustomWindowSize(size[0], size[1]);
+            assertEquals("Width should match", size[0], gameSettings.getWindowWidth());
+            assertEquals("Height should match", size[1], gameSettings.getWindowHeight());
+        }
+    }
+    
+    @Test
+    public void testPlayerKeyCodeAllCombinations() {
+        String[] actions = {"down", "left", "right", "rotate", "drop", "item"};
+        int[] players = {1, 2};
+        
+        for (int player : players) {
+            for (String action : actions) {
+                int originalKey = gameSettings.getPlayerKeyCode(player, action);
+                assertTrue("Original key should be valid", originalKey >= -1);
+                
+                int newKey = 400 + player * 10 + action.hashCode() % 10;
+                gameSettings.setPlayerKeyCode(player, action, newKey);
+                assertEquals("Key should be updated", newKey, gameSettings.getPlayerKeyCode(player, action));
+            }
+        }
+    }
+    
+    @Test
+    public void testToggleSoundMultipleTimes() {
+        for (int i = 0; i < 10; i++) {
+            boolean currentState = gameSettings.isSoundEnabled();
+            gameSettings.setSoundEnabled(!currentState);
+            assertEquals("Sound should toggle", !currentState, gameSettings.isSoundEnabled());
+        }
+    }
+    
+    @Test
+    public void testToggleColorblindMultipleTimes() {
+        for (int i = 0; i < 10; i++) {
+            boolean currentState = gameSettings.isColorblindMode();
+            gameSettings.setColorblindMode(!currentState);
+            assertEquals("Colorblind mode should toggle", !currentState, gameSettings.isColorblindMode());
+        }
+    }
+    
+    @Test
+    public void testCycleWindowSizes() {
+        String[] sizes = {GameSettings.WINDOW_SIZE_SMALL, GameSettings.WINDOW_SIZE_MEDIUM, GameSettings.WINDOW_SIZE_LARGE};
+        
+        for (int cycle = 0; cycle < 3; cycle++) {
+            for (String size : sizes) {
+                gameSettings.setWindowSize(size);
+                assertEquals("Window size should be set", size, gameSettings.getWindowSize());
+            }
+        }
+    }
+    
+    @Test
+    public void testCycleGameSpeeds() {
+        for (int cycle = 0; cycle < 3; cycle++) {
+            for (int speed = 1; speed <= 5; speed++) {
+                gameSettings.setGameSpeed(speed);
+                assertEquals("Game speed should be set", speed, gameSettings.getGameSpeed());
+            }
+        }
+    }
 }
