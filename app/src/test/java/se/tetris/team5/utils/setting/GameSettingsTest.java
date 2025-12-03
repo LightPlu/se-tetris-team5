@@ -949,7 +949,7 @@ public class GameSettingsTest {
     }
     
     @Test
-    public void testColorblindModeI BlockColor() {
+    public void testColorblindModeIBlockColor() {
         gameSettings.setColorblindMode(true);
         Color iColor = gameSettings.getColorForBlock("I");
         assertEquals("I block colorblind color", new Color(135, 206, 250), iColor);

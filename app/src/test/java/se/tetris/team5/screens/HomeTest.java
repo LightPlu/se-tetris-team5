@@ -5,9 +5,11 @@ import org.junit.Test;
 import org.junit.After;
 import static org.junit.Assert.*;
 
+import java.awt.Font;
 import java.awt.event.KeyEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Random;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 

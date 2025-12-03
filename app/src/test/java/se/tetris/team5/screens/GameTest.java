@@ -1654,7 +1654,7 @@ public class GameTest {
                 java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(size, size, 1);
                 java.awt.Graphics g = img.getGraphics();
                 try {
-                    gameInstance.paintComponent(g);
+                    gameInstance.repaint();
                 } catch(Exception e) {}
             }
         }

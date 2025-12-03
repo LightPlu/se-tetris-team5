@@ -8,9 +8,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.*;
 
-import se.tetris.team5.game.GameSettings;
-import se.tetris.team5.core.ScreenController;
-import se.tetris.team5.managers.BGMManager;
+import se.tetris.team5.utils.setting.GameSettings;
+import se.tetris.team5.ScreenController;
+import se.tetris.team5.components.home.BGMManager;
 
 public class SettingTest {
     private setting settingScreen;

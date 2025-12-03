@@ -456,7 +456,6 @@ public class P2PClientTest {
                 p.setCurrentBlockType(new String[]{"I","O","T","S","Z","J","L"}[i % 7]);
                 p.setNextBlockType(new String[]{"I","O","T","S","Z","J","L"}[(i+1) % 7]);
                 p.setMessage("Score: " + (i*100));
-                p.setGameOver(i % 10 == 0);
                 int[][] board = new int[20][10];
                 for(int r=0;r<20;r++) for(int c=0;c<10;c++) board[r][c] = (r+c+i) % 8;
                 p.setBoard(board);
@@ -555,8 +554,6 @@ public class P2PClientTest {
                 p.setCurrentBlockType("TYPE" + i);
                 p.setNextBlockType("NEXT" + i);
                 p.setMessage("MSG" + i);
-                p.setGameOver(i % 2 == 0);
-                p.setReady(i % 3 == 0);
                 p.setBoard(new int[20][10]);
                 client.sendPacket(p);
             } catch(Exception e) {}
