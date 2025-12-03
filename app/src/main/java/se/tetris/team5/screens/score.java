@@ -232,7 +232,7 @@ public class score {
         
         // 모드 탭 버튼들
         String[] modes = {"ITEM", "NORMAL_EASY", "NORMAL_NORMAL", "NORMAL_HARD"};
-        String[] modeNames = {"아이템", "쉬움", "보통", "어려움"};
+        String[] modeNames = {"아이템", "이지", "노말", "하드"};
         
         // 버튼 배열 초기화
         modeTabButtons = new JButton[modes.length];
@@ -564,9 +564,9 @@ public class score {
         
         switch (gameMode) {
             case "ITEM": return "아이템";
-            case "NORMAL_EASY": return "쉬움";
-            case "NORMAL_NORMAL": return "보통";
-            case "NORMAL_HARD": return "어려움";
+            case "NORMAL_EASY": return "이지";
+            case "NORMAL_NORMAL": return "노말";
+            case "NORMAL_HARD": return "하드";
             default: return "아이템";
         }
     }

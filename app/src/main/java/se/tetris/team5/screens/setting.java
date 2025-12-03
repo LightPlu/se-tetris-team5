@@ -64,6 +64,10 @@ public class setting {
     private String[] battleKeyActionKeys = {"down", "left", "right", "rotate", "drop", "item"};
     private int currentBattleKeyIndex = 0;
     
+    // 확인 메시지 모드
+    private boolean isConfirmationMode = false;
+    private Thread confirmationTimer = null;
+    
     public setting(ScreenController screenController) {
         this.screenController = screenController;
         
@@ -659,6 +663,8 @@ public class setting {
     }
     
     private void showConfirmation(String message) {
+        isConfirmationMode = true;
+        
         StringBuilder sb = new StringBuilder();
         sb.append("\n\n\n");
         sb.append("═══════════════════════════════════\n");
@@ -671,15 +677,24 @@ public class setting {
         
         updateDisplay(sb.toString());
         
-        // 2초 후 자동으로 설정 화면으로 돌아가기
-        new Thread(() -> {
+        // 기존 타이머가 있으면 취소
+        if (confirmationTimer != null) {
+            confirmationTimer.interrupt();
+        }
+        
+        // 3초 후 자동으로 설정 화면으로 돌아가기
+        confirmationTimer = new Thread(() -> {
             try {
-                Thread.sleep(2000);
-                drawSettingScreen();
+                Thread.sleep(3000);
+                if (isConfirmationMode) {
+                    isConfirmationMode = false;
+                    javax.swing.SwingUtilities.invokeLater(() -> drawSettingScreen());
+                }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                // 타이머가 중단됨 (키 입력으로 즉시 복귀)
             }
-        }).start();
+        });
+        confirmationTimer.start();
     }
     
     private void showKeyWarning(String message) {
@@ -774,6 +789,17 @@ public class setting {
         @Override
         public void keyPressed(KeyEvent e) {
             e.consume(); // 이벤트 소비하여 전파 방지
+            
+            // 확인 모드일 때 아무 키나 누르면 즉시 복귀
+            if (isConfirmationMode) {
+                isConfirmationMode = false;
+                if (confirmationTimer != null) {
+                    confirmationTimer.interrupt();
+                    confirmationTimer = null;
+                }
+                drawSettingScreen();
+                return;
+            }
             
             if (currentKeyAction.isEmpty()) {
                 // 일반 메뉴 모드
