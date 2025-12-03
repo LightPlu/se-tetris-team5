@@ -43,6 +43,7 @@ public class GameStatePacket implements Serializable {
     private int linesCleared;
     private long elapsedTime; // 게임 경과 시간 (밀리초)
     private boolean hasTimeStopCharge; // 타임스톱 보유 여부
+    private int timeLimitRemaining = -1; // 시간제한 모드 남은 시간 (초 단위, -1이면 미사용)
     
     // 공격 블럭 데이터
     private List<int[]> attackBlocks;
@@ -163,6 +164,14 @@ public class GameStatePacket implements Serializable {
 
     public void setHasTimeStopCharge(boolean hasTimeStopCharge) {
         this.hasTimeStopCharge = hasTimeStopCharge;
+    }
+
+    public int getTimeLimitRemaining() {
+        return timeLimitRemaining;
+    }
+
+    public void setTimeLimitRemaining(int timeLimitRemaining) {
+        this.timeLimitRemaining = timeLimitRemaining;
     }
     
     public List<int[]> getAttackBlocks() {

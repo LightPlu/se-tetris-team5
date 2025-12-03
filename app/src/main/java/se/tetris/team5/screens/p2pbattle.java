@@ -828,6 +828,11 @@ public class p2pbattle extends JPanel implements KeyListener {
         long elapsedTime = myPanel.getGameEngine().getElapsedTime();
         packet.setElapsedTime(elapsedTime);
         packet.setHasTimeStopCharge(myPanel.getGameEngine().hasTimeStopCharge());
+        if (isTimeLimitMode()) {
+            packet.setTimeLimitRemaining(Math.max(remainingSeconds, 0));
+        } else {
+            packet.setTimeLimitRemaining(-1);
+        }
         
         // 공격 블록 전송 (게임에서 새로 생성된 공격 줄만)
         java.util.List<java.awt.Color[]> attackBlocks = myPanel.drainPendingOutgoingAttackBlocks();
@@ -966,6 +971,10 @@ public class p2pbattle extends JPanel implements KeyListener {
             opponentPanel.updateNextBlock(packet.getNextBlockType());
             if (!isTimeLimitMode()) {
                 opponentPanel.updateTimer(packet.getElapsedTime());
+            } else if (packet.getTimeLimitRemaining() >= 0) {
+                int remain = packet.getTimeLimitRemaining();
+                String timeStr = String.format("%02d:%02d", Math.max(remain, 0) / 60, Math.max(remain, 0) % 60);
+                opponentPanel.updateTimerLabel(timeStr);
             }
         }
     }
