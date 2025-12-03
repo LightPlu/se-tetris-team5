@@ -88,11 +88,35 @@ public class score {
         // Left controls: Back + Score reset
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         leftControls.setOpaque(false);
-        JButton topBack = new JButton("Back");
+        JButton topBack = new JButton("◀ 뒤로가기");
         topBack.setFocusable(false);
-        topBack.setBackground(new Color(40, 40, 48));
+        topBack.setBackground(new Color(30, 30, 35));
         topBack.setForeground(Color.WHITE);
-        topBack.setBorder(BorderFactory.createEmptyBorder(6,12,6,12));
+        topBack.setFont(createKoreanFont(Font.BOLD, 13));
+        topBack.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(100, 200, 255), 2), // 밝은 파란 테두리
+            BorderFactory.createEmptyBorder(6, 14, 6, 14)
+        ));
+        topBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // 호버 효과 추가
+        topBack.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                topBack.setBackground(new Color(50, 50, 60));
+                topBack.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(150, 220, 255), 2),
+                    BorderFactory.createEmptyBorder(6, 14, 6, 14)
+                ));
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                topBack.setBackground(new Color(30, 30, 35));
+                topBack.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(100, 200, 255), 2),
+                    BorderFactory.createEmptyBorder(6, 14, 6, 14)
+                ));
+            }
+        });
         topBack.addActionListener(ae -> {
             int res = JOptionPane.showConfirmDialog(screenController,
                 "뒤로 가시겠습니까? (현재 화면을 벗어납니다)",
