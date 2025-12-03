@@ -5,6 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import se.tetris.team5.gamelogic.GameEngine;
+import se.tetris.team5.utils.setting.GameSettings;
 import java.awt.event.KeyEvent;
 
 /**
@@ -318,6 +319,43 @@ public class Player2InputHandlerTest {
             assertTrue("게임 오버 후 입력 안전", true);
         } else {
             assertTrue("게임 진행 중", true);
+        }
+    }
+
+    /**
+     * 테스트 26: Shift 좌/우 구분
+     */
+    @Test
+    public void testPlayer2InputHandler_ShiftLocationHandling() {
+        TrackingGameEngine trackingEngine = new TrackingGameEngine();
+        Player2InputHandler trackingHandler = new Player2InputHandler(trackingEngine);
+        GameSettings settings = GameSettings.getInstance();
+        int originalDropKey = settings.getPlayerKeyCode(2, "drop");
+        
+        try {
+            settings.setPlayerKeyCode(2, "drop", KeyEvent.VK_SHIFT);
+            
+            trackingHandler.handleKeyPress(KeyEvent.VK_SHIFT, KeyEvent.KEY_LOCATION_LEFT);
+            assertFalse("왼쪽 Shift는 하드드롭을 유발하지 않아야 함", trackingEngine.hardDropCalled);
+            
+            trackingHandler.handleKeyPress(KeyEvent.VK_SHIFT, KeyEvent.KEY_LOCATION_RIGHT);
+            assertTrue("오른쪽 Shift는 하드드롭을 유발해야 함", trackingEngine.hardDropCalled);
+        } finally {
+            settings.setPlayerKeyCode(2, "drop", originalDropKey);
+        }
+    }
+
+    private static class TrackingGameEngine extends GameEngine {
+        boolean hardDropCalled = false;
+
+        TrackingGameEngine() {
+            super(20, 10, false);
+        }
+
+        @Override
+        public boolean hardDrop() {
+            hardDropCalled = true;
+            return true;
         }
     }
 }

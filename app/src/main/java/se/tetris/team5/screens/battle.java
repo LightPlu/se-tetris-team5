@@ -369,8 +369,8 @@ public class battle extends JPanel implements KeyListener {
     // Player1 키 처리
     player1Input.handleKeyPress(keyCode);
     
-    // Player2 키 처리
-    player2Input.handleKeyPress(keyCode);
+    // Player2 키 처리 (Shift 좌/우 구분)
+    player2Input.handleKeyPress(keyCode, e.getKeyLocation());
     
     // 공통 키 처리
     if (keyCode == KeyEvent.VK_ESCAPE) {

@@ -1,5 +1,7 @@
 package se.tetris.team5.gamelogic.input;
 
+import java.awt.event.KeyEvent;
+
 import se.tetris.team5.gamelogic.GameEngine;
 
 /**
@@ -65,6 +67,13 @@ public class Player2InputHandler implements PlayerInputHandler {
      * 키 이벤트 처리 - GameSettings에서 키 코드를 가져와서 처리
      */
     public void handleKeyPress(int keyCode) {
+        handleKeyPress(keyCode, KeyEvent.KEY_LOCATION_UNKNOWN);
+    }
+
+    /**
+     * 키 이벤트 처리 (키 위치 포함) - 왼쪽/오른쪽 Shift 구분
+     */
+    public void handleKeyPress(int keyCode, int keyLocation) {
         se.tetris.team5.utils.setting.GameSettings settings = 
             se.tetris.team5.utils.setting.GameSettings.getInstance();
         
@@ -84,7 +93,15 @@ public class Player2InputHandler implements PlayerInputHandler {
         } else if (keyCode == downKey) {
             handleSoftDrop();
         } else if (keyCode == dropKey) {
-            handleHardDrop();
+            if (dropKey == KeyEvent.VK_SHIFT) {
+                // RShift만 허용해 왼쪽/양쪽 Shift로 인한 오동작 방지
+                if (keyLocation == KeyEvent.KEY_LOCATION_RIGHT 
+                        || keyLocation == KeyEvent.KEY_LOCATION_UNKNOWN) {
+                    handleHardDrop();
+                }
+            } else {
+                handleHardDrop();
+            }
         } else if (keyCode == itemKey) {
             handleUseItem();
         }
