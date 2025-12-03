@@ -66,6 +66,7 @@ public class battle extends JPanel implements KeyListener {
   private String battleMode; // "NORMAL", "ITEM", "TIMELIMIT"
   private javax.swing.Timer timeLimitTimer;
   private int remainingSeconds;
+  private boolean isPaused = false; // 일시정지 상태
 
   public battle(ScreenController screenController) {
     this.screenController = screenController;
