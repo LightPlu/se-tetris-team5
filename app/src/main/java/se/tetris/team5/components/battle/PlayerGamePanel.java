@@ -30,6 +30,7 @@ public class PlayerGamePanel extends JPanel {
   // UI 컴포넌트
   private GameBoard gameBoard;
   private JPanel nextVisualPanel;
+  private JPanel nextWrapper; // 다음 블록 래퍼 (크기 조정용)
   private JLabel scoreValueLabel;
   private DoubleScoreBadge doubleScoreBadge;
   private JLabel levelLabel;
@@ -59,7 +60,7 @@ public class PlayerGamePanel extends JPanel {
 
   // 대전모드: 상대방 패널 참조 (공격 블럭 전송용)
   private PlayerGamePanel opponentPanel;
-  
+
   // 타임스톱 관련
   private boolean isTimeStopped = false;
   private Timer timeStopCountdownTimer;
@@ -68,6 +69,8 @@ public class PlayerGamePanel extends JPanel {
   private JLabel timeStopIconLabel;
   private JLabel timeStopNumberLabel;
   private JLabel timeStopSubLabel;
+  // 타임스톱 아이템 획득 표시 (게임보드 오른쪽 위)
+  private JLabel timeStopIndicator;
 
   /**
    * 플레이어 게임 패널 생성 (기본값)
@@ -86,13 +89,13 @@ public class PlayerGamePanel extends JPanel {
   public PlayerGamePanel(String playerName, String controlInfo, Color themeColor) {
     this(playerName, controlInfo, themeColor, null);
   }
-  
+
   /**
    * 플레이어 게임 패널 생성 (GameEngine 주입 가능)
    * 
-   * @param playerName  플레이어 이름
-   * @param controlInfo 조작키 정보
-   * @param themeColor  테마 색상
+   * @param playerName   플레이어 이름
+   * @param controlInfo  조작키 정보
+   * @param themeColor   테마 색상
    * @param customEngine 커스텀 게임 엔진 (null이면 일반 GameEngine 생성)
    */
   public PlayerGamePanel(String playerName, String controlInfo, Color themeColor, GameEngine customEngine) {
@@ -115,7 +118,7 @@ public class PlayerGamePanel extends JPanel {
     } else {
       initGameEngine();
     }
-    
+
     initComponents();
   }
 
@@ -148,7 +151,7 @@ public class PlayerGamePanel extends JPanel {
     timerLabel.setBackground(new Color(0, 0, 0, 180));
     timerLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
     boardContainer.add(timerLabel, Integer.valueOf(100));
-    
+
     // 타임스톱 오버레이 패널 (처음에는 숨김)
     timeStopOverlay = new JPanel() {
       @Override
@@ -164,22 +167,22 @@ public class PlayerGamePanel extends JPanel {
     timeStopOverlay.setLayout(new BoxLayout(timeStopOverlay, BoxLayout.Y_AXIS));
     timeStopOverlay.setOpaque(false); // 투명도 적용을 위해 필수
     timeStopOverlay.setVisible(false);
-    
+
     timeStopIconLabel = new JLabel("⏱", javax.swing.SwingConstants.CENTER);
     timeStopIconLabel.setFont(new Font("Dialog", Font.BOLD, 48));
     timeStopIconLabel.setForeground(Color.CYAN);
     timeStopIconLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    
+
     timeStopNumberLabel = new JLabel("5", javax.swing.SwingConstants.CENTER);
     timeStopNumberLabel.setFont(new Font("Dialog", Font.BOLD, 72));
     timeStopNumberLabel.setForeground(Color.YELLOW);
     timeStopNumberLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    
+
     timeStopSubLabel = new JLabel("초 남음", javax.swing.SwingConstants.CENTER);
     timeStopSubLabel.setFont(new Font("Dialog", Font.BOLD, 24));
     timeStopSubLabel.setForeground(Color.WHITE);
     timeStopSubLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    
+
     timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
     timeStopOverlay.add(timeStopIconLabel);
     timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
@@ -187,8 +190,20 @@ public class PlayerGamePanel extends JPanel {
     timeStopOverlay.add(javax.swing.Box.createVerticalStrut(10));
     timeStopOverlay.add(timeStopSubLabel);
     timeStopOverlay.add(javax.swing.Box.createVerticalGlue());
-    
+
     boardContainer.add(timeStopOverlay, Integer.valueOf(200));
+
+    // 타임스톱 아이템 획득 표시 (오른쪽 위) - 일반 모드와 동일
+    timeStopIndicator = new JLabel("획득:⌛", javax.swing.SwingConstants.CENTER);
+    timeStopIndicator.setFont(new Font("Dialog", Font.BOLD, 16));
+    timeStopIndicator.setForeground(new Color(60, 180, 170));
+    timeStopIndicator.setOpaque(true);
+    timeStopIndicator.setBackground(new Color(0, 0, 0, 180));
+    timeStopIndicator.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(60, 180, 170), 2),
+        BorderFactory.createEmptyBorder(1, 1, 1, 1)));
+    timeStopIndicator.setVisible(false);
+    boardContainer.add(timeStopIndicator, Integer.valueOf(200));
 
     // 보드와 타이머 위치 설정
     boardContainer.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -198,6 +213,10 @@ public class PlayerGamePanel extends JPanel {
         gameBoard.setBounds(0, 0, size.width, size.height);
         timerLabel.setBounds(10, 10, 80, 30);
         timeStopOverlay.setBounds(0, 0, size.width, size.height);
+        // 타임스톱 표시 위치 (오른쪽 위)
+        int indicatorWidth = 60;
+        int indicatorHeight = 45;
+        timeStopIndicator.setBounds(size.width - indicatorWidth - 10, 10, indicatorWidth, indicatorHeight);
       }
     });
 
@@ -232,9 +251,10 @@ public class PlayerGamePanel extends JPanel {
 
     // 다음 블록
     nextVisualPanel = createNextBlockPanel();
-    JPanel nextWrapper = BattleLayoutBuilder.createTitledPanel("다음 블록", nextVisualPanel,
+    nextWrapper = BattleLayoutBuilder.createTitledPanel("다음 블록", nextVisualPanel,
         new Color(255, 204, 0), new Color(255, 204, 0));
     nextWrapper.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    nextWrapper.setMaximumSize(new java.awt.Dimension(190, 110)); // 소형 기본값
     panel.add(nextWrapper);
     panel.add(javax.swing.Box.createVerticalStrut(12));
 
@@ -290,24 +310,10 @@ public class PlayerGamePanel extends JPanel {
               g2.setColor(new Color(255, 255, 255, 40));
               g2.fillRoundRect(x + 4, y + 4, (cellSize - 8) / 2, (cellSize - 8) / 2, 4, 4);
 
-              // 아이템이 있으면 시각적으로 표시
+              // 아이템이 있으면 일반 모드와 동일한 스타일로 표시
               se.tetris.team5.items.Item cellItem = next.getItem(c, r);
               if (cellItem != null) {
-                // 반투명 금색 원
-                g2.setColor(new Color(255, 215, 0, 200));
-                int ovalSize = Math.max(cellSize / 2, 10);
-                int ovalX = x + 4 + (cellSize - 8 - ovalSize) / 2;
-                int ovalY = y + 4 + (cellSize - 8 - ovalSize) / 2;
-                g2.fillOval(ovalX, ovalY, ovalSize, ovalSize);
-                // 아이템 아이콘/문자
-                g2.setColor(Color.BLACK);
-                Font iconFont = new Font("Arial", Font.BOLD, Math.max(ovalSize / 2, 8));
-                g2.setFont(iconFont);
-                String icon = getItemIcon(cellItem);
-                java.awt.FontMetrics fm = g2.getFontMetrics();
-                int textX = ovalX + (ovalSize - fm.stringWidth(icon)) / 2;
-                int textY = ovalY + (ovalSize + fm.getAscent()) / 2 - fm.getDescent();
-                g2.drawString(icon, textX, textY);
+                drawItemIndicator(g2, x + 4, y + 4, cellSize - 8, cellItem);
               }
             }
           }
@@ -315,21 +321,95 @@ public class PlayerGamePanel extends JPanel {
         g2.dispose();
       }
 
-      // 싱글 모드와 동일한 아이템 아이콘 반환 방식
-      private String getItemIcon(se.tetris.team5.items.Item item) {
-        if (item instanceof se.tetris.team5.items.LineClearItem)
-          return "L";
-        if (item instanceof se.tetris.team5.items.TimeStopItem)
-          return "⏱";
-        if (item instanceof se.tetris.team5.items.DoubleScoreItem)
-          return "×2";
-        if (item instanceof se.tetris.team5.items.BombItem)
-          return "💣";
-        if (item instanceof se.tetris.team5.items.WeightBlockItem)
-          return "W";
-        if (item instanceof se.tetris.team5.items.ScoreItem)
-          return "S";
-        return "?";
+      // 일반 모드와 동일한 아이템 표시 방식
+      private void drawItemIndicator(java.awt.Graphics2D g2, int x, int y, int cellSize,
+          se.tetris.team5.items.Item item) {
+        int cx = x + cellSize / 2;
+        int cy = y + cellSize / 2;
+        // 아이템 아이콘 크기를 블록보다 작게 조정
+        int r = Math.max(5, cellSize / 4);
+
+        // 배경 링
+        g2.setColor(new Color(0, 0, 0, 120));
+        g2.fillOval(cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+
+        if (item instanceof se.tetris.team5.items.TimeStopItem) {
+          // 시계 아이콘
+          g2.setColor(new Color(60, 180, 170));
+          g2.fillOval(cx - r, cy - r, r * 2, r * 2);
+          g2.setColor(Color.WHITE);
+          int hw = Math.max(2, r / 4);
+          g2.fillOval(cx - hw, cy - hw, hw * 2, hw * 2);
+          g2.setColor(new Color(255, 255, 255, 200));
+          g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r / 6)));
+          g2.drawLine(cx, cy, cx + r / 2, cy - r / 3);
+        } else if (item instanceof se.tetris.team5.items.BombItem) {
+          // 폭탄 아이콘
+          g2.setColor(new Color(30, 10, 10));
+          g2.fillOval(cx - r, cy - r, r * 2, r * 2);
+          g2.setColor(new Color(255, 90, 90));
+          g2.setStroke(new java.awt.BasicStroke(Math.max(1f, r / 6)));
+          g2.drawOval(cx - r + 1, cy - r + 1, r * 2 - 2, r * 2 - 2);
+          g2.setColor(new Color(255, 200, 80));
+          g2.fillOval(cx + r - Math.max(4, r / 4), cy - r - Math.max(2, r / 6), Math.max(4, r / 3), Math.max(4, r / 3));
+        } else if (item instanceof se.tetris.team5.items.LineClearItem) {
+          // 라인 클리어 아이콘
+          g2.setColor(new Color(255, 200, 70));
+          int arc = Math.max(4, r / 2);
+          g2.fillRoundRect(cx - r, cy - r, r * 2, r * 2, arc, arc);
+          g2.setColor(new Color(255, 255, 255, 220));
+          Font prev = g2.getFont();
+          Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(6, r * 0.9));
+          g2.setFont(glyphFont);
+          java.awt.FontMetrics fm = g2.getFontMetrics();
+          String text = "L";
+          int sx = cx - fm.stringWidth(text) / 2;
+          int sy = cy + fm.getAscent() / 2 - 2;
+          g2.drawString(text, sx, sy);
+          g2.setFont(prev);
+        } else if (item instanceof se.tetris.team5.items.DoubleScoreItem) {
+          // 더블 스코어 아이콘
+          g2.setColor(new Color(255, 215, 0));
+          g2.fillOval(cx - r, cy - r, r * 2, r * 2);
+          g2.setColor(Color.WHITE);
+          Font prev = g2.getFont();
+          Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+          g2.setFont(glyphFont);
+          java.awt.FontMetrics fm = g2.getFontMetrics();
+          String text = "×2";
+          int sx = cx - fm.stringWidth(text) / 2;
+          int sy = cy + fm.getAscent() / 2 - 2;
+          g2.drawString(text, sx, sy);
+          g2.setFont(prev);
+        } else if (item instanceof se.tetris.team5.items.WeightBlockItem) {
+          // 무게추 아이콘
+          g2.setColor(new Color(80, 80, 80));
+          g2.fillOval(cx - r, cy - r, r * 2, r * 2);
+          g2.setColor(Color.WHITE);
+          Font prev = g2.getFont();
+          Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+          g2.setFont(glyphFont);
+          java.awt.FontMetrics fm = g2.getFontMetrics();
+          String text = "W";
+          int sx = cx - fm.stringWidth(text) / 2;
+          int sy = cy + fm.getAscent() / 2 - 2;
+          g2.drawString(text, sx, sy);
+          g2.setFont(prev);
+        } else if (item instanceof se.tetris.team5.items.ScoreItem) {
+          // 스코어 아이콘
+          g2.setColor(new Color(100, 200, 255));
+          g2.fillOval(cx - r, cy - r, r * 2, r * 2);
+          g2.setColor(Color.WHITE);
+          Font prev = g2.getFont();
+          Font glyphFont = prev.deriveFont(Font.BOLD, (float) Math.max(8, r));
+          g2.setFont(glyphFont);
+          java.awt.FontMetrics fm = g2.getFontMetrics();
+          String text = "S";
+          int sx = cx - fm.stringWidth(text) / 2;
+          int sy = cy + fm.getAscent() / 2 - 2;
+          g2.drawString(text, sx, sy);
+          g2.setFont(prev);
+        }
       }
     };
     panel.setPreferredSize(new java.awt.Dimension(180, 90));
@@ -592,9 +672,10 @@ public class PlayerGamePanel extends JPanel {
           }
         }
       }
-      
+
       // 폭탄 폭발 애니메이션 처리
-      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = gameEngine.consumeLastBombExplosionCells();
+      java.util.List<se.tetris.team5.components.game.GameBoard.CellPos> bombCells = gameEngine
+          .consumeLastBombExplosionCells();
       if (bombCells != null && !bombCells.isEmpty()) {
         gameBoard.triggerBombExplosion(bombCells);
       }
@@ -607,6 +688,23 @@ public class PlayerGamePanel extends JPanel {
       nextVisualPanel.repaint();
     }
 
+    // 화면 크기에 따른 다음 블록 패널 크기 조정 (일반 모드와 동일하게 유지)
+    java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(this);
+    if (window != null && nextVisualPanel != null && nextWrapper != null) {
+      int width = window.getWidth();
+      if (width <= 450) {
+        // 소형: 일반 모드와 동일한 크기
+        nextVisualPanel.setPreferredSize(new java.awt.Dimension(170, 120));
+        nextWrapper.setMaximumSize(new java.awt.Dimension(190, 140));
+      } else {
+        // 중형/대형: 일반 모드와 동일한 크기
+        nextVisualPanel.setPreferredSize(new java.awt.Dimension(170, 120));
+        nextWrapper.setMaximumSize(new java.awt.Dimension(190, 140));
+      }
+      nextWrapper.revalidate();
+      nextWrapper.repaint();
+    }
+
     // 점수 정보 업데이트
     if (scoreValueLabel != null) {
       scoreValueLabel.setText(String.format("%,d", gameEngine.getGameScoring().getCurrentScore()));
@@ -617,6 +715,9 @@ public class PlayerGamePanel extends JPanel {
     if (linesLabel != null) {
       linesLabel.setText("줄: " + gameEngine.getGameScoring().getLinesCleared());
     }
+
+    // 타임스톱 획득 표시 업데이트
+    updateTimeStopIndicator();
 
     // 타이머 업데이트
     // countdownTimerEnabled가 true면 battle.java에서 updateTimerLabel()로 업데이트하므로 여기서는
@@ -687,7 +788,7 @@ public class PlayerGamePanel extends JPanel {
   public boolean isGameOver() {
     return gameEngine.isGameOver();
   }
-  
+
   /**
    * P2P 대전 모드: 상대방 점수 업데이트 (렌더링만)
    */
@@ -696,7 +797,7 @@ public class PlayerGamePanel extends JPanel {
       scoreValueLabel.setText(String.format("%,d", score));
     }
   }
-  
+
   /**
    * P2P 대전 모드: 상대방 레벨 업데이트 (렌더링만)
    */
@@ -705,7 +806,7 @@ public class PlayerGamePanel extends JPanel {
       levelLabel.setText("레벨: " + level);
     }
   }
-  
+
   /**
    * P2P 대전 모드: 상대방 줄 수 업데이트 (렌더링만)
    */
@@ -714,22 +815,24 @@ public class PlayerGamePanel extends JPanel {
       linesLabel.setText("줄: " + lines);
     }
   }
-  
+
   /**
    * P2P 대전 모드: 상대방 다음 블록 업데이트 (렌더링만)
+   * 
    * @param nextBlockType 다음 블록 타입 (I, O, T, S, Z, L, J, W, DOT)
    */
   public void updateNextBlock(String nextBlockType) {
     if (gameEngine != null && nextBlockType != null) {
       // 다음 블록을 nextBlockType으로 교체 (렌더링용)
       try {
-        java.lang.reflect.Field nextBlockField = se.tetris.team5.gamelogic.GameEngine.class.getDeclaredField("nextBlock");
+        java.lang.reflect.Field nextBlockField = se.tetris.team5.gamelogic.GameEngine.class
+            .getDeclaredField("nextBlock");
         nextBlockField.setAccessible(true);
-        
+
         se.tetris.team5.blocks.Block newNextBlock = createBlockFromType(nextBlockType);
         if (newNextBlock != null) {
           nextBlockField.set(gameEngine, newNextBlock);
-          
+
           // 다음 블록 UI 재렌더링
           if (nextVisualPanel != null) {
             nextVisualPanel.repaint();
@@ -740,9 +843,10 @@ public class PlayerGamePanel extends JPanel {
       }
     }
   }
-  
+
   /**
    * P2P 대전 모드: 상대방 타이머 업데이트 (렌더링만)
+   * 
    * @param elapsedTimeMs 경과 시간 (밀리초)
    */
   public void updateTimer(long elapsedTimeMs) {
@@ -751,24 +855,35 @@ public class PlayerGamePanel extends JPanel {
     seconds = seconds % 60;
     updateTimerLabel(String.format("%02d:%02d", minutes, seconds));
   }
-  
+
   /**
    * blockType으로 Block 객체 생성
    */
   private se.tetris.team5.blocks.Block createBlockFromType(String blockType) {
-    if (blockType == null) return null;
-    
+    if (blockType == null)
+      return null;
+
     switch (blockType) {
-      case "I": return new se.tetris.team5.blocks.IBlock();
-      case "O": return new se.tetris.team5.blocks.OBlock();
-      case "T": return new se.tetris.team5.blocks.TBlock();
-      case "S": return new se.tetris.team5.blocks.SBlock();
-      case "Z": return new se.tetris.team5.blocks.ZBlock();
-      case "L": return new se.tetris.team5.blocks.LBlock();
-      case "J": return new se.tetris.team5.blocks.JBlock();
-      case "W": return new se.tetris.team5.blocks.WBlock();
-      case "DOT": return new se.tetris.team5.blocks.DotBlock();
-      default: return null;
+      case "I":
+        return new se.tetris.team5.blocks.IBlock();
+      case "O":
+        return new se.tetris.team5.blocks.OBlock();
+      case "T":
+        return new se.tetris.team5.blocks.TBlock();
+      case "S":
+        return new se.tetris.team5.blocks.SBlock();
+      case "Z":
+        return new se.tetris.team5.blocks.ZBlock();
+      case "L":
+        return new se.tetris.team5.blocks.LBlock();
+      case "J":
+        return new se.tetris.team5.blocks.JBlock();
+      case "W":
+        return new se.tetris.team5.blocks.WBlock();
+      case "DOT":
+        return new se.tetris.team5.blocks.DotBlock();
+      default:
+        return null;
     }
   }
 
@@ -888,7 +1003,7 @@ public class PlayerGamePanel extends JPanel {
   public void setOpponentPanel(PlayerGamePanel opponent) {
     this.opponentPanel = opponent;
   }
-  
+
   /**
    * 최근 생성된 공격 블럭 데이터를 P2P 전송을 위해 큐에 저장한다.
    */
@@ -896,12 +1011,12 @@ public class PlayerGamePanel extends JPanel {
     if (attackBlocks == null || attackBlocks.isEmpty()) {
       return;
     }
-    
+
     synchronized (pendingOutgoingAttackBlocks) {
       pendingOutgoingAttackBlocks.addAll(attackBlocks);
     }
   }
-  
+
   /**
    * 대기 중인 공격 블럭을 가져오고 내부 큐를 비운다 (P2P 전송용).
    */
@@ -915,7 +1030,7 @@ public class PlayerGamePanel extends JPanel {
       return copy;
     }
   }
-  
+
   /**
    * P2P 대전모드: 네트워크로 받은 공격 블럭을 수신합니다
    * 
@@ -925,42 +1040,44 @@ public class PlayerGamePanel extends JPanel {
     if (receivedBlocks == null || receivedBlocks.isEmpty()) {
       return;
     }
-    
+
     synchronized (attackBlocksData) {
       attackBlocksData.addAll(receivedBlocks);
-      System.out.println("[P2P 공격 블럭 수신] " + receivedBlocks.size() + "줄 추가됨 - 대기 중인 공격: " + attackBlocksData.size() + "줄");
+      System.out
+          .println("[P2P 공격 블럭 수신] " + receivedBlocks.size() + "줄 추가됨 - 대기 중인 공격: " + attackBlocksData.size() + "줄");
     }
-    
+
     // 공격 블럭 패널 업데이트
     if (attackPanel != null) {
       attackPanel.repaint();
     }
   }
-  
+
   /**
    * 아이템 사용 - 타임스톱 활성화
+   * 
    * @return 아이템 사용 성공 여부
    */
   public boolean useItem() {
     if (gameEngine != null && gameEngine.hasTimeStopCharge() && !isTimeStopped) {
       isTimeStopped = true;
       gameEngine.useTimeStop(); // 충전 소모
-      
+
       // 타이머 정지
       if (gameTimer != null) {
         gameTimer.stop();
       }
-      
+
       // 타임스톱 오버레이 표시 및 카운트다운 시작
       timeStopRemaining = 5;
       showTimeStopOverlay();
-      
+
       // 기존 카운트다운 타이머 정리
       if (timeStopCountdownTimer != null) {
         timeStopCountdownTimer.stop();
         timeStopCountdownTimer = null;
       }
-      
+
       // 1초마다 카운트다운
       timeStopCountdownTimer = new Timer(1000, e -> {
         timeStopRemaining--;
@@ -977,13 +1094,13 @@ public class PlayerGamePanel extends JPanel {
       });
       timeStopCountdownTimer.setRepeats(true);
       timeStopCountdownTimer.start();
-      
+
       System.out.println("[" + playerName + "] 타임스톱 아이템 사용!");
       return true;
     }
     return false;
   }
-  
+
   /**
    * 타임스톱 오버레이 표시
    */
@@ -995,7 +1112,7 @@ public class PlayerGamePanel extends JPanel {
       timeStopOverlay.setVisible(true);
     }
   }
-  
+
   /**
    * 타임스톱 오버레이 업데이트
    */
@@ -1004,23 +1121,33 @@ public class PlayerGamePanel extends JPanel {
       timeStopNumberLabel.setText(String.valueOf(timeStopRemaining));
     }
   }
-  
+
   /**
    * 타임스톱 해제
    */
   private void deactivateTimeStop() {
     isTimeStopped = false;
-    
+
     // 오버레이 숨기기
     if (timeStopOverlay != null) {
       timeStopOverlay.setVisible(false);
     }
-    
+
     // 타이머 재시작
     if (gameTimer != null && !isGameOver()) {
       gameTimer.start();
     }
-    
+
     System.out.println("[" + playerName + "] 타임스톱 종료");
   }
+
+  /**
+   * 타임스톱 획득 표시를 업데이트합니다 (일반 모드와 동일)
+   */
+  private void updateTimeStopIndicator() {
+    if (gameEngine != null && timeStopIndicator != null) {
+      timeStopIndicator.setVisible(gameEngine.hasTimeStopCharge());
+    }
+  }
+
 }
