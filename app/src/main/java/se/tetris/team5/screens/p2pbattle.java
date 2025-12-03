@@ -582,8 +582,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         centerPanel.add(Box.createVerticalStrut(20));
         centerPanel.add(createLobbyLatencyPanel());
         centerPanel.add(Box.createVerticalStrut(20));
-        centerPanel.add(createChatPanel());
-        centerPanel.add(Box.createVerticalStrut(20));
         centerPanel.add(createCenteredComponent(readyButton));
         centerPanel.add(Box.createVerticalStrut(15));
         centerPanel.add(createCenteredComponent(cancelButton));
@@ -721,10 +719,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         
         myPanel.getGameEngine().setGameMode(mode);
         opponentEngine.setGameMode(mode);
-        
-        if ("ITEM".equals(selectedBattleMode)) {
-            enableItemModeTestSettings();
-        }
         
         // P2P 모드: 각자 랜덤하게 블록 생성 (동기화 안함)
         // 양쪽이 서로 다른 블록으로 플레이하는 진정한 대전 모드
@@ -905,7 +899,7 @@ public class p2pbattle extends JPanel implements KeyListener {
                     handleGameOver(packet.getWinner());
                     break;
                 case CHAT_MESSAGE:
-                    appendChatMessage(getOpponentRoleLabel(), packet.getMessage());
+                    // 채팅 시스템은 현재 비활성화됨 (더미 패킷만 처리)
                     break;
                     
                 default:
@@ -1229,24 +1223,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         }
         chatArea.append(String.format("[%s] %s%n", sender, message));
         chatArea.setCaretPosition(chatArea.getDocument().getLength());
-    }
-    
-    /**
-     * 아이템 모드 테스트를 위해 I블록 고정 + 2줄마다 아이템 드롭을 활성화
-     */
-    private void enableItemModeTestSettings() {
-        if (myPanel == null) {
-            return;
-        }
-        se.tetris.team5.gamelogic.GameEngine engine = myPanel.getGameEngine();
-        if (engine == null) {
-            return;
-        }
-        se.tetris.team5.gamelogic.block.BlockFactory factory = engine.getBlockFactory();
-        if (factory != null) {
-            factory.setForcedBlockType(0); // I블록
-        }
-        engine.setItemGrantPolicy(new se.tetris.team5.items.FrequentItemGrantPolicy(2));
     }
     
     private Color getLatencyColor(long latency) {
@@ -1596,54 +1572,21 @@ public class p2pbattle extends JPanel implements KeyListener {
     }
 
     private JPanel createChatPanel() {
+        // 채팅 기능은 현재 비활성화 상태이며 향후 재도입 시 아래의 더미 패널을 교체하세요.
+        JPanel placeholder = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        placeholder.setOpaque(false);
+        placeholder.setMaximumSize(new Dimension(450, 60));
+        JLabel label = new JLabel("채팅 기능은 현재 비활성화되었습니다.");
+        label.setFont(createKoreanFont(Font.ITALIC, 12));
+        label.setForeground(Color.LIGHT_GRAY);
+        placeholder.add(label);
+        return placeholder;
+
+        /*
+        기존 채팅 구현:
         JPanel wrapper = new JPanel();
-        wrapper.setOpaque(false);
-        wrapper.setLayout(new BorderLayout(5, 5));
-        wrapper.setMaximumSize(new Dimension(450, 220));
-
-        JLabel title = new JLabel("대기방 채팅");
-        title.setFont(createKoreanFont(Font.BOLD, 14));
-        title.setForeground(Color.WHITE);
-        wrapper.add(title, BorderLayout.NORTH);
-
-        chatArea = new JTextArea();
-        chatArea.setEditable(false);
-        chatArea.setLineWrap(true);
-        chatArea.setWrapStyleWord(true);
-        chatArea.setFont(createKoreanFont(Font.PLAIN, 12));
-        chatArea.setBackground(new Color(20, 20, 20));
-        chatArea.setForeground(Color.WHITE);
-        chatArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        JScrollPane scrollPane = new JScrollPane(chatArea);
-        scrollPane.setPreferredSize(new Dimension(450, 140));
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70)));
-        wrapper.add(scrollPane, BorderLayout.CENTER);
-
-        JPanel inputPanel = new JPanel(new BorderLayout(5, 0));
-        inputPanel.setOpaque(false);
-
-        chatInputField = new JTextField();
-        chatInputField.setFont(createKoreanFont(Font.PLAIN, 12));
-        chatInputField.addActionListener(e -> sendChatMessage());
-
-        chatSendButton = new JButton("전송");
-        chatSendButton.setFont(createKoreanFont(Font.BOLD, 12));
-        chatSendButton.setBackground(new Color(70, 130, 255));
-        chatSendButton.setForeground(Color.WHITE);
-        chatSendButton.setOpaque(true);
-        chatSendButton.setBorder(BorderFactory.createLineBorder(new Color(30, 30, 60)));
-        chatSendButton.setFocusPainted(false);
-        chatSendButton.setContentAreaFilled(true);
-        chatSendButton.addActionListener(e -> sendChatMessage());
-
-        inputPanel.add(chatInputField, BorderLayout.CENTER);
-        inputPanel.add(chatSendButton, BorderLayout.EAST);
-
-        wrapper.add(inputPanel, BorderLayout.SOUTH);
-
-        appendChatMessage("시스템", "연결이 완료되었습니다. 간단한 메시지를 주고받을 수 있습니다.");
-        return wrapper;
+        ... (이전 UI 및 메시지 처리 코드)
+        */
     }
 
     /**
