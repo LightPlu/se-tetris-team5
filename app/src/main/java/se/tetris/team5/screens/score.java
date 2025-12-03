@@ -564,9 +564,9 @@ public class score {
         
         switch (gameMode) {
             case "ITEM": return "아이템";
-            case "NORMAL_EASY": return "쉬움";
-            case "NORMAL_NORMAL": return "보통";
-            case "NORMAL_HARD": return "어려움";
+            case "NORMAL_EASY": return "이지";
+            case "NORMAL_NORMAL": return "노말";
+            case "NORMAL_HARD": return "하드";
             default: return "아이템";
         }
     }
