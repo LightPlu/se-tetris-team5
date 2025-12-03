@@ -66,6 +66,8 @@ public class PlayerGamePanel extends JPanel {
 
   // 대전모드: 상대방 패널 참조 (공격 블럭 전송용)
   private PlayerGamePanel opponentPanel;
+  // 대전모드: 공격 대기열 상태 변경 리스너 (P2P 동기화용)
+  private java.util.function.Consumer<java.util.List<Color[]>> attackQueueListener;
 
   // 타임스톱 관련
   private boolean isTimeStopped = false;
@@ -1022,6 +1024,7 @@ public class PlayerGamePanel extends JPanel {
     if (attackPanel != null) {
       attackPanel.repaint();
     }
+    notifyAttackQueueListener();
   }
 
   /**
@@ -1048,6 +1051,7 @@ public class PlayerGamePanel extends JPanel {
         System.out.println("[공격 블럭 적용 완료] 게임 보드에 추가되고 패널 초기화됨");
       }
     }
+    notifyAttackQueueListener();
   }
 
   /**
@@ -1088,6 +1092,7 @@ public class PlayerGamePanel extends JPanel {
     if (attackPanel != null) {
       attackPanel.repaint();
     }
+    notifyAttackQueueListener();
   }
 
   /**
@@ -1097,6 +1102,25 @@ public class PlayerGamePanel extends JPanel {
    */
   public void setOpponentPanel(PlayerGamePanel opponent) {
     this.opponentPanel = opponent;
+  }
+  
+  /**
+   * 공격 대기열 변화를 통지받을 리스너를 설정한다 (P2P 동기화용).
+   */
+  public void setAttackQueueListener(java.util.function.Consumer<java.util.List<Color[]>> listener) {
+    this.attackQueueListener = listener;
+  }
+  
+  private void notifyAttackQueueListener() {
+    java.util.function.Consumer<java.util.List<Color[]>> listener = this.attackQueueListener;
+    if (listener == null) {
+      return;
+    }
+    java.util.List<Color[]> snapshot;
+    synchronized (attackBlocksData) {
+      snapshot = new java.util.ArrayList<>(attackBlocksData);
+    }
+    listener.accept(snapshot);
   }
 
   /**
@@ -1148,6 +1172,27 @@ public class PlayerGamePanel extends JPanel {
     }
     System.out.println("[P2P 공격 블럭 수신] " + receivedBlocks.size() + "줄 수신");
     addAttackBlocks(receivedBlocks);
+  }
+  
+  /**
+   * 관전자 패널에서 상대방의 공격 대기열을 직접 업데이트한다 (P2P용).
+   */
+  public void updateSpectatorAttackQueue(java.util.List<Color[]> pendingBlocks) {
+    if (!(gameEngine instanceof se.tetris.team5.gamelogic.P2PGameEngine)) {
+      return;
+    }
+    synchronized (attackBlocksData) {
+      attackBlocksData.clear();
+      totalReceivedAttackLines = 0;
+      if (pendingBlocks != null && !pendingBlocks.isEmpty()) {
+        int limit = Math.min(pendingBlocks.size(), MAX_ATTACK_LINES);
+        attackBlocksData.addAll(pendingBlocks.subList(0, limit));
+        totalReceivedAttackLines = limit;
+      }
+    }
+    if (attackPanel != null) {
+      attackPanel.repaint();
+    }
   }
 
   /**

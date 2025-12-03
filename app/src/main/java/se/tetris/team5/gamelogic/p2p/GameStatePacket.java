@@ -20,6 +20,7 @@ public class GameStatePacket implements Serializable {
         GAME_START,            // 게임 시작
         GAME_STATE,            // 게임 상태 업데이트
         ATTACK_BLOCKS,         // 공격 블럭 전송
+        ATTACK_STATUS,         // 공격 블럭 대기열 상태 동기화
         GAME_OVER,             // 게임 오버
         DISCONNECT,            // 연결 종료
         PING,                  // 연결 확인 (핑)

@@ -696,6 +696,8 @@ public class p2pbattle extends JPanel implements KeyListener {
             "화살표 + Space",  // 싱글 플레이 기본 키
             isServer ? new Color(100, 200, 255) : new Color(255, 200, 100)
         );
+        myPanel.setAttackQueueListener(this::sendAttackQueueStatus);
+        sendAttackQueueStatus(java.util.Collections.emptyList());
         
         // 상대방 패널은 P2P 전용 게임 엔진 사용 (네트워크 상태 주입용)
         se.tetris.team5.gamelogic.P2PGameEngine opponentEngine = 
@@ -892,6 +894,12 @@ public class p2pbattle extends JPanel implements KeyListener {
                             System.out.println("[P2P] 공격 블록 수신: " + receivedAttacks.size() + "줄");
                             myPanel.receiveAttackBlocks(receivedAttacks);
                         }
+                    }
+                    break;
+                case ATTACK_STATUS:
+                    if (opponentPanel != null && currentState == ScreenState.PLAYING) {
+                        java.util.List<java.awt.Color[]> opponentQueue = decodeAttackBlocks(packet.getAttackBlocks());
+                        opponentPanel.updateSpectatorAttackQueue(opponentQueue);
                     }
                     break;
                     
@@ -1671,6 +1679,19 @@ public class p2pbattle extends JPanel implements KeyListener {
             decoded.add(decodedRow);
         }
         return decoded;
+    }
+
+    private void sendAttackQueueStatus(java.util.List<java.awt.Color[]> pendingBlocks) {
+        if (currentState != ScreenState.PLAYING) {
+            return;
+        }
+        GameStatePacket statusPacket = new GameStatePacket(GameStatePacket.PacketType.ATTACK_STATUS);
+        statusPacket.setAttackBlocks(encodeAttackBlocks(pendingBlocks));
+        if (isServer && server != null) {
+            server.sendPacket(statusPacket);
+        } else if (!isServer && client != null) {
+            client.sendPacket(statusPacket);
+        }
     }
     
     /**
