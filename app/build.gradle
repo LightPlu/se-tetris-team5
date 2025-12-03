@@ -256,7 +256,7 @@ exec java -Xdock:name="${appName}" -Xdock:icon="../Resources/${appName}.icns" -D
 """
         
         // 아이콘 처리 (있으면 복사)
-        def iconSource = file("${project.projectDir}/src/main/resources/Tetris_icon.icns")
+        def iconSource = file("${project.projectDir}/src/main/resources/Tetris_Mac_icon.icns")
         def iconPng = file("${project.projectDir}/src/main/resources/Tetris_icon.png")
         
         if (iconSource.exists()) {
