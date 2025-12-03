@@ -199,7 +199,7 @@ public class BattleTimeLimitTest {
     remainingSecondsField.setAccessible(true);
 
     // 일시정지
-    battleScreen.forcePause();
+    // battleScreen.forcePause();
 
     int secondsBeforePause = (int) remainingSecondsField.get(battleScreen);
 

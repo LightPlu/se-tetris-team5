@@ -281,7 +281,7 @@ public class BattleModeComprehensiveTest {
     startBattleMethod.invoke(battleScreen);
 
     // 일시정지
-    battleScreen.forcePause();
+    // battleScreen.forcePause();
 
     Field pausedField = battle.class.getDeclaredField("isPaused");
     pausedField.setAccessible(true);

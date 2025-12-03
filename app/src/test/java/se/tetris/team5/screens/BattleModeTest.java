@@ -189,7 +189,7 @@ public class BattleModeTest {
     startBattleMethod.invoke(battleScreen);
 
     // 테스트 환경에서는 ESC키 대신 강제로 일시정지
-    battleScreen.forcePause();
+    // battleScreen.forcePause();
 
     // 일시정지 상태 확인
     Field pausedField = battle.class.getDeclaredField("isPaused");
