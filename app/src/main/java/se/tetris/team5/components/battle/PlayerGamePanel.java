@@ -569,11 +569,17 @@ public class PlayerGamePanel extends JPanel {
   }
 
   public void pauseGame() {
+    // 일시정지 시작 시점 기록
+    pauseStartTime = System.currentTimeMillis();
+    
     if (gameTimer != null) {
       gameTimer.stop();
     }
     if (uiTimer != null) {
       uiTimer.stop();
+    }
+    if (gameEngine != null) {
+      gameEngine.setPaused(true);
     }
     if (timeStopIndicatorLabel != null) {
       timeStopIndicatorLabel.setVisible(false);

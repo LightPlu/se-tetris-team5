@@ -26,8 +26,8 @@ public class AIPlayerController {
   public enum AIDifficulty {
     /** 보통 난이도: 500ms 사고 시간 */
     NORMAL(500),
-    /** 어려움 난이도: 200ms 사고 시간 */
-    HARD(200);
+    /** 어려움 난이도: 100ms 사고 시간 */
+    HARD(100);
 
     private final int thinkDelayMs;
 

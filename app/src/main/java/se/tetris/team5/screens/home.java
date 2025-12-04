@@ -73,7 +73,7 @@ public class home extends JPanel implements KeyListener {
   };
 
   private String[] difficultyMenuIcons = {
-      "🟢", "🟡", "🔴", "↩️"
+      "🟢", "🟡", "🔴", "↩✖"
   };
 
   private String[] difficultyMenuDescriptions = {
@@ -88,13 +88,13 @@ public class home extends JPanel implements KeyListener {
       "일반 대전",
       "아이템 대전",
       "시간제한 대전",
-      "AI 대전",
-      "AI vs AI",
+      "인공지능 대전",
+      "인공지능 관전",
       "뒤로 가기"
   };
 
   private String[] battleModeIcons = {
-      "⚡", "💎⚡", "⏰", "🤖⚔️", "🤖🤖", "←"
+      "🎮", "💎", "⚡", "🤖", "🤖🎮🤖", "✖"
   };
 
   private String[] battleModeDescriptions = {
@@ -117,7 +117,7 @@ public class home extends JPanel implements KeyListener {
   };
 
   private String[] aiDifficultyIcons = {
-      "🟡", "🔴", "↩️"
+      "🟡", "🔴", "✖"
   };
 
   private String[] aiDifficultyDescriptions = {
