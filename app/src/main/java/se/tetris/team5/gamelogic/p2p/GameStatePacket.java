@@ -20,8 +20,8 @@ public class GameStatePacket implements Serializable {
         GAME_START,            // 게임 시작
         GAME_STATE,            // 게임 상태 업데이트
         ATTACK_BLOCKS,         // 공격 블럭 전송
+        ATTACK_STATUS,         // 공격 블럭 대기열 상태 동기화
         GAME_OVER,             // 게임 오버
-        RESTART_REQUEST,       // 재시작 요청
         DISCONNECT,            // 연결 종료
         PING,                  // 연결 확인 (핑)
         PONG,                  // 핑 응답
@@ -42,9 +42,11 @@ public class GameStatePacket implements Serializable {
     private int level;
     private int linesCleared;
     private long elapsedTime; // 게임 경과 시간 (밀리초)
+    private boolean hasTimeStopCharge; // 타임스톱 보유 여부
+    private int timeLimitRemaining = -1; // 시간제한 모드 남은 시간 (초 단위, -1이면 미사용)
     
     // 공격 블럭 데이터
-    private List<Color[]> attackBlocks;
+    private List<int[]> attackBlocks;
     
     // 게임 모드 선택
     private String battleMode; // "NORMAL", "ITEM", "TIMELIMIT"
@@ -156,11 +158,27 @@ public class GameStatePacket implements Serializable {
         this.elapsedTime = elapsedTime;
     }
     
-    public List<Color[]> getAttackBlocks() {
+    public boolean hasTimeStopCharge() {
+        return hasTimeStopCharge;
+    }
+
+    public void setHasTimeStopCharge(boolean hasTimeStopCharge) {
+        this.hasTimeStopCharge = hasTimeStopCharge;
+    }
+
+    public int getTimeLimitRemaining() {
+        return timeLimitRemaining;
+    }
+
+    public void setTimeLimitRemaining(int timeLimitRemaining) {
+        this.timeLimitRemaining = timeLimitRemaining;
+    }
+    
+    public List<int[]> getAttackBlocks() {
         return attackBlocks;
     }
     
-    public void setAttackBlocks(List<Color[]> attackBlocks) {
+    public void setAttackBlocks(List<int[]> attackBlocks) {
         this.attackBlocks = attackBlocks;
     }
     

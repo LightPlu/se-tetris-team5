@@ -82,6 +82,7 @@ public class battle extends JPanel implements KeyListener {
   private String battleMode; // "NORMAL", "ITEM", "TIMELIMIT"
   private javax.swing.Timer timeLimitTimer;
   private int remainingSeconds;
+  private boolean isPaused = false; // 일시정지 상태
 
   public battle(ScreenController screenController) {
     this.screenController = screenController;
@@ -142,13 +143,6 @@ public class battle extends JPanel implements KeyListener {
   }
 
   // === 테스트 지원 메서드 ===
-  /**
-   * 테스트 환경에서 강제로 일시정지 상태로 만듦
-   */
-  public void forcePause() {
-    this.isPaused = true;
-  }
-
   /**
    * 테스트 환경에서 타임리밋 타이머를 강제로 생성
    */
@@ -230,9 +224,6 @@ public class battle extends JPanel implements KeyListener {
 
     buildUI();
 
-    // 일시정지 상태 초기화
-    isPaused = false;
-
     addMouseListener(new java.awt.event.MouseAdapter() {
       @Override
       public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -299,7 +290,7 @@ public class battle extends JPanel implements KeyListener {
     }
 
     gameOverCheckTimer = new javax.swing.Timer(500, e -> {
-      if (!isPaused && gameController != null) {
+      if (gameController != null) {
         gameController.checkGameOver();
       }
     });
@@ -651,9 +642,7 @@ public class battle extends JPanel implements KeyListener {
     }
 
     // 공통 키 처리
-    if (keyCode == KeyEvent.VK_P) {
-      togglePause();
-    } else if (keyCode == KeyEvent.VK_ESCAPE) {
+    if (keyCode == KeyEvent.VK_ESCAPE) {
       isPaused = true; // ESC 입력 시 명확히 일시정지
       showPauseMenu();
     }
@@ -702,7 +691,6 @@ public class battle extends JPanel implements KeyListener {
   }
 
   private void showPauseMenu() {
-    isPaused = true;
     gameController.setPaused(true);
     pauseAllAIControllers();
     // PlayerGamePanel 일시정지
@@ -717,17 +705,23 @@ public class battle extends JPanel implements KeyListener {
       gameOverCheckTimer.stop();
     }
 
-    int option = JOptionPane.showOptionDialog(
+    // 일반 모드와 동일한 형식의 일시정지 메뉴
+    String[] options = { "계속", "메뉴로 나가기", "게임 종료" };
+    int choice = JOptionPane.showOptionDialog(
         this,
-        "게임 일시정지",
+        "게임을 일시중단했습니다.\n\n" +
+            "• 계속: 현재 게임을 이어서 진행합니다.\n" +
+            "• 메뉴로 나가기: 현재 게임을 취소하고 메인 메뉴로 이동합니다.\n" +
+            "• 게임 종료: 테트리스 프로그램을 완전히 종료합니다.",
         "일시정지",
         JOptionPane.DEFAULT_OPTION,
         JOptionPane.QUESTION_MESSAGE,
         null,
-        new Object[] { "게임 계속", "메뉴로 나가기" },
-        "게임 계속");
+        options,
+        options[0]);
 
-    if (option == 0) {
+    if (choice == 0 || choice == JOptionPane.CLOSED_OPTION) {
+      // 계속하기 (기본값)
       isPaused = false;
       gameController.setPaused(false);
       resumeAllAIControllers();
@@ -742,9 +736,9 @@ public class battle extends JPanel implements KeyListener {
         gameOverCheckTimer.start();
       }
       requestFocusInWindow();
-    } else {
+    } else if (choice == 1) {
       // 메뉴로 나가기: 모든 리소스 정리
-      disposeAllAIControllers();
+      isPaused = false;
       if (timeLimitTimer != null) {
         timeLimitTimer.stop();
       }
@@ -754,6 +748,17 @@ public class battle extends JPanel implements KeyListener {
       gameController.stop();
       restoreWindowSize();
       screenController.showScreen("home");
+    } else if (choice == 2) {
+      // 게임 종료: 테트리스 프로그램 완전 종료
+      isPaused = false;
+      if (timeLimitTimer != null) {
+        timeLimitTimer.stop();
+      }
+      if (gameOverCheckTimer != null) {
+        gameOverCheckTimer.stop();
+      }
+      gameController.stop();
+      System.exit(0);
     }
   }
 
@@ -770,7 +775,7 @@ public class battle extends JPanel implements KeyListener {
     }
 
     timeLimitTimer = new javax.swing.Timer(1000, e -> {
-      if (!isPaused && !gameController.isGameOver()) {
+      if (!gameController.isGameOver()) {
         remainingSeconds--;
         updateTimerLabels();
 
@@ -814,5 +819,14 @@ public class battle extends JPanel implements KeyListener {
     }
 
     handleGameOver(winner);
+  }
+
+  /**
+   * 테스트용: 게임을 강제로 일시정지
+   */
+  public void forcePause() {
+    if (gameController != null) {
+      gameController.setPaused(true);
+    }
   }
 }

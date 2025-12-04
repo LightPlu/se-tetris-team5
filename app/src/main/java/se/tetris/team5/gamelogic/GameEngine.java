@@ -123,6 +123,9 @@ public class GameEngine {
 
     // 블록을 보드에 배치하지 않음 - renderBoard에서 동적으로 그려짐
     // boardManager.placeBlock(currentBlock, x, y);
+
+    // 새 게임 시작 시간을 기록하여 경과 시간을 정확히 계산한다 (P2P 동기화용)
+    gameStartTime = System.currentTimeMillis();
   }
 
   /**
@@ -489,6 +492,11 @@ public class GameEngine {
   // 타임스톱 충전 여부 반환
   public boolean hasTimeStopCharge() {
     return hasTimeStopCharge;
+  }
+  
+  // 외부에서 타임스톱 충전 상태를 강제로 설정 (P2P 동기화용)
+  public void setTimeStopCharge(boolean hasCharge) {
+    this.hasTimeStopCharge = hasCharge;
   }
 
   // 타임스톱 사용 (충전 소모)

@@ -9,6 +9,7 @@ import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -63,6 +64,10 @@ public class setting {
     private String[] battleKeyActionKeys = {"down", "left", "right", "rotate", "drop", "item"};
     private int currentBattleKeyIndex = 0;
     
+    // 확인 메시지 모드
+    private boolean isConfirmationMode = false;
+    private Thread confirmationTimer = null;
+    
     public setting(ScreenController screenController) {
         this.screenController = screenController;
         
@@ -86,9 +91,16 @@ public class setting {
         textPane.setOpaque(false);
         textPane.setBackground(Color.BLACK);
         textPane.setLayout(new BorderLayout());
+        
+        // 기존 KeyListener 제거
         for (KeyListener kl : textPane.getKeyListeners()) {
             textPane.removeKeyListener(kl);
         }
+        
+        // textPane 자체를 포커스 가능하게 설정하고 KeyListener 추가
+        textPane.setFocusable(true);
+        textPane.setEditable(false);
+        textPane.addKeyListener(new SettingKeyListener());
         
         if (backgroundPanel == null) {
             backgroundPanel = new SettingBackgroundPanel();
@@ -99,15 +111,10 @@ public class setting {
         
         JTextPane contentPane = new JTextPane();
         contentPane.setOpaque(false);
-        contentPane.setFocusable(true);
+        contentPane.setFocusable(false); // contentPane은 포커스 받지 않음
         contentPane.setEditable(false);
         contentPane.setForeground(Color.WHITE);
         contentPane.setFont(new Font("Source Code Pro", Font.BOLD, 16));
-        // Remove existing key listeners
-        for (KeyListener kl : contentPane.getKeyListeners()) {
-            contentPane.removeKeyListener(kl);
-        }
-        contentPane.addKeyListener(new SettingKeyListener());
         this.currentTextPane = contentPane;
         
         JPanel overlay = new JPanel(new BorderLayout());
@@ -119,7 +126,44 @@ public class setting {
         textPane.add(backgroundPanel, BorderLayout.CENTER);
         
         drawSettingScreen();
-        currentTextPane.requestFocusInWindow();
+        
+        // 즉시 포커스 요청 (textPane만)
+        textPane.requestFocusInWindow();
+        
+        // 다단계 포커스 요청 (UI 렌더링 완료 후)
+        SwingUtilities.invokeLater(() -> {
+            textPane.requestFocusInWindow();
+        });
+        
+        // 50ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    textPane.requestFocusInWindow();
+                });
+            }
+        }, 50);
+        
+        // 100ms 후 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    textPane.requestFocusInWindow();
+                });
+            }
+        }, 100);
+        
+        // 200ms 후 최종 재시도
+        new java.util.Timer().schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    textPane.requestFocusInWindow();
+                });
+            }
+        }, 200);
     }
     
     private void loadBackgroundImage() {
@@ -619,6 +663,8 @@ public class setting {
     }
     
     private void showConfirmation(String message) {
+        isConfirmationMode = true;
+        
         StringBuilder sb = new StringBuilder();
         sb.append("\n\n\n");
         sb.append("═══════════════════════════════════\n");
@@ -631,15 +677,24 @@ public class setting {
         
         updateDisplay(sb.toString());
         
-        // 2초 후 자동으로 설정 화면으로 돌아가기
-        new Thread(() -> {
+        // 기존 타이머가 있으면 취소
+        if (confirmationTimer != null) {
+            confirmationTimer.interrupt();
+        }
+        
+        // 3초 후 자동으로 설정 화면으로 돌아가기
+        confirmationTimer = new Thread(() -> {
             try {
-                Thread.sleep(2000);
-                drawSettingScreen();
+                Thread.sleep(3000);
+                if (isConfirmationMode) {
+                    isConfirmationMode = false;
+                    javax.swing.SwingUtilities.invokeLater(() -> drawSettingScreen());
+                }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                // 타이머가 중단됨 (키 입력으로 즉시 복귀)
             }
-        }).start();
+        });
+        confirmationTimer.start();
     }
     
     private void showKeyWarning(String message) {
@@ -660,7 +715,12 @@ public class setting {
             try {
                 Thread.sleep(2000);
                 currentKeyAction = "";
-                drawKeySettingScreen();
+                // 대전모드 키 설정 중이면 대전모드 화면으로, 아니면 일반 키 설정 화면으로
+                if (isBattleKeySettingMode) {
+                    drawBattleKeySettingScreen();
+                } else {
+                    drawKeySettingScreen();
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -729,6 +789,17 @@ public class setting {
         @Override
         public void keyPressed(KeyEvent e) {
             e.consume(); // 이벤트 소비하여 전파 방지
+            
+            // 확인 모드일 때 아무 키나 누르면 즉시 복귀
+            if (isConfirmationMode) {
+                isConfirmationMode = false;
+                if (confirmationTimer != null) {
+                    confirmationTimer.interrupt();
+                    confirmationTimer = null;
+                }
+                drawSettingScreen();
+                return;
+            }
             
             if (currentKeyAction.isEmpty()) {
                 // 일반 메뉴 모드
@@ -835,7 +906,7 @@ public class setting {
                     // 설정 인터페이스에 필수적인 키만 제한
                     if (newKeyCode == KeyEvent.VK_ESCAPE || newKeyCode == KeyEvent.VK_ENTER) {
                         // 제한된 키에 대한 경고 메시지
-                        showKeyWarning("ESC와 Enter키는 설정할 수 없습니다.");
+                        showKeyWarning("Enter키로는 설정할 수 없습니다.");
                         return;
                     }
                     

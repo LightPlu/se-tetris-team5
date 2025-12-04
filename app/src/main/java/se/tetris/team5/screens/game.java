@@ -1191,22 +1191,30 @@ public class game extends JPanel implements KeyListener {
       }
     }
 
-    // 아이템 설명 업데이트 - 다음 블록에 포함된 아이템만 설명
+    // 아이템 설명 업데이트 - 다음 블록에 포함된 아이템 또는 특수 블록 타입 설명
     String itemDesc = "다음 블록에 포함된 아이템이 없습니다.";
 
     if (nextBlock != null) {
-      se.tetris.team5.items.Item found = null;
-      outer: for (int r = 0; r < nextBlock.height(); r++) {
-        for (int c = 0; c < nextBlock.width(); c++) {
-          se.tetris.team5.items.Item it = nextBlock.getItem(c, r);
-          if (it != null) {
-            found = it;
-            break outer;
+      // 먼저 특수 블록 타입 체크 (WBlock, DotBlock)
+      if (nextBlock instanceof se.tetris.team5.blocks.WBlock) {
+        itemDesc = "블록이 다른 블록과 닿을 시 밑의 모든 블럭을 제거합니다.";
+      } else if (nextBlock instanceof se.tetris.team5.blocks.DotBlock) {
+        itemDesc = "블록 고정 시 폭발로 주변 블록을 제거합니다.";
+      } else {
+        // 일반 블록인 경우 블록 내 아이템 체크
+        se.tetris.team5.items.Item found = null;
+        outer: for (int r = 0; r < nextBlock.height(); r++) {
+          for (int c = 0; c < nextBlock.width(); c++) {
+            se.tetris.team5.items.Item it = nextBlock.getItem(c, r);
+            if (it != null) {
+              found = it;
+              break outer;
+            }
           }
         }
-      }
-      if (found != null) {
-        itemDesc = describeItem(found, false);
+        if (found != null) {
+          itemDesc = describeItem(found, false);
+        }
       }
     }
 
@@ -1619,7 +1627,6 @@ public class game extends JPanel implements KeyListener {
     int rightKey = settings.getKeyCode("right");
     int rotateKey = settings.getKeyCode("rotate");
     int dropKey = settings.getKeyCode("drop");
-    int pauseKey = settings.getKeyCode("pause");
     int itemKey = settings.getKeyCode("item");
 
     // 일시정지 상태일 때의 키 처리
@@ -1667,11 +1674,6 @@ public class game extends JPanel implements KeyListener {
           break;
       }
 
-      // 일시정지 상태에서도 설정된 일시정지 키로 게임 재개 가능
-      if (pauseKey != -1 && e.getKeyCode() == pauseKey) {
-        resumeGame();
-      }
-
       return; // 일시정지 상태에서는 다른 키 무시
     }
 
@@ -1701,8 +1703,6 @@ public class game extends JPanel implements KeyListener {
       if (gameEngine.hasTimeStopCharge() && !isTimeStopped) {
         activateTimeStop();
       }
-    } else if (keyCode == pauseKey) {
-      pauseGame();
     }
   }
 

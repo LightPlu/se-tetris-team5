@@ -48,11 +48,11 @@ public class p2pbattle extends JPanel implements KeyListener {
     // UI 컴포넌트
     private JPanel mainPanel;
     private JLabel statusLabel;
-    private JLabel lagIndicator;
     private JLabel latencyLabel;  // 실시간 레이턴시 표시
     private Timer latencyUpdateTimer;  // 레이턴시 업데이트 타이머
     private JLabel lobbyLatencyLabel;
     private Timer lobbyLatencyTimer;
+    private boolean isLaggingNetwork = false;
     private ImageIcon backgroundGif;
     private Image backgroundFallbackImage;
     
@@ -88,6 +88,7 @@ public class p2pbattle extends JPanel implements KeyListener {
     private se.tetris.team5.gamelogic.input.SinglePlayerInputHandler myInputHandler;
     
     private static final int TIME_LIMIT_SECONDS = 300;
+    private static final long LAG_WARNING_THRESHOLD_MS = 200;
     private Timer timeLimitTimer;
     private int remainingSeconds;
     
@@ -95,6 +96,7 @@ public class p2pbattle extends JPanel implements KeyListener {
     private long gameRandomSeed;
     
     private String originalWindowSize;
+    private WindowFocusListener windowFocusListener;
     
     public p2pbattle(ScreenController screenController) {
         this.screenController = screenController;
@@ -112,6 +114,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         addKeyListener(this);
         
         initializeUI();
+        setupWindowFocusHandling();
     }
     
     private void loadBackgroundImage() {
@@ -171,17 +174,9 @@ public class p2pbattle extends JPanel implements KeyListener {
         statusLabel.setForeground(Color.WHITE);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         
-        // 랙 인디케이터
-        lagIndicator = new JLabel("");
-        lagIndicator.setFont(createKoreanFont(Font.BOLD, 16));
-        lagIndicator.setForeground(Color.RED);
-        lagIndicator.setHorizontalAlignment(SwingConstants.CENTER);
-        lagIndicator.setVisible(false);
-        
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(0, 0, 0, 180));
         topPanel.add(statusLabel, BorderLayout.CENTER);
-        topPanel.add(lagIndicator, BorderLayout.SOUTH);
         
         mainPanel.add(topPanel, BorderLayout.NORTH);
         
@@ -296,7 +291,7 @@ public class p2pbattle extends JPanel implements KeyListener {
             
             @Override
             public void onLagDetected(boolean isLagging) {
-                SwingUtilities.invokeLater(() -> updateLagIndicator(isLagging));
+                SwingUtilities.invokeLater(() -> handleLagDetectionEvent(isLagging));
             }
             
             @Override
@@ -471,7 +466,7 @@ public class p2pbattle extends JPanel implements KeyListener {
             
             @Override
             public void onLagDetected(boolean isLagging) {
-                SwingUtilities.invokeLater(() -> updateLagIndicator(isLagging));
+                SwingUtilities.invokeLater(() -> handleLagDetectionEvent(isLagging));
             }
             
             @Override
@@ -480,10 +475,6 @@ public class p2pbattle extends JPanel implements KeyListener {
                     showError("연결 오류: " + error);
                     if (connectButton != null) {
                         connectButton.setEnabled(true);
-                    }
-                    // 재연결 시도인 경우 홈으로 돌아가기
-                    if (currentState == ScreenState.CLIENT_CONNECTING && ipField == null) {
-                        returnToHome();
                     }
                 });
             }
@@ -590,8 +581,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         centerPanel.add(readyStatusLabel);
         centerPanel.add(Box.createVerticalStrut(20));
         centerPanel.add(createLobbyLatencyPanel());
-        centerPanel.add(Box.createVerticalStrut(20));
-        centerPanel.add(createChatPanel());
         centerPanel.add(Box.createVerticalStrut(20));
         centerPanel.add(createCenteredComponent(readyButton));
         centerPanel.add(Box.createVerticalStrut(15));
@@ -707,6 +696,8 @@ public class p2pbattle extends JPanel implements KeyListener {
             "화살표 + Space",  // 싱글 플레이 기본 키
             isServer ? new Color(100, 200, 255) : new Color(255, 200, 100)
         );
+        myPanel.setAttackQueueListener(this::sendAttackQueueStatus);
+        sendAttackQueueStatus(java.util.Collections.emptyList());
         
         // 상대방 패널은 P2P 전용 게임 엔진 사용 (네트워크 상태 주입용)
         se.tetris.team5.gamelogic.P2PGameEngine opponentEngine = 
@@ -730,10 +721,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         
         myPanel.getGameEngine().setGameMode(mode);
         opponentEngine.setGameMode(mode);
-        
-        if ("ITEM".equals(selectedBattleMode)) {
-            enableItemModeTestSettings();
-        }
         
         // P2P 모드: 각자 랜덤하게 블록 생성 (동기화 안함)
         // 양쪽이 서로 다른 블록으로 플레이하는 진정한 대전 모드
@@ -775,7 +762,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         statusLabel.setText("P2P 대전 중 - " + getBattleModeText(selectedBattleMode));
         topPanel.add(statusLabel, BorderLayout.CENTER);
         topPanel.add(latencyLabel, BorderLayout.WEST);
-        topPanel.add(lagIndicator, BorderLayout.EAST);
         
         add(topPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
@@ -816,22 +802,7 @@ public class p2pbattle extends JPanel implements KeyListener {
         latencyUpdateTimer = new Timer(500, e -> updateLatencyDisplay());
         latencyUpdateTimer.start();
         
-        // 키 포커스 설정
-        removeKeyListener(this); // 기존 리스너 제거
-        addKeyListener(this); // 다시 추가
-        setFocusable(true);
-        setFocusTraversalKeysEnabled(false);
-        requestFocusInWindow();
-        
-        // 몇 밀리초 후 다시 포커스 요청 (확실히)
-        Timer focusTimer = new Timer(200, e -> {
-            setFocusable(true);
-            requestFocusInWindow();
-            System.out.println("[P2P] 포커스 요청 완료");
-            ((Timer)e.getSource()).stop();
-        });
-        focusTimer.setRepeats(false);
-        focusTimer.start();
+        ensureGameplayFocus();
     }
     
     /**
@@ -856,13 +827,19 @@ public class p2pbattle extends JPanel implements KeyListener {
         // 게임 경과 시간 계산 및 전송
         long elapsedTime = myPanel.getGameEngine().getElapsedTime();
         packet.setElapsedTime(elapsedTime);
+        packet.setHasTimeStopCharge(myPanel.getGameEngine().hasTimeStopCharge());
+        if (isTimeLimitMode()) {
+            packet.setTimeLimitRemaining(Math.max(remainingSeconds, 0));
+        } else {
+            packet.setTimeLimitRemaining(-1);
+        }
         
         // 공격 블록 전송 (게임에서 새로 생성된 공격 줄만)
         java.util.List<java.awt.Color[]> attackBlocks = myPanel.drainPendingOutgoingAttackBlocks();
         if (!attackBlocks.isEmpty()) {
             System.out.println("[P2P] 공격 블록 전송: " + attackBlocks.size() + "줄");
             GameStatePacket attackPacket = new GameStatePacket(GameStatePacket.PacketType.ATTACK_BLOCKS);
-            attackPacket.setAttackBlocks(attackBlocks);
+            attackPacket.setAttackBlocks(encodeAttackBlocks(attackBlocks));
             
             if (isServer && server != null) {
                 server.sendPacket(attackPacket);
@@ -917,23 +894,25 @@ public class p2pbattle extends JPanel implements KeyListener {
                 case ATTACK_BLOCKS:
                     // 공격 블록 수신 - 내 패널에 적용
                     if (myPanel != null && currentState == ScreenState.PLAYING) {
-                        java.util.List<java.awt.Color[]> receivedAttacks = packet.getAttackBlocks();
-                        if (receivedAttacks != null && !receivedAttacks.isEmpty()) {
+                        java.util.List<java.awt.Color[]> receivedAttacks = decodeAttackBlocks(packet.getAttackBlocks());
+                        if (!receivedAttacks.isEmpty()) {
                             System.out.println("[P2P] 공격 블록 수신: " + receivedAttacks.size() + "줄");
                             myPanel.receiveAttackBlocks(receivedAttacks);
                         }
+                    }
+                    break;
+                case ATTACK_STATUS:
+                    if (opponentPanel != null && currentState == ScreenState.PLAYING) {
+                        java.util.List<java.awt.Color[]> opponentQueue = decodeAttackBlocks(packet.getAttackBlocks());
+                        opponentPanel.updateSpectatorAttackQueue(opponentQueue);
                     }
                     break;
                     
                 case GAME_OVER:
                     handleGameOver(packet.getWinner());
                     break;
-                    
-                case RESTART_REQUEST:
-                    handleRestartRequest();
-                    break;
                 case CHAT_MESSAGE:
-                    appendChatMessage(getOpponentRoleLabel(), packet.getMessage());
+                    // 채팅 시스템은 현재 비활성화됨 (더미 패킷만 처리)
                     break;
                     
                 default:
@@ -967,18 +946,20 @@ public class p2pbattle extends JPanel implements KeyListener {
                 packet.getLinesCleared(),
                 packet.getElapsedTime()
             );
+            p2pEngine.setTimeStopCharge(packet.hasTimeStopCharge());
+            opponentPanel.updateTimeStopIndicatorFromNetwork(packet.hasTimeStopCharge());
             
             // UI 컴포넌트 업데이트 (P2P 엔진이 상태를 가지고 있으므로 자동 반영됨)
             if (opponentPanel.getGameBoard() != null) {
-                // renderBoard는 엔진의 상태를 읽어서 그림
+                // 현재 보드에는 이동 중인 블록(값 2)이 이미 포함되어 있으므로 별도의 currentBlock 전달 불필요
                 opponentPanel.getGameBoard().renderBoard(
                     packet.getBoard(),
                     packet.getBoardColors(),
-                    null, // items
-                    createBlockFromType(packet.getCurrentBlockType()),
-                    packet.getCurrentBlockX(),
-                    packet.getCurrentBlockY(),
-                    -1 // ghostY
+                    null,
+                    null,
+                    0,
+                    0,
+                    -1
                 );
             }
             
@@ -990,6 +971,10 @@ public class p2pbattle extends JPanel implements KeyListener {
             opponentPanel.updateNextBlock(packet.getNextBlockType());
             if (!isTimeLimitMode()) {
                 opponentPanel.updateTimer(packet.getElapsedTime());
+            } else if (packet.getTimeLimitRemaining() >= 0) {
+                int remain = packet.getTimeLimitRemaining();
+                String timeStr = String.format("%02d:%02d", Math.max(remain, 0) / 60, Math.max(remain, 0) % 60);
+                opponentPanel.updateTimerLabel(timeStr);
             }
         }
     }
@@ -1036,9 +1021,10 @@ public class p2pbattle extends JPanel implements KeyListener {
         }
 
         String message = winner == (isServer ? 1 : 2) ?
-            "축하합니다! 승리하셨습니다!\n\n대기방으로 돌아가서 재대결 하시겠습니까?" :
-            "아쉽게도 패배하셨습니다...\n\n대기방으로 돌아가서 재대결 하시겠습니까?";
+            "축하합니다! 승리하셨습니다!\n\n메인 메뉴로 돌아가거나 게임을 종료할 수 있습니다." :
+            "아쉽게도 패배하셨습니다...\n\n메인 메뉴로 돌아가거나 게임을 종료할 수 있습니다.";
 
+        Object[] options = { "메인 메뉴", "게임 종료" };
         int option = JOptionPane.showOptionDialog(
             this,
             message,
@@ -1046,58 +1032,14 @@ public class p2pbattle extends JPanel implements KeyListener {
             JOptionPane.DEFAULT_OPTION,
             JOptionPane.INFORMATION_MESSAGE,
             null,
-            new Object[] { "대기방으로", "메인 메뉴" },
-            "대기방으로"
+            options,
+            options[0]
         );
 
         if (option == 0 || option == JOptionPane.CLOSED_OPTION) {
-            // 재시작 요청 (닫기 버튼도 대기방으로)
-            requestRestart();
-        } else {
             disconnect();
-        }
-    }
-    
-    /**
-     * 재시작 요청
-     */
-    private void requestRestart() {
-        stopTimeLimitTimer();
-        stopLobbyLatencyMonitor();
-        GameStatePacket packet = new GameStatePacket(GameStatePacket.PacketType.RESTART_REQUEST);
-        
-        if (isServer && server != null) {
-            server.sendPacket(packet);
-        } else if (!isServer && client != null) {
-            client.sendPacket(packet);
-        }
-        
-        isReady = false;
-        opponentReady = false;
-
-        restoreLobbyLayout();
-
-        if (isServer) {
-            showModeSelection();
-        } else {
-            showReadyWaiting();
-        }
-    }
-    
-    /**
-     * 재시작 요청 처리
-     */
-    private void handleRestartRequest() {
-        stopTimeLimitTimer();
-        stopLobbyLatencyMonitor();
-        isReady = false;
-        opponentReady = false;
-        restoreLobbyLayout();
-
-        if (isServer) {
-            showModeSelection();
-        } else {
-            showReadyWaiting();
+        } else if (option == 1) {
+            exitApplication();
         }
     }
     
@@ -1123,6 +1065,46 @@ public class p2pbattle extends JPanel implements KeyListener {
     }
     
     /**
+     * 애플리케이션 완전 종료
+     */
+    private void exitApplication() {
+        stopTimeLimitTimer();
+        stopLobbyLatencyMonitor();
+        if (latencyUpdateTimer != null) {
+            latencyUpdateTimer.stop();
+            latencyUpdateTimer = null;
+        }
+
+        try {
+            GameStatePacket packet = new GameStatePacket(GameStatePacket.PacketType.DISCONNECT);
+            if (isServer && server != null) {
+                server.sendPacket(packet);
+                server.close();
+                server = null;
+            } else if (!isServer && client != null) {
+                client.sendPacket(packet);
+                client.close();
+                client = null;
+            }
+        } catch (Exception ignored) {}
+
+        if (gameController != null) {
+            gameController.stop();
+            gameController = null;
+        }
+        if (myPanel != null) {
+            myPanel.stopGame();
+        }
+        if (opponentPanel != null) {
+            opponentPanel.stopGame();
+        }
+        if (screenController != null) {
+            screenController.dispose();
+        }
+        System.exit(0);
+    }
+    
+    /**
      * 연결 끊김 처리
      */
     private void handleDisconnection(String reason) {
@@ -1142,34 +1124,23 @@ public class p2pbattle extends JPanel implements KeyListener {
         // 연결 끊김 이유에 따른 자세한 메시지
         String detailedMessage = getDisconnectionMessage(reason);
         
-        // 클라이언트인 경우 재연결 옵션 제공
-        if (!isServer && currentState != ScreenState.ROLE_SELECTION) {
-            int option = JOptionPane.showOptionDialog(
-                this,
-                detailedMessage + "\n\n다시 연결하시겠습니까?",
-                "연결 종료",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE,
-                null,
-                new Object[] { "재연결 시도", "메인 메뉴" },
-                "재연결 시도"
-            );
-            
-            if (option == 0) {
-                // 재연결 시도
-                attemptReconnect();
-                return;
-            }
-        } else {
-            JOptionPane.showMessageDialog(
-                this,
-                detailedMessage,
-                "연결 종료",
-                JOptionPane.WARNING_MESSAGE
-            );
+        Object[] options = { "메인 메뉴", "게임 종료" };
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            detailedMessage + "\n\n게임을 종료하거나 메인 화면으로 돌아가세요.",
+            "연결 종료",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.WARNING_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+        
+        if (choice == 1) {
+            exitApplication();
+            return;
         }
         
-        // 역할 선택 화면 대신 홈 화면으로 이동
         returnToHome();
     }
     
@@ -1197,46 +1168,6 @@ public class p2pbattle extends JPanel implements KeyListener {
     }
     
     /**
-     * 재연결 시도
-     */
-    private void attemptReconnect() {
-        String lastIP = ipField != null ? ipField.getText() : "";
-        if (lastIP.isEmpty() && recentIPComboBox != null && recentIPComboBox.getItemCount() > 0) {
-            lastIP = recentIPComboBox.getItemAt(0);
-        }
-        
-        if (lastIP.isEmpty()) {
-            showError("이전 연결 정보를 찾을 수 없습니다.\n처음부터 다시 연결해주세요.");
-            returnToHome();
-            return;
-        }
-        
-        // 기존 연결 정리
-        if (client != null) {
-            client.close();
-            client = null;
-        }
-        
-        // 재연결 시도
-        statusLabel.setText("재연결 시도 중...");
-        currentState = ScreenState.CLIENT_CONNECTING;
-        
-        connectToServer(lastIP);
-    }
-    
-    /**
-     * 랙 인디케이터 업데이트
-     */
-    private void updateLagIndicator(boolean isLagging) {
-        if (lagIndicator != null) {
-            lagIndicator.setVisible(isLagging);
-            if (isLagging) {
-                lagIndicator.setText("⚠️ 네트워크 지연 발생 (200ms 초과) ⚠️");
-            }
-        }
-    }
-    
-    /**
      * 레이턴시 표시 업데이트
      */
     private void updateLatencyDisplay() {
@@ -1251,9 +1182,34 @@ public class p2pbattle extends JPanel implements KeyListener {
             latency = client.getCurrentLatency();
         }
         
-        Color color = getLatencyColor(latency);
+        if (latency <= 0) {
+            latencyLabel.setForeground(Color.LIGHT_GRAY);
+            latencyLabel.setText("핑 측정 중...");
+            updateLobbyLatencyLabel();
+            return;
+        }
+        
+        boolean thresholdLagging = latency >= LAG_WARNING_THRESHOLD_MS;
+        if (isLaggingNetwork != thresholdLagging) {
+            isLaggingNetwork = thresholdLagging;
+            updateLobbyLatencyLabel();
+        }
+        
+        Color color = isLaggingNetwork ? Color.RED : getLatencyColor(latency);
+        String text = isLaggingNetwork
+            ? String.format("핑: %dms (지연)", latency)
+            : String.format("핑: %dms", latency);
         latencyLabel.setForeground(color);
-        latencyLabel.setText(String.format("핑: %dms", latency));
+        latencyLabel.setText(text);
+        updateLobbyLatencyLabel();
+    }
+    
+    private void handleLagDetectionEvent(boolean isLagging) {
+        if (this.isLaggingNetwork != isLagging) {
+            this.isLaggingNetwork = isLagging;
+            updateLobbyLatencyLabel();
+        }
+        updateLatencyDisplay();
     }
     
     private void sendChatMessage() {
@@ -1284,24 +1240,6 @@ public class p2pbattle extends JPanel implements KeyListener {
         }
         chatArea.append(String.format("[%s] %s%n", sender, message));
         chatArea.setCaretPosition(chatArea.getDocument().getLength());
-    }
-    
-    /**
-     * 아이템 모드 테스트를 위해 I블록 고정 + 2줄마다 아이템 드롭을 활성화
-     */
-    private void enableItemModeTestSettings() {
-        if (myPanel == null) {
-            return;
-        }
-        se.tetris.team5.gamelogic.GameEngine engine = myPanel.getGameEngine();
-        if (engine == null) {
-            return;
-        }
-        se.tetris.team5.gamelogic.block.BlockFactory factory = engine.getBlockFactory();
-        if (factory != null) {
-            factory.setForcedBlockType(0); // I블록
-        }
-        engine.setItemGrantPolicy(new se.tetris.team5.items.FrequentItemGrantPolicy(2));
     }
     
     private Color getLatencyColor(long latency) {
@@ -1356,12 +1294,18 @@ public class p2pbattle extends JPanel implements KeyListener {
             return;
         }
         
-        if (latency == 0) {
+        if (latency <= 0) {
             lobbyLatencyLabel.setForeground(Color.LIGHT_GRAY);
             lobbyLatencyLabel.setText("핑 측정 중...");
         } else {
-            lobbyLatencyLabel.setForeground(getLatencyColor(latency));
-            lobbyLatencyLabel.setText(String.format("현재 핑: %dms", latency));
+            boolean lagging = isLaggingNetwork || latency >= LAG_WARNING_THRESHOLD_MS;
+            if (lagging) {
+                lobbyLatencyLabel.setForeground(Color.RED);
+                lobbyLatencyLabel.setText(String.format("현재 핑: %dms (지연)", latency));
+            } else {
+                lobbyLatencyLabel.setForeground(getLatencyColor(latency));
+                lobbyLatencyLabel.setText(String.format("현재 핑: %dms", latency));
+            }
         }
     }
     
@@ -1478,19 +1422,52 @@ public class p2pbattle extends JPanel implements KeyListener {
             myPanel.stopGame();
         }
         
-        // 항상 기본 중형 크기로 복원
-        se.tetris.team5.utils.setting.GameSettings settings = 
-            se.tetris.team5.utils.setting.GameSettings.getInstance();
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
-        settings.loadSettings();
-        screenController.updateWindowSize();
-        
+        applyOriginalWindowSize();
         screenController.showScreen("home");
     }
     
     /**
      * 최근 접속 IP 저장
      */
+    private void ensureGameplayFocus() {
+        if (currentState != ScreenState.PLAYING) {
+            return;
+        }
+        removeKeyListener(this);
+        addKeyListener(this);
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+        boolean focused = requestFocusInWindow();
+
+        Timer focusTimer = new Timer(200, e -> {
+            if (!hasFocus()) {
+                setFocusable(true);
+                requestFocusInWindow();
+                System.out.println("[P2P] 포커스 재요청");
+            }
+            ((Timer) e.getSource()).stop();
+        });
+        focusTimer.setRepeats(false);
+        focusTimer.start();
+
+        if (!focused) {
+            SwingUtilities.invokeLater(this::requestFocusInWindow);
+        }
+    }
+
+    private void setupWindowFocusHandling() {
+        if (screenController == null || windowFocusListener != null) {
+            return;
+        }
+        windowFocusListener = new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                SwingUtilities.invokeLater(() -> ensureGameplayFocus());
+            }
+        };
+        screenController.addWindowFocusListener(windowFocusListener);
+    }
+
     private void saveRecentIP(String ip) {
         try {
             java.util.Properties props = new java.util.Properties();
@@ -1612,74 +1589,118 @@ public class p2pbattle extends JPanel implements KeyListener {
     }
 
     private JPanel createChatPanel() {
+        // 채팅 기능은 현재 비활성화 상태이며 향후 재도입 시 아래의 더미 패널을 교체하세요.
+        JPanel placeholder = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        placeholder.setOpaque(false);
+        placeholder.setMaximumSize(new Dimension(450, 60));
+        JLabel label = new JLabel("채팅 기능은 현재 비활성화되었습니다.");
+        label.setFont(createKoreanFont(Font.ITALIC, 12));
+        label.setForeground(Color.LIGHT_GRAY);
+        placeholder.add(label);
+        return placeholder;
+
+        /*
+        기존 채팅 구현:
         JPanel wrapper = new JPanel();
-        wrapper.setOpaque(false);
-        wrapper.setLayout(new BorderLayout(5, 5));
-        wrapper.setMaximumSize(new Dimension(450, 220));
-
-        JLabel title = new JLabel("대기방 채팅");
-        title.setFont(createKoreanFont(Font.BOLD, 14));
-        title.setForeground(Color.WHITE);
-        wrapper.add(title, BorderLayout.NORTH);
-
-        chatArea = new JTextArea();
-        chatArea.setEditable(false);
-        chatArea.setLineWrap(true);
-        chatArea.setWrapStyleWord(true);
-        chatArea.setFont(createKoreanFont(Font.PLAIN, 12));
-        chatArea.setBackground(new Color(20, 20, 20));
-        chatArea.setForeground(Color.WHITE);
-        chatArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        JScrollPane scrollPane = new JScrollPane(chatArea);
-        scrollPane.setPreferredSize(new Dimension(450, 140));
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70)));
-        wrapper.add(scrollPane, BorderLayout.CENTER);
-
-        JPanel inputPanel = new JPanel(new BorderLayout(5, 0));
-        inputPanel.setOpaque(false);
-
-        chatInputField = new JTextField();
-        chatInputField.setFont(createKoreanFont(Font.PLAIN, 12));
-        chatInputField.addActionListener(e -> sendChatMessage());
-
-        chatSendButton = new JButton("전송");
-        chatSendButton.setFont(createKoreanFont(Font.BOLD, 12));
-        chatSendButton.setBackground(new Color(70, 130, 255));
-        chatSendButton.setForeground(Color.WHITE);
-        chatSendButton.setOpaque(true);
-        chatSendButton.setBorder(BorderFactory.createLineBorder(new Color(30, 30, 60)));
-        chatSendButton.setFocusPainted(false);
-        chatSendButton.setContentAreaFilled(true);
-        chatSendButton.addActionListener(e -> sendChatMessage());
-
-        inputPanel.add(chatInputField, BorderLayout.CENTER);
-        inputPanel.add(chatSendButton, BorderLayout.EAST);
-
-        wrapper.add(inputPanel, BorderLayout.SOUTH);
-
-        appendChatMessage("시스템", "연결이 완료되었습니다. 간단한 메시지를 주고받을 수 있습니다.");
-        return wrapper;
+        ... (이전 UI 및 메시지 처리 코드)
+        */
     }
 
     /**
      * 게임 화면에서 대기방 UI로 복귀하기 위한 기본 레이아웃/크기 복원
      */
     private void restoreLobbyLayout() {
-        // Always revert to medium window for lobby screens
-        se.tetris.team5.utils.setting.GameSettings settings =
-            se.tetris.team5.utils.setting.GameSettings.getInstance();
-        settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
-        settings.loadSettings();
-        if (screenController != null) {
-            screenController.updateWindowSize();
-        }
+        applyOriginalWindowSize();
 
         removeAll();
         setLayout(new BorderLayout());
         add(mainPanel, BorderLayout.CENTER);
         revalidate();
         repaint();
+    }
+
+    /**
+     * 사용자가 설정한 원래 창 크기를 다시 적용한다.
+     */
+    private void applyOriginalWindowSize() {
+        se.tetris.team5.utils.setting.GameSettings settings =
+            se.tetris.team5.utils.setting.GameSettings.getInstance();
+        String targetSize = originalWindowSize;
+        if (targetSize == null || targetSize.trim().isEmpty()) {
+            targetSize = settings.getWindowSize();
+        }
+        if (targetSize == null || targetSize.trim().isEmpty()) {
+            targetSize = se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM;
+        }
+        boolean applied = false;
+        try {
+            String[] parts = targetSize.toLowerCase().split("x");
+            if (parts.length == 2) {
+                int width = Integer.parseInt(parts[0].trim());
+                int height = Integer.parseInt(parts[1].trim());
+                settings.setCustomWindowSize(width, height);
+                applied = true;
+            }
+        } catch (Exception ignored) {}
+
+        if (!applied) {
+            settings.setWindowSize(se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM);
+            targetSize = se.tetris.team5.utils.setting.GameSettings.WINDOW_SIZE_MEDIUM;
+        }
+
+        originalWindowSize = targetSize;
+        if (screenController != null) {
+            screenController.updateWindowSize();
+        }
+    }
+
+    private java.util.List<int[]> encodeAttackBlocks(java.util.List<java.awt.Color[]> blocks) {
+        java.util.List<int[]> encoded = new java.util.ArrayList<>();
+        if (blocks == null) {
+            return encoded;
+        }
+        for (java.awt.Color[] row : blocks) {
+            if (row == null) {
+                continue;
+            }
+            int[] encodedRow = new int[row.length];
+            for (int i = 0; i < row.length; i++) {
+                encodedRow[i] = row[i] != null ? row[i].getRGB() : 0;
+            }
+            encoded.add(encodedRow);
+        }
+        return encoded;
+    }
+
+    private java.util.List<java.awt.Color[]> decodeAttackBlocks(java.util.List<int[]> encoded) {
+        java.util.List<java.awt.Color[]> decoded = new java.util.ArrayList<>();
+        if (encoded == null || encoded.isEmpty()) {
+            return decoded;
+        }
+        for (int[] row : encoded) {
+            if (row == null) {
+                continue;
+            }
+            java.awt.Color[] decodedRow = new java.awt.Color[row.length];
+            for (int i = 0; i < row.length; i++) {
+                decodedRow[i] = row[i] == 0 ? null : new java.awt.Color(row[i], true);
+            }
+            decoded.add(decodedRow);
+        }
+        return decoded;
+    }
+
+    private void sendAttackQueueStatus(java.util.List<java.awt.Color[]> pendingBlocks) {
+        if (currentState != ScreenState.PLAYING) {
+            return;
+        }
+        GameStatePacket statusPacket = new GameStatePacket(GameStatePacket.PacketType.ATTACK_STATUS);
+        statusPacket.setAttackBlocks(encodeAttackBlocks(pendingBlocks));
+        if (isServer && server != null) {
+            server.sendPacket(statusPacket);
+        } else if (!isServer && client != null) {
+            client.sendPacket(statusPacket);
+        }
     }
     
     /**
@@ -1728,6 +1749,18 @@ public class p2pbattle extends JPanel implements KeyListener {
     public void keyPressed(KeyEvent e) {
         System.out.println("[P2P] 키 입력 감지: " + KeyEvent.getKeyText(e.getKeyCode()));
 
+        if (currentState == ScreenState.PLAYING) {
+            se.tetris.team5.utils.setting.GameSettings settings =
+                se.tetris.team5.utils.setting.GameSettings.getInstance();
+            int itemKey = settings.getKeyCode("item");
+            if (e.getKeyCode() == itemKey && myPanel != null) {
+                if (myPanel.useItem()) {
+                    ensureGameplayFocus();
+                }
+                return;
+            }
+        }
+
         if (currentState == ScreenState.PLAYING && myInputHandler != null) {
             myInputHandler.handleKeyPress(e.getKeyCode());
             System.out.println("[P2P] 키 입력 처리 완료");
@@ -1743,7 +1776,8 @@ public class p2pbattle extends JPanel implements KeyListener {
 
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
             if (currentState == ScreenState.PLAYING) {
-                String message = "게임을 종료하시겠습니까?\n\n대기방으로 돌아가거나 메인 메뉴로 이동할 수 있습니다.";
+                String message = "게임을 종료하시겠습니까?\n\n메인 메뉴로 돌아가거나 게임을 완전히 종료할 수 있습니다.";
+                Object[] options = { "메인 메뉴", "게임 종료" };
                 int option = JOptionPane.showOptionDialog(
                     this,
                     message,
@@ -1751,13 +1785,15 @@ public class p2pbattle extends JPanel implements KeyListener {
                     JOptionPane.DEFAULT_OPTION,
                     JOptionPane.INFORMATION_MESSAGE,
                     null,
-                    new Object[] { "대기방으로", "메인 메뉴" },
-                    "대기방으로"
+                    options,
+                    options[0]
                 );
-                if (option == 0 || option == JOptionPane.CLOSED_OPTION) {
-                    requestRestart();
-                } else {
+                if (option == 0) {
                     disconnect();
+                } else if (option == 1) {
+                    exitApplication();
+                } else {
+                    ensureGameplayFocus();
                 }
             }
         }

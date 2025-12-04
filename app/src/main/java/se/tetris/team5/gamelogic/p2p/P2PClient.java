@@ -153,9 +153,11 @@ public class P2PClient {
                 break;
             } catch (IOException | ClassNotFoundException e) {
                 if (isRunning) {
-                    System.out.println("[P2P Client] 패킷 수신 오류: " + e.getMessage());
+                    String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    System.out.println("[P2P Client] 패킷 수신 오류: " + message);
+                    isConnected = false;
                     if (listener != null) {
-                        listener.onError(e.getMessage());
+                        listener.onDisconnected("연결 오류: " + message);
                     }
                 }
                 break;
@@ -217,13 +219,11 @@ public class P2PClient {
             out.flush();
             out.reset(); // 객체 캐시 초기화 (메모리 누수 방지)
         } catch (IOException e) {
-            System.out.println("[P2P Client] 패킷 전송 오류: " + e.getMessage());
-            // 소켓이 실제로 닫혔는지 확인
-            if (socket.isClosed() || !socket.isConnected()) {
-                isConnected = false;
-                if (listener != null) {
-                    listener.onDisconnected("연결이 끊어졌습니다");
-                }
+            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            System.out.println("[P2P Client] 패킷 전송 오류: " + message);
+            isConnected = false;
+            if (listener != null) {
+                listener.onDisconnected("연결 오류: " + message);
             }
         }
     }
